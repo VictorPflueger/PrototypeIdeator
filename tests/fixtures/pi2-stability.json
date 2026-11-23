@@ -1,0 +1,31 @@
+{
+  "case": "PI2",
+  "what": "Stability: the ideas of PI1 ranked with the default weights, equal weights and seven times with one criterion left out",
+  "source": "Build brief, section 11, PI2",
+  "ideas_from": "pi1-scores.json",
+  "rankings": [
+    { "weights": "default", "ranking": ["A", "B", "C", "D", "E"] },
+    { "weights": "equal", "ranking": ["A", "C", "B", "D", "E"] },
+    { "weights": "without:value", "ranking": ["A", "B", "D", "C", "E"] },
+    { "weights": "without:evidence", "ranking": ["A", "B", "D", "C", "E"] },
+    { "weights": "without:buildable", "ranking": ["A", "B", "C", "D", "E"] },
+    { "weights": "without:agentic", "ranking": ["A", "C", "B", "D", "E"] },
+    { "weights": "without:relevance", "ranking": ["A", "B", "C", "D", "E"] },
+    { "weights": "without:demo", "ranking": ["A", "C", "D", "B", "E"] },
+    { "weights": "without:risk", "ranking": ["A", "B", "C", "D", "E"] }
+  ],
+  "stated": {
+    "first": { "idea": "A", "count": 9, "of": 9 },
+    "second": { "idea": "B", "count": 6, "of": 9 }
+  },
+  "equal_weights_tie": {
+    "ideas": ["B", "C", "D"],
+    "score": { "numerator": 30, "denominator": 7 },
+    "order": ["C", "B", "D"],
+    "why": "C goes first on business value; B before D on demo impact, after business value, relevance, buildable and agentic fit tie"
+  },
+  "sentence": {
+    "en": "A is first in 9 of 9 rankings; places 2 to 4 change with the weights.",
+    "de": "A liegt in 9 von 9 Rangfolgen vorn; die Plätze 2 bis 4 wechseln mit den Gewichten."
+  }
+}
