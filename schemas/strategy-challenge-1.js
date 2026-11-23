@@ -1,0 +1,734 @@
+// The module twin of strategy-challenge-1.json: a page under a strict security policy can't import JSON, so it imports
+// this file. Written from the JSON by tools/sync-schemas.mjs; never edit it by hand.
+export default {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://victorpflueger.github.io/PrototypeIdeator/schemas/strategy-challenge-1.json",
+  "title": "strategy-challenge/1",
+  "description": "The handoff file a challenger (Business Model Canvas, SWOT or PESTEL) exports and the Prototype Ideator reads without a model call. The same file in all four repositories. A change to the shape means a new schema name. Figures are numbers, never text; it carries no API key, no prompt and no thinking.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "tool",
+    "created",
+    "language",
+    "mode",
+    "model",
+    "company",
+    "framework",
+    "issues",
+    "responses",
+    "figures",
+    "summary",
+    "sources",
+    "disclaimer"
+  ],
+  "properties": {
+    "schema": {
+      "const": "strategy-challenge/1"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "version",
+        "url"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "bmc-challenger, swot-challenger or pestel-challenger"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://"
+        }
+      }
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "When the file was written, as an ISO 8601 date and time"
+    },
+    "language": {
+      "enum": [
+        "en",
+        "de"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "simulation",
+        "live"
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The model's API id in a live run; null in a simulation"
+    },
+    "company": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "sector",
+        "country",
+        "description",
+        "fictional"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sector": {
+          "type": "string",
+          "description": "A sector id of data/kpis.js, or other"
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fictional": {
+          "type": "boolean"
+        }
+      }
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "areas"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "bmc",
+            "swot",
+            "pestel"
+          ]
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Area"
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Issue"
+      }
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Response"
+      }
+    },
+    "figures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at_stake_eur_year",
+        "left_eur_year",
+        "upside_eur_year",
+        "score",
+        "pressure"
+      ],
+      "properties": {
+        "at_stake_eur_year": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "left_eur_year": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "upside_eur_year": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "score": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "scale",
+            "before",
+            "after"
+          ],
+          "properties": {
+            "name": {
+              "enum": [
+                "resilience",
+                "efe",
+                "readiness"
+              ]
+            },
+            "scale": {
+              "enum": [
+                "0-100",
+                "1-4"
+              ]
+            },
+            "before": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "after": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "pressure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "label",
+            "before",
+            "after",
+            "of"
+          ],
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "before": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "after": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "of": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headline",
+        "text"
+      ],
+      "properties": {
+        "headline": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Source"
+      }
+    },
+    "disclaimer": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "title",
+        "read_on"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "title": {
+          "type": "string"
+        },
+        "read_on": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "Item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text",
+        "source"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "user",
+            "ai"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "basis": {
+          "type": "string"
+        }
+      }
+    },
+    "Area": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "items"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "One of the canvas's nine block ids, the four SWOT quadrants or the six PESTEL dimensions"
+        },
+        "label": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Item"
+          }
+        }
+      }
+    },
+    "Kpi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "unit",
+        "direction",
+        "change_low",
+        "change_high",
+        "basis"
+      ],
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A KPI id of data/kpis.js, such as transport_logistics.cost_per_teu, or null"
+        },
+        "name": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "up",
+            "down"
+          ]
+        },
+        "change_low": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "change_high": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "basis": {
+          "type": "string"
+        }
+      }
+    },
+    "Issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "type",
+        "description",
+        "areas",
+        "items",
+        "impact",
+        "likelihood",
+        "band",
+        "horizon",
+        "kpis",
+        "eur_year_low",
+        "eur_year_high",
+        "eur_year_expected",
+        "eur_basis",
+        "evidence",
+        "confidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "impact": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "likelihood": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "band": {
+          "type": "string"
+        },
+        "horizon": {
+          "type": "string"
+        },
+        "kpis": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Kpi"
+          }
+        },
+        "eur_year_low": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_year_high": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_year_expected": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_basis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Source"
+          }
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      }
+    },
+    "Change": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "area",
+            "action",
+            "text"
+          ],
+          "properties": {
+            "area": {
+              "type": "string"
+            },
+            "action": {
+              "enum": [
+                "add",
+                "change",
+                "remove"
+              ]
+            },
+            "item": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "item",
+            "from",
+            "to"
+          ],
+          "properties": {
+            "action": {
+              "const": "rate"
+            },
+            "item": {
+              "type": "string"
+            },
+            "from": {
+              "type": "number"
+            },
+            "to": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "item",
+            "signal",
+            "trigger"
+          ],
+          "properties": {
+            "action": {
+              "const": "watch"
+            },
+            "item": {
+              "type": "string"
+            },
+            "signal": {
+              "type": "string"
+            },
+            "trigger": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "Residual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impact",
+        "likelihood",
+        "band",
+        "eur_year_low",
+        "eur_year_high",
+        "eur_year_expected"
+      ],
+      "properties": {
+        "impact": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "likelihood": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "band": {
+          "type": "string"
+        },
+        "eur_year_low": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_year_high": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_year_expected": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "Upside": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eur_year_low",
+        "eur_year_high",
+        "likelihood",
+        "eur_year_expected"
+      ],
+      "properties": {
+        "eur_year_low": {
+          "type": "number"
+        },
+        "eur_year_high": {
+          "type": "number"
+        },
+        "likelihood": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "eur_year_expected": {
+          "type": "number"
+        }
+      }
+    },
+    "Response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "issue",
+        "kind",
+        "chosen",
+        "title",
+        "first_step",
+        "owner",
+        "changes",
+        "residual",
+        "upside",
+        "effort",
+        "time_to_impact"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "issue": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "mitigate",
+            "advantage",
+            "accept",
+            "monitor"
+          ]
+        },
+        "chosen": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "first_step": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Change"
+          }
+        },
+        "residual": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Residual"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upside": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Upside"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effort": {
+          "type": "string"
+        },
+        "time_to_impact": {
+          "type": "string"
+        }
+      }
+    }
+  }
+};
