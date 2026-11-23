@@ -1,6 +1,6 @@
 # Review: files taken from other tools
 
-Every file this repository took from a sister prototype or a sibling tool, as of version 0.1.0, with what changed and why. "Copied" means byte for byte. The sources, as read on 23 November 2026: the Sovereignty Assessment 2.0.0 (35c0dea), the Data Quality Agent 2.2.0 (831f050), the Timetable Translator (through the Sovereignty Assessment), the SWOT Challenger 0.1.0 (a52fd6f, merged as 617b122) and Vici (eaebdca).
+Every file this repository took from a sister prototype or a sibling tool, as of version 0.1.0, with what changed and why. "Copied" means byte for byte. The sources, as read on 23 November 2026: the Sovereignty Assessment 2.0.0 (35c0dea), the Data Quality Agent 2.2.0 (831f050), the Timetable Translator (through the Sovereignty Assessment), the SWOT Challenger 0.1.0 (a52fd6f, merged as 617b122) and Vici (6580c06).
 
 ## Shared with the sibling tools
 

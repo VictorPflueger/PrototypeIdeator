@@ -60,7 +60,7 @@ The SWOT Challenger merged its M1 first, on 23 November 2026 at 21:35 (commit a5
 
 No sibling had the live client or the key store yet, so this tool sets them for the others to copy: `js/anthropic.js`, `js/sse.js` and `js/cost.js` from the Sovereignty Assessment 2.0.0 (35c0dea), with the app's name read from `config.js` so the file can be byte-identical in all four tools, and `js/keystore.js`, held in memory only.
 
-`tests/parity.mjs` compares every shared part with every sibling checkout that has it, and CI clones the three challengers for it. On 23 November 2026 the canvas challenger's unmerged `m1` branch carried its own versions of the KPI library, the handoff schema and `js/risk.js`; they differ from the SWOT Challenger's and will need to be replaced by them before that branch merges.
+`tests/parity.mjs` compares every shared part with every sibling checkout that has it, and CI clones the three challengers for it. The Business Model Canvas Challenger merged its M1 later the same day (849e6ee) with the same bytes, so on 23 November 2026 three of the four tools hold one KPI library, one handoff schema and one `js/risk.js`; the PESTEL Challenger had not merged its M1 yet.
 
 ## 7. The fact audit
 
@@ -86,7 +86,7 @@ Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, secti
 
 | Deviation | From | Why |
 |---|---|---|
-| The session-only data rule is not added to ViciDesign by this tool | PLAN.md, section 13 | The PESTEL Challenger added it first (ViciDesign PR 24, with `storageProblems` and `storedKeyProblems`), with the strict-policy starter and `dist/vici-theme.js` (PR 25). This tool uses them from `eaebdca` |
+| The session-only data rule is not added to ViciDesign by this tool | PLAN.md, section 13 | The PESTEL Challenger added it first (ViciDesign PR 24, with `storageProblems` and `storedKeyProblems`), with the strict-policy starter and `dist/vici-theme.js` (PR 25). This tool uses them from main at `6580c06` |
 | The page's own theme script is gone | PLAN.md, section 7.1 | Vici's `vici/dist/vici-theme.js` does the same and is Vici's own |
 | PI4's display strings | `tests/fixtures/pi4-handoff.json` as first written | The values stay the brief's; their display follows the shared money format of `js/risk.js` |
 | The KPI library, the handoff schema and their tests | PLAN.md, section 6.3, where this tool would build them | The SWOT Challenger merged them first (section 6) |
