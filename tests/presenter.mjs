@@ -5,8 +5,9 @@
 //              offers "Check for updates";
 //   figures    (G7, AC-07) before anything runs each tile shows the scenario's value in the simulation and the
 //              ellipsis with what it waits for in a live run; a decision strikes the old value through;
-//   choices    (G8, AC-05) a parked issue, an undone merge, another weight and another shortlist give the
-//              tiles, the score table, the chart, the stability sentence and the summary the engine gives;
+//   choices    (G8, AC-05) a parked issue, an undone merge, two issues merged, another weight and another
+//              shortlist give the tiles, the score table, the chart, the stability sentence and the summary
+//              the engine gives;
 //   weights    (G9, AC-20) a weight moved with the keyboard re-ranks at once, with no request, and the table,
 //              the chart and the stability sentence follow the engine;
 //   play       (G10) Play walks the steps and stops where the person acts, Space plays and pauses, the arrow
@@ -21,7 +22,8 @@
 // PRESENTER PLAY OK, PRESENTER IDEAS OK and PRESENTER GUIDE OK.
 // Usage: node tests/presenter.mjs [scenarios|figures|choices|weights|play|ideas|guide]
 import path from "node:path";
-import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE } from "./lib/harness.mjs";
+import { spawn } from "node:child_process";
+import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, viciDir, REQUIRE_VICI } from "./lib/harness.mjs";
 
 const parts = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const want = (p) => !parts.length || parts.includes(p);
@@ -98,8 +100,12 @@ try {
       const { context, page, errors, outside } = await open(`?guide=0&lang=${lang}&scenario=${sc.id}`, { clock: "2026-11-24T10:00:00Z" });
       const seen = [];
       let stale = "unchecked";
+      let chips = [];
       await walk(page, async (step) => {
-        if (step === 0) stale = await page.$(".fiction-line .stale-link");
+        if (step === 0) {
+          stale = await page.$(".fiction-line .stale-link");
+          chips = await page.evaluate(() => [...document.querySelectorAll(".doc-chip")].map((li) => ({ id: li.dataset.doc, tags: [...li.querySelectorAll(".vc-tag")].map((t) => t.textContent) })));
+        }
         const at = await current(page);
         const mode = await text(page, "#mode-text");
         const title = await text(page, "#step-title");
@@ -110,6 +116,9 @@ try {
       const report = await page.$(".report-page");
       res.push([seen.every((s) => s.ok) && seen.length === 6, `${where}: six steps, each SIMULATION with a title, and the company's name with "${d["fiction.tag"]}"${seen.every((s) => s.ok) ? "" : `: ${JSON.stringify(seen.filter((s) => !s.ok))}`}`]);
       res.push([!!report && (await text(page, ".report-headline"))?.includes(sc.company.name), `${where}: the Report step shows the short version about ${sc.company.name}`]);
+      const standIns = sc.documents.filter((x) => x.stand_in).map((x) => x.id);
+      const okChips = chips.length === sc.documents.length && chips.every((c) => c.tags.includes(d["doc.standIn"]) === standIns.includes(c.id));
+      res.push([okChips && standIns.length > 0, `${where}: the Start step's chips say "${d["doc.standIn"]}" on the ${standIns.length} stand-in report(s) and on nothing else`]);
       res.push([!outside.length && !errors.length, `${where}: no key, no request to any other host and no page error${outside.length || errors.length ? `: ${[...outside, ...errors].join("; ")}` : ""}`]);
       await context.close();
       // The same scenario 100 days on: the Start step offers "Check for updates".
@@ -153,7 +162,7 @@ try {
       await page.click(`tr[data-issue="${victim.id}"] [data-action="decide-park"]`);
       await page.waitForTimeout(300);
       const after = await tiles(page);
-      const decisions = decide(sc.choices.issues, victim.id, "park", { reason: await page.$eval(`tr[data-issue="${victim.id}"] select`, (s) => s.value).catch(() => "scope") });
+      const decisions = decide(sc.choices.issues, victim.id, "park", { reason: d[`read.reason.${await page.$eval(`tr[data-issue="${victim.id}"] select`, (s) => s.value)}`] });
       const run = buildRun(sc, lang, { decisions });
       const expect = tileModel({ mode: "simulation", run, preview, reached: 1, lang });
       res.push([after.stake.value === expect.stake.value && after.stake.was === before && after.stake.state === "moved" && after.stake.value !== before, `${lang}: parking "${victim.title.slice(0, 40)}…" moves at stake from ${before} to ${after.stake.value}, the old value struck through beside it`]);
@@ -183,9 +192,16 @@ try {
       const park = buildRun(sc, lang, { decisions }).issues.find((i) => i.status === "kept" && named.has(i.id) && i.id !== merged.id);
       await page.click(`tr[data-issue="${park.id}"] [data-action="decide-park"]`);
       await page.waitForTimeout(250);
-      const reason = await page.$eval(`tr[data-issue="${park.id}"] select`, (s) => s.value);
+      const reason = DICT[lang][`read.reason.${await page.$eval(`tr[data-issue="${park.id}"] select`, (s) => s.value)}`];
       decisions = decide(decisions, park.id, "park", { reason });
-      // 3. ideas, then one weight up two steps with the keyboard.
+      // 3. merge two: the last kept issue joins the first kept one, as the Merge button proposes.
+      const keptNow = buildRun(sc, lang, { decisions }).issues.filter((i) => i.status === "kept");
+      const joiner = keptNow[keptNow.length - 1];
+      await page.click(`tr[data-issue="${joiner.id}"] [data-action="decide-merge"]`);
+      await page.waitForTimeout(250);
+      const into = await page.$eval(`tr[data-issue="${joiner.id}"] select`, (s) => s.value);
+      decisions = decide(decisions, joiner.id, "merge", { into });
+      // 4. ideas, then one weight up two steps with the keyboard.
       await page.click("#btn-cta");
       await page.waitForTimeout(250);
       await pausePlay(page);
@@ -207,9 +223,9 @@ try {
       await page.click("label:has(#view-stability)");
       await page.waitForTimeout(200);
       const sentence = await text(page, ".stability-sentence");
-      res.push([JSON.stringify(table) === JSON.stringify(run.ranked.map((r) => r.id)) && JSON.stringify(order) === JSON.stringify(run.ranked.map((r) => r.id)), `${where}: after an undone merge, a parked issue and Business value at ${weights.value} %, the table and the chart rank ${table.join(" ")} as the engine does`]);
+      res.push([JSON.stringify(table) === JSON.stringify(run.ranked.map((r) => r.id)) && JSON.stringify(order) === JSON.stringify(run.ranked.map((r) => r.id)), `${where}: after an undone merge, a parked issue, two issues merged and Business value at ${weights.value} %, the table and the chart rank ${table.join(" ")} as the engine does`]);
       res.push([sentence === run.sentence, `${where}: the stability sentence is the engine's: "${(sentence || "").slice(0, 60)}…"`]);
-      // 4. another shortlist: the fifth idea first, then write the report.
+      // 5. another shortlist: the fifth idea first, then write the report.
       await page.click("#btn-cta");
       await page.waitForTimeout(250);
       await pausePlay(page);
@@ -423,6 +439,21 @@ try {
       }, lang);
       res.push([at > 0, `${lang}: ?guide=present opens the guide at the presenter's script`]);
       await pres.context.close();
+    }
+    // ViciDesign's own drive of the guide over http: it opens once a tab, Escape and the buttons work,
+    // ?guide=0 and ?guide=present behave, and the last button starts.
+    const dir = viciDir();
+    if (dir) {
+      const r = await new Promise((resolve) => {
+        const child = spawn(process.execPath, [path.join(dir, "scripts", "check-guide-render.mjs"), server.base], { cwd: dir, env: process.env });
+        let out = "";
+        child.stdout.on("data", (x) => { out += x; });
+        child.stderr.on("data", (x) => { out += x; });
+        child.on("close", (code) => resolve({ code, out }));
+      });
+      res.push([r.code === 0 && /GUIDE BEHAVIOUR OK/.test(r.out), `Vici's check-guide-render.mjs passes against the page${r.code === 0 ? "" : `: ${r.out.split("\n").filter((l) => l.trim()).slice(-4).join(" | ")}`}`]);
+    } else {
+      res.push([!REQUIRE_VICI, "Vici's check-guide-render.mjs would run here (no ViciDesign checkout)"]);
     }
     report("guide", res, "PRESENTER GUIDE OK");
   }
