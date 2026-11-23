@@ -8,11 +8,16 @@
 //              only vc-theme, pi.lang and Vici's vc-guide note, with no database, cache or cookie, and the
 //              page asked no other host for anything;
 //   layout     at 1920 x 1080 and 1280 x 720, light and dark, English and German: no sideways scroll, no
-//              page scroll, no text cut off, the Your turn bar covers nothing, and no page error.
-// Prints PAGE LANGUAGES OK, PAGE TILES OK, PAGE STORAGE OK and PAGE LAYOUT OK.
-// Usage: node tests/page.mjs [languages|tiles|storage|layout]
+//              page scroll, no text cut off, the Your turn bar covers nothing, and no page error;
+//   probe      the Ideator probe's console line (js/probe.js SNIPPET), run in the page as served under its
+//              security policy, against a stand-in for api.anthropic.com: it asks for the key in a dialog,
+//              sends three requests to the API host only, prints two tables, keeps nothing in storage
+//              and never writes the key to the console.
+// Prints PAGE LANGUAGES OK, PAGE TILES OK, PAGE STORAGE OK, PAGE LAYOUT OK and PAGE PROBE OK.
+// Usage: node tests/page.mjs [languages|tiles|storage|layout|probe]
+import { readFileSync } from "node:fs";
 import path from "node:path";
-import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, KEYS } from "./lib/harness.mjs";
+import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, KEYS, MOCK_KEY } from "./lib/harness.mjs";
 
 const parts = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const want = (p) => !parts.length || parts.includes(p);
@@ -216,6 +221,58 @@ try {
     }
     console.log(`\nTargets under 40 px (AC-14 holds them to 40 px from version 1.0.0): ${[...smallAll].join("; ") || "none"}`);
     report("layout", res, "PAGE LAYOUT OK");
+  }
+
+  // ---- probe -------------------------------------------------------------------------------------------
+  if (want("probe")) {
+    const res = [];
+    const { SNIPPET } = await import(path.join(APP_ROOT, "js", "probe.js"));
+    const answer = readFileSync(path.join(APP_ROOT, "tests", "fixtures", "ideator-s1-answer.json"), "utf8");
+    const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-expose-headers": "*" };
+    const events = [
+      { type: "message_start", message: { id: "msg_stand_in", model: "stand-in", role: "assistant", content: [], usage: { input_tokens: 3200, output_tokens: 1 } } },
+      { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+      { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: answer } },
+      { type: "content_block_stop", index: 0 },
+      { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 5400 } },
+      { type: "message_stop" }
+    ];
+    const body = events.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join("");
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    const api = [];
+    const outside = [];
+    await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => {
+      const req = route.request();
+      const u = new URL(req.url());
+      if (u.host !== "api.anthropic.com") { outside.push(u.host); return route.abort("blockedbyclient"); }
+      if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+      api.push({ path: u.pathname, key: req.headers()["x-api-key"], body: req.postDataJSON() });
+      return route.fulfill({ status: 200, headers: { ...CORS, "content-type": "text/event-stream" }, body });
+    });
+    const page = await context.newPage();
+    const consoleText = [];
+    const tables = [];
+    const errors = [];
+    page.on("console", (m) => { consoleText.push(m.text()); if (m.type() === "table") tables.push(m); if (m.type() === "error" && !NETWORK_NOISE.test(m.text())) errors.push(m.text()); });
+    page.on("pageerror", (e) => errors.push(String(e.message || e)));
+    let asked = null;
+    page.on("dialog", async (d) => { asked = d.message(); await d.accept(MOCK_KEY); });
+    await page.goto(`${server.base}?guide=0`);
+    await page.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+    const before = await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage) }));
+    await page.evaluate(SNIPPET);
+    await page.waitForFunction(() => globalThis.piProbe && globalThis.piProbe.runs.length === 3, null, { timeout: 30000 });
+    await page.waitForTimeout(200);
+    const after = await page.evaluate(async () => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookie: document.cookie, dbs: (await indexedDB.databases()).length, caches: (await caches.keys()).length, runs: globalThis.piProbe.runs.map((x) => ({ ideas: x.answer?.ideas?.length || 0, refusals: x.refusals.length, audit: x.audit.length, model: x.request.model })) }));
+    res.push([asked === "Claude API key, kept in this tab only", `the line asks for the key in a dialog, not in the console ("${asked}")`]);
+    res.push([api.length === 3 && api.every((a) => a.path === "/v1/messages" && a.key === MOCK_KEY) && !outside.length, `it sends three requests to api.anthropic.com/v1/messages with the key in its header, and nothing anywhere else${outside.length ? ` (also asked: ${outside.join(", ")})` : ""}`]);
+    res.push([JSON.stringify(api.map((a) => a.body.model)) === JSON.stringify(["claude-haiku-5-5", "claude-haiku-5-5", "claude-sonnet-5-5"]) && after.runs.every((x) => x.ideas === 8 && x.refusals === 0 && x.audit === 0), "the three settings run in order and each answer reads, with eight ideas and nothing refused"]);
+    res.push([tables.length === 2, `it prints two tables, the runs and the ideas (${tables.length})`]);
+    res.push([JSON.stringify(after.local) === JSON.stringify(before.local) && JSON.stringify(after.session) === JSON.stringify(before.session) && !after.cookie && !after.dbs && !after.caches, "storage is as before the line ran, with no cookie, database or cache"]);
+    res.push([!consoleText.some((t) => t.includes(MOCK_KEY) || /sk-ant-/.test(t)), "the key is never written to the console"]);
+    res.push([!errors.length, `no page error and no security-policy error${errors.length ? `: ${errors.slice(0, 3).join("; ")}` : ""}`]);
+    await context.close();
+    report("probe", res, "PAGE PROBE OK");
   }
 } finally {
   await browser.close();
