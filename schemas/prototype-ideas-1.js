@@ -1,0 +1,784 @@
+// The module twin of prototype-ideas-1.json: a page under a strict security policy can't import JSON, so it imports
+// this file. Written from the JSON by tools/sync-schemas.mjs; never edit it by hand.
+export default {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://victorpflueger.github.io/PrototypeIdeator/schemas/prototype-ideas-1.json",
+  "title": "prototype-ideas/1",
+  "description": "The ideas file the Prototype Ideator downloads: the issue map, the ideas, the weights, the scores, the stability check and the shortlist. It carries no document text and no API key. A change to the shape means a new schema name.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "tool",
+    "created",
+    "language",
+    "mode",
+    "model",
+    "setting",
+    "company",
+    "stopped",
+    "issues",
+    "ideas",
+    "weights",
+    "scores",
+    "stability",
+    "shortlist",
+    "disclaimer"
+  ],
+  "properties": {
+    "schema": {
+      "const": "prototype-ideas/1"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "version",
+        "url"
+      ],
+      "properties": {
+        "id": {
+          "const": "prototype-ideator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://"
+        }
+      }
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "language": {
+      "enum": [
+        "en",
+        "de"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "simulation",
+        "live"
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The model's API id in a live run; null in a simulation"
+    },
+    "setting": {
+      "enum": [
+        "fast",
+        "balanced",
+        "thorough",
+        null
+      ],
+      "description": "The live run's setting; null in a simulation"
+    },
+    "company": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "sector",
+        "fictional"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "sector": {
+          "type": "string",
+          "description": "A sector id of data/kpis.js, or other"
+        },
+        "fictional": {
+          "type": "boolean"
+        }
+      }
+    },
+    "stopped": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "after",
+            "reason"
+          ],
+          "properties": {
+            "after": {
+              "enum": [
+                "start",
+                "read",
+                "ideate",
+                "score",
+                "shortlist",
+                "report"
+              ]
+            },
+            "reason": {
+              "enum": [
+                "budget",
+                "repair",
+                "abort",
+                "error"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Issue"
+      }
+    },
+    "ideas": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/Idea"
+      }
+    },
+    "weights": {
+      "$ref": "#/$defs/Weights"
+    },
+    "scores": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/Score"
+      }
+    },
+    "stability": {
+      "$ref": "#/$defs/Stability"
+    },
+    "shortlist": {
+      "$ref": "#/$defs/Shortlist"
+    },
+    "disclaimer": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "KpiRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "unit",
+        "today"
+      ],
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A KPI id of data/kpis.js, or null"
+        },
+        "name": {
+          "type": "string"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "today": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Today's value as a document states it, or null"
+        }
+      }
+    },
+    "Where": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "where"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "where": {
+          "type": "string",
+          "description": "The page or section; never the document's text"
+        }
+      }
+    },
+    "Issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "area",
+        "description",
+        "money_as_stated",
+        "eur_year_low",
+        "eur_year_high",
+        "eur_year_expected",
+        "eur_basis",
+        "estimate",
+        "kpis",
+        "sources",
+        "confidence",
+        "status",
+        "merged_into",
+        "park_reason",
+        "from"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "area": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "money_as_stated": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "eur_year_low": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_year_high": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_year_expected": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "eur_basis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "estimate": {
+          "type": "boolean",
+          "description": "True when the euros are an AI estimate, false when a document or a challenger states them"
+        },
+        "kpis": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KpiRef"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Where"
+          }
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "status": {
+          "enum": [
+            "kept",
+            "merged",
+            "parked"
+          ]
+        },
+        "merged_into": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "park_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "tool"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "document",
+                "handoff"
+              ]
+            },
+            "tool": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The challenger's name for a handoff issue; null for a document"
+            }
+          }
+        }
+      }
+    },
+    "Rating": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "reason"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Ratings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "evidence",
+        "buildable",
+        "agentic",
+        "relevance",
+        "demo",
+        "risk"
+      ],
+      "properties": {
+        "value": {
+          "$ref": "#/$defs/Rating"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Rating"
+        },
+        "buildable": {
+          "$ref": "#/$defs/Rating"
+        },
+        "agentic": {
+          "$ref": "#/$defs/Rating"
+        },
+        "relevance": {
+          "$ref": "#/$defs/Rating"
+        },
+        "demo": {
+          "$ref": "#/$defs/Rating"
+        },
+        "risk": {
+          "$ref": "#/$defs/Rating"
+        }
+      }
+    },
+    "KeyFigure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "today",
+        "source",
+        "public",
+        "demo"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "today": {
+          "type": "string",
+          "description": "Today's value as a source states it; empty when it is not public"
+        },
+        "source": {
+          "type": "string",
+          "description": "Where today's value comes from; empty when it is not public"
+        },
+        "public": {
+          "type": "boolean",
+          "description": "False when no public source gives today's value: the page then says not public"
+        },
+        "demo": {
+          "type": "string",
+          "description": "What the demo shows for this figure"
+        }
+      }
+    },
+    "Idea": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "what_it_does",
+        "issues",
+        "audience",
+        "room",
+        "how",
+        "key_figures",
+        "data",
+        "risks",
+        "effort_days",
+        "live_inputs",
+        "ratings",
+        "why"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "what_it_does": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issues": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "audience": {
+          "type": "string"
+        },
+        "room": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "how": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "spot",
+            "check",
+            "calculate",
+            "propose",
+            "prepare",
+            "decision"
+          ],
+          "properties": {
+            "spot": {
+              "type": "string"
+            },
+            "check": {
+              "type": "string"
+            },
+            "calculate": {
+              "type": "string"
+            },
+            "propose": {
+              "type": "string"
+            },
+            "prepare": {
+              "type": "string"
+            },
+            "decision": {
+              "type": "string"
+            }
+          }
+        },
+        "key_figures": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/KeyFigure"
+          }
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risks": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          }
+        },
+        "effort_days": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "low",
+            "high"
+          ],
+          "properties": {
+            "low": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "live_inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "model_calls",
+            "web_searches"
+          ],
+          "properties": {
+            "model_calls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "web_searches": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "ratings": {
+          "$ref": "#/$defs/Ratings"
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "evidence",
+        "buildable",
+        "agentic",
+        "relevance",
+        "demo",
+        "risk"
+      ],
+      "properties": {
+        "value": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "evidence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "buildable": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "agentic": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "relevance": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "demo": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "risk": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        }
+      }
+    },
+    "Score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "idea",
+        "value",
+        "rank"
+      ],
+      "properties": {
+        "idea": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "of",
+        "rankings",
+        "counts",
+        "sentence"
+      ],
+      "properties": {
+        "of": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9
+        },
+        "rankings": {
+          "type": "array",
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label",
+              "order"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "pattern": "^(current|equal|without:(value|evidence|buildable|agentic|relevance|demo|risk))$"
+              },
+              "order": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "firsts",
+              "top3"
+            ],
+            "properties": {
+              "firsts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "top3": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "sentence": {
+          "type": "string"
+        }
+      }
+    },
+    "Shortlist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decided",
+        "picks"
+      ],
+      "properties": {
+        "decided": {
+          "type": "boolean",
+          "description": "False while the engine's top three are only preselected"
+        },
+        "picks": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "idea",
+              "place",
+              "points"
+            ],
+            "properties": {
+              "idea": {
+                "type": "string"
+              },
+              "place": {
+                "enum": [
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "points": {
+                "enum": [
+                  3,
+                  2,
+                  1
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
