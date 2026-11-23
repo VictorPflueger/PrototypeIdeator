@@ -1,0 +1,77 @@
+# Runs every suite on every push and pull request (tests/README.md). The app has no build step and no
+# dependencies; Playwright is installed here only for the browser suites. ViciDesign is checked out next
+# to the app at the commit vici/ was copied from, so the suites run Vici's own checks and compare vici/
+# with it byte for byte. The three challengers are cloned next to it, so tests/parity.mjs compares the
+# parts the four tools share with the first of them that has each. No suite calls the Claude API: the
+# live client is tested against a scripted stand-in.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request cancels the run still in progress.
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Engine, contracts, probe, Vici's checks, parity, docs, and the page in Chromium
+    # Pinned image: Playwright 1.56's system dependencies are known to install on Ubuntu 24.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+      - uses: actions/checkout@v4
+        with:
+          repository: VictorPflueger/ViciDesign
+          ref: 6580c0615eed7dc33adb130d91044e56f2fb57fd
+          path: ViciDesign
+          fetch-depth: 0
+      # The three challengers, public, next to the app for the parity suite.
+      - name: The sibling tools
+        run: |
+          for r in BMC-challenger SWOT-challenger PESTEL-challenger; do
+            git clone -q --depth 1 "https://github.com/VictorPflueger/$r" "$GITHUB_WORKSPACE/$r"
+          done
+      # Victor's website next to the app, but only once it carries this prototype's card: the page-icon
+      # suite then holds the card's name, icon and kind to the page. Without the card the clone is
+      # dropped again, and the suite checks the page's own icons.
+      - name: VIP's card for this prototype, if it exists
+        run: |
+          git clone -q --depth 1 https://github.com/VictorPflueger/VIP "$GITHUB_WORKSPACE/VIP"
+          if grep -q 'name: "Prototype Ideator"' "$GITHUB_WORKSPACE/VIP/data/prototypes.js"; then
+            echo "VIP carries the card: page-icon compares the page with it."
+          else
+            rm -rf "$GITHUB_WORKSPACE/VIP"
+            echo "VIP has no card for this prototype yet: page-icon checks the page alone."
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cache the Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.0-chromium-${{ runner.os }}
+      - run: npm install -g playwright@1.56.0 && npx playwright install --with-deps chromium
+      # The hygiene check reads its private term list from the HYGIENE_TERMS secret if the repository
+      # has one; without it only the generic checks run, and the result says so (tests/hygiene.mjs).
+      - name: All suites
+        working-directory: app
+        run: NODE_PATH="$(npm root -g)" node tests/run-all.mjs --require-vici
+        env:
+          HYGIENE_TERMS: ${{ secrets.HYGIENE_TERMS }}
+          PI_TEST_OUT: ${{ runner.temp }}/prototype-ideator-tests
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots
+          path: ${{ runner.temp }}/prototype-ideator-tests
+          if-no-files-found: ignore

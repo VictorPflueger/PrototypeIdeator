@@ -1,0 +1,12 @@
+{
+  "case": "PI3",
+  "what": "Live-run estimates per idea: model calls x (2,000 new input tokens + 15,000 cache-read input tokens + 600 output tokens) at the model's prices, plus $0.01 per web search, at 0.894 euros per dollar",
+  "source": "Build brief, section 11, PI3, with the rule of section 6.4",
+  "rule": { "input_tokens": 2000, "cache_read_tokens": 15000, "output_tokens": 600, "usd_per_search": 0.01, "eur_per_usd": 0.894 },
+  "rows": [
+    { "model": "claude-sonnet-5-5", "calls": 24, "searches": 6, "usd": 0.336, "shown": { "en": "€0.30", "de": "0,30\u00a0€" } },
+    { "model": "claude-sonnet-5-5", "calls": 30, "searches": 0, "usd": 0.345, "shown": { "en": "€0.31", "de": "0,31\u00a0€" } },
+    { "model": "claude-haiku-5-5", "calls": 24, "searches": 6, "usd": 0.0756, "shown": { "en": "€0.07", "de": "0,07\u00a0€" } },
+    { "model": "claude-opus-5-5", "calls": 24, "searches": 6, "usd": 0.612, "shown": { "en": "€0.55", "de": "0,55\u00a0€" } }
+  ]
+}

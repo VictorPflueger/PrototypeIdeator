@@ -1,0 +1,26 @@
+{
+  "case": "PI4",
+  "what": "Reading a handoff file: the brief's example of section 4.3, read without a request",
+  "source": "Build brief, section 11, PI4",
+  "input": "strategy-challenge-example.json",
+  "note": "The values are the brief's: 2,000,000 to 6,000,000 euros a year and 2,800,000 expected. The brief writes the range \"€2m–€6m\"; it shows in the money format the four tools share (js/risk.js, published first by the SWOT Challenger), which writes millions with one decimal.",
+  "expected": {
+    "requests": 0,
+    "company": { "name": "Tidewell Lines", "sector": "transport_logistics", "fictional": true },
+    "issues": [
+      {
+        "title": "Emission allowances raise the cost of every European call",
+        "tool": { "id": "bmc-challenger", "name": "Business Model Canvas Challenger" },
+        "kpis": [ { "name": "Cost per container moved", "id": "transport_logistics.cost_per_teu", "unit": "EUR per TEU" } ],
+        "eur_year_low": 2000000,
+        "eur_year_high": 6000000,
+        "eur_year_expected": 2800000,
+        "response": { "title": "Charge the full allowance cost through a published surcharge", "chosen": true },
+        "shown": {
+          "en": { "range": "€2.0m–€6.0m a year", "expected": "€2.8m" },
+          "de": { "range": "2,0–6,0\u00a0Mio.\u00a0€ im Jahr", "expected": "2,8\u00a0Mio.\u00a0€" }
+        }
+      }
+    ]
+  }
+}

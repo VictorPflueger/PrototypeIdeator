@@ -1,0 +1,23 @@
+{
+  "case": "PI1",
+  "what": "Scores and ranking: ratings in the order of the brief's section 6.4, default weights",
+  "source": "Build brief, section 11, PI1",
+  "criteria": ["value", "evidence", "buildable", "agentic", "relevance", "demo", "risk"],
+  "weights": { "value": 20, "evidence": 10, "buildable": 20, "agentic": 15, "relevance": 15, "demo": 15, "risk": 5 },
+  "tie_order": ["value", "relevance", "buildable", "agentic", "demo", "evidence", "risk"],
+  "ideas": [
+    { "id": "A", "name": "A", "ratings": { "value": 5, "evidence": 5, "buildable": 4, "agentic": 5, "relevance": 5, "demo": 5, "risk": 4 } },
+    { "id": "B", "name": "B", "ratings": { "value": 4, "evidence": 4, "buildable": 4, "agentic": 5, "relevance": 5, "demo": 5, "risk": 3 } },
+    { "id": "C", "name": "C", "ratings": { "value": 5, "evidence": 5, "buildable": 4, "agentic": 3, "relevance": 5, "demo": 4, "risk": 4 } },
+    { "id": "D", "name": "D", "ratings": { "value": 4, "evidence": 4, "buildable": 4, "agentic": 5, "relevance": 5, "demo": 4, "risk": 4 } },
+    { "id": "E", "name": "E", "ratings": { "value": 4, "evidence": 3, "buildable": 5, "agentic": 4, "relevance": 4, "demo": 3, "risk": 4 } }
+  ],
+  "scores": {
+    "en": { "A": "4.75", "B": "4.40", "C": "4.30", "D": "4.30", "E": "3.95" },
+    "de": { "A": "4,75", "B": "4,40", "C": "4,30", "D": "4,30", "E": "3,95" }
+  },
+  "ranking": ["A", "B", "C", "D", "E"],
+  "ties": [
+    { "ideas": ["C", "D"], "score": "4.30", "decided_by": "value", "first": "C" }
+  ]
+}

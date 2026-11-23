@@ -1,0 +1,308 @@
+{
+  "ideas": [
+    {
+      "name": "Allowance Gap Agent",
+      "what_it_does": "Prices the emission allowances each European voyage needs and shows where the surcharge falls short, loop by loop.",
+      "issues": ["bmc-I1", "pestel-I3"],
+      "audience": "Pricing and trade management",
+      "room": [
+        "Pick a Europe loop and a month",
+        "The agent prices the allowances each voyage needs",
+        "It sets the cost per container beside today's surcharge",
+        "It proposes next month's surcharge and drafts the customer notice"
+      ],
+      "how": {
+        "spot": "Finds the voyages to and from EU ports in the published schedule",
+        "check": "Checks each port pair against the rules for voyages inside and into or out of the EU",
+        "calculate": "Works out the allowances per voyage and the cost per container",
+        "propose": "Proposes a surcharge that closes the gap, with its basis",
+        "prepare": "Drafts the monthly surcharge notice for customers",
+        "decision": "Pricing approves or changes the surcharge before it goes out"
+      },
+      "key_figures": [
+        { "name": "Emission allowance cost per container", "today": "", "source": "", "public": false, "demo": "Set beside the surcharge, loop by loop, until the gap closes" },
+        { "name": "Money at stake a year", "today": "", "source": "", "public": false, "demo": "The uncovered allowance cost across Europe services, {{fact:issue.bmc-I1.eur}} a year" }
+      ],
+      "data": ["Published sailing schedules and port calls", "Published allowance prices", "Synthetic container volumes per loop"],
+      "risks": ["Allowance prices change daily, so the demo fixes a date", "Emissions per ship are estimates until the company shares its own"],
+      "effort_days": { "low": 8, "high": 12 },
+      "live_inputs": { "model_calls": 12, "web_searches": 2 },
+      "ratings": {
+        "value": { "score": 5, "reason": "The uncovered cost per container is easy to grasp" },
+        "evidence": { "score": 4, "reason": "The rules and prices are public; the company's volumes are not" },
+        "buildable": { "score": 5, "reason": "Schedules and prices are public, volumes can be synthetic" },
+        "agentic": { "score": 4, "reason": "It checks each voyage, prices it and asks pricing to decide" },
+        "relevance": { "score": 5, "reason": "All three challengers raised this cost" },
+        "demo": { "score": 5, "reason": "One loop shows the gap and the fix in minutes" },
+        "risk": { "score": 4, "reason": "Surcharges are touchy with large customers" }
+      },
+      "why": "It turns the cost all three challengers raised into a surcharge decision the room can follow."
+    },
+    {
+      "name": "FuelEU Pool Planner",
+      "what_it_does": "Finds the ships above the FuelEU Maritime limit and proposes pools with cleaner ships that avoid the penalty.",
+      "issues": ["pestel-I2"],
+      "audience": "Fleet management and compliance",
+      "room": [
+        "The fleet appears with each ship's fuel and intensity",
+        "The agent marks the ships above the limit",
+        "It proposes pools with the dual-fuel newbuilds",
+        "It shows the penalty with and without each pool"
+      ],
+      "how": {
+        "spot": "Finds the ships whose energy use is above the limit for the year",
+        "check": "Checks which cleaner ships have room to cover them",
+        "calculate": "Works out the penalty each ship would pay alone and in a pool",
+        "propose": "Proposes the pools that remove the most penalty",
+        "prepare": "Prepares the pooling summary for the verifier",
+        "decision": "The fleet manager chooses which pools to register"
+      },
+      "key_figures": [
+        { "name": "CO2 per container-kilometre", "today": "", "source": "", "public": false, "demo": "Falls for the pooled fleet against the limit" },
+        { "name": "Money saved a year", "today": "", "source": "", "public": false, "demo": "The penalty avoided, against {{fact:issue.pestel-I2.eur}} at stake" }
+      ],
+      "data": ["The FuelEU Maritime limits and penalty rules", "Synthetic fuel use per ship"],
+      "risks": ["Pooling rules leave room for interpretation", "Fuel use per ship is synthetic"],
+      "effort_days": { "low": 10, "high": 15 },
+      "live_inputs": { "model_calls": 10, "web_searches": 1 },
+      "ratings": {
+        "value": { "score": 4, "reason": "A penalty avoided is a clear sum" },
+        "evidence": { "score": 4, "reason": "The limits and penalties are published" },
+        "buildable": { "score": 4, "reason": "Rules are public; ship data must be synthetic" },
+        "agentic": { "score": 5, "reason": "It weighs many pool options and asks a person to choose" },
+        "relevance": { "score": 4, "reason": "The older ships still burn heavy fuel oil" },
+        "demo": { "score": 3, "reason": "Pooling takes a minute to explain" },
+        "risk": { "score": 4, "reason": "Compliance figures need a verifier's check" }
+      },
+      "why": "It shows a penalty shrink as the agent pairs old ships with new ones."
+    },
+    {
+      "name": "Route Risk Desk",
+      "what_it_does": "Weighs each Asia loop's route every week from security notices, war-risk cost and fuel, and proposes the route.",
+      "issues": ["swot-I2"],
+      "audience": "Network planning",
+      "room": [
+        "This week's security notices come in",
+        "The agent sets the Suez and Cape routes side by side for one loop",
+        "It prices fuel, war-risk cover and days at sea",
+        "It proposes a route and drafts the customer advisory"
+      ],
+      "how": {
+        "spot": "Spots notices that change the risk on a route",
+        "check": "Checks them against the loop's next sailings",
+        "calculate": "Prices each route in fuel, cover and days",
+        "propose": "Proposes the route for the next sailing",
+        "prepare": "Drafts the advisory to customers on the loop",
+        "decision": "The network planner confirms or overrides the route"
+      },
+      "key_figures": [
+        { "name": "Schedule reliability", "today": "", "source": "", "public": false, "demo": "Holds as routes change ahead of trouble" },
+        { "name": "Detection to decision", "today": "", "source": "", "public": false, "demo": "Drops from a weekly meeting to the same day" }
+      ],
+      "data": ["Published security and shipping advisories", "Published fuel prices", "Synthetic charter and cover costs"],
+      "risks": ["Security news is sensitive and changes fast", "Cover prices are not public"],
+      "effort_days": { "low": 12, "high": 18 },
+      "live_inputs": { "model_calls": 18, "web_searches": 6 },
+      "ratings": {
+        "value": { "score": 5, "reason": "Rerouting puts the most money at stake of all issues" },
+        "evidence": { "score": 4, "reason": "The route closures and returns are well reported" },
+        "buildable": { "score": 3, "reason": "Cover costs must be invented" },
+        "agentic": { "score": 5, "reason": "It reads news, prices options and hands a person the call" },
+        "relevance": { "score": 5, "reason": "It is this year's largest pain" },
+        "demo": { "score": 5, "reason": "Two routes on a map make the choice obvious" },
+        "risk": { "score": 2, "reason": "War and security make it politically sensitive" }
+      },
+      "why": "It shows an agent turning the week's news into a priced route choice."
+    },
+    {
+      "name": "Rate Index Watch",
+      "what_it_does": "Compares contract rates with the weekly freight index and proposes which contracts to reprice or index-link.",
+      "issues": ["bmc-I2"],
+      "audience": "Commercial and key accounts",
+      "room": [
+        "The weekly index lands",
+        "The agent compares it with each contract's rate",
+        "It ranks the contracts by margin at risk",
+        "It drafts an index clause for the top account"
+      ],
+      "how": {
+        "spot": "Spots contracts whose rate has drifted from the index",
+        "check": "Checks each contract's repricing date and volume",
+        "calculate": "Works out the margin at risk until the next repricing",
+        "propose": "Proposes which contracts to reprice or link to the index",
+        "prepare": "Drafts the index clause and a note for the account manager",
+        "decision": "The commercial lead decides which offers go out"
+      },
+      "key_figures": [
+        { "name": "Average freight rate", "today": "$4,176 per 40 ft container on 19 November 2026", "source": "Drewry World Container Index", "public": true, "demo": "Contract rates follow the index with a lag the agent closes" },
+        { "name": "Vessel utilisation", "today": "", "source": "", "public": false, "demo": "Holds while rates move" }
+      ],
+      "data": ["The published weekly freight index", "Synthetic contract book"],
+      "risks": ["Customers may resist index clauses", "The contract book is synthetic"],
+      "effort_days": { "low": 8, "high": 12 },
+      "live_inputs": { "model_calls": 10, "web_searches": 2 },
+      "ratings": {
+        "value": { "score": 4, "reason": "Margin at risk per contract is easy to follow" },
+        "evidence": { "score": 5, "reason": "The index is published every week" },
+        "buildable": { "score": 4, "reason": "Only the contract book must be synthetic" },
+        "agentic": { "score": 4, "reason": "It checks each contract and asks before offers go out" },
+        "relevance": { "score": 4, "reason": "Rate swings hit margins every quarter" },
+        "demo": { "score": 4, "reason": "One chart shows the gap" },
+        "risk": { "score": 4, "reason": "Pricing talk with customers needs care" }
+      },
+      "why": "It ties a public index the room knows to a decision on real contracts."
+    },
+    {
+      "name": "Instant Spot Quote",
+      "what_it_does": "Answers a small shipper's spot booking request with a checked quote in minutes instead of a working day.",
+      "issues": ["swot-I3"],
+      "audience": "Customer service and small shippers",
+      "room": [
+        "A booking request arrives by e-mail",
+        "The agent reads it and checks space on the loop",
+        "It prices the quote with surcharges",
+        "It drafts the reply for an agent to send"
+      ],
+      "how": {
+        "spot": "Picks out the route, dates and cargo from the request",
+        "check": "Checks space and cut-off times on the loop",
+        "calculate": "Prices the quote with every surcharge",
+        "propose": "Proposes the quote and an alternative sailing",
+        "prepare": "Drafts the reply in the shipper's language",
+        "decision": "A customer service agent sends, edits or rejects it"
+      },
+      "key_figures": [
+        { "name": "Booking response time", "today": "", "source": "", "public": false, "demo": "Falls from a working day to minutes" },
+        { "name": "People affected", "today": "", "source": "", "public": false, "demo": "The small shippers who get an answer the same hour" }
+      ],
+      "data": ["Published schedules and surcharges", "Synthetic booking requests"],
+      "risks": ["A wrong quote binds the company", "Space data is synthetic"],
+      "effort_days": { "low": 6, "high": 10 },
+      "live_inputs": { "model_calls": 8, "web_searches": 0 },
+      "ratings": {
+        "value": { "score": 3, "reason": "The lost bookings are hard to price" },
+        "evidence": { "score": 3, "reason": "Response times are the company's own and not published" },
+        "buildable": { "score": 5, "reason": "Requests and schedules are easy to simulate" },
+        "agentic": { "score": 4, "reason": "It checks space and prices before a person sends" },
+        "relevance": { "score": 4, "reason": "Digital forwarders take small shippers now" },
+        "demo": { "score": 5, "reason": "A request answered live lands at once" },
+        "risk": { "score": 5, "reason": "No sensitive topic" }
+      },
+      "why": "Everyone in the room has waited for a quote, and here it comes in minutes."
+    },
+    {
+      "name": "Emissions per Box",
+      "what_it_does": "Writes an emissions statement per container to the EN ISO 14083 method and attaches it to every bill of lading.",
+      "issues": ["bmc-I3"],
+      "audience": "Sales and sustainability",
+      "room": [
+        "A shipper asks for the emissions of a shipment",
+        "The agent finds the voyage legs and the ship",
+        "It works out the emissions per container",
+        "It drafts the statement for the bill of lading"
+      ],
+      "how": {
+        "spot": "Spots shipments whose customers ask for emissions data",
+        "check": "Checks the legs, the ship and the cargo against the method",
+        "calculate": "Works out the emissions per container and leg",
+        "propose": "Proposes the statement with its assumptions",
+        "prepare": "Prepares it for the bill of lading",
+        "decision": "Sustainability signs off the method once, sales sends each statement"
+      },
+      "key_figures": [
+        { "name": "CO2 per container-kilometre", "today": "", "source": "", "public": false, "demo": "Shown per shipment instead of a yearly average" },
+        { "name": "Money at stake a year", "today": "", "source": "", "public": false, "demo": "The tender volume at risk, {{fact:issue.bmc-I3.eur}} a year" }
+      ],
+      "data": ["The EN ISO 14083 method", "Published ship particulars", "Synthetic shipments"],
+      "risks": ["Emission factors per ship are estimates", "Customers may compare figures across carriers"],
+      "effort_days": { "low": 10, "high": 14 },
+      "live_inputs": { "model_calls": 9, "web_searches": 1 },
+      "ratings": {
+        "value": { "score": 4, "reason": "Tenders lost without the data are easy to see" },
+        "evidence": { "score": 4, "reason": "The method and the counting rules are public" },
+        "buildable": { "score": 4, "reason": "Ship data is public, shipments synthetic" },
+        "agentic": { "score": 3, "reason": "Much of it is a fixed calculation" },
+        "relevance": { "score": 5, "reason": "Shippers ask for it in tenders now" },
+        "demo": { "score": 4, "reason": "A statement per container is concrete" },
+        "risk": { "score": 4, "reason": "Figures will be compared and challenged" }
+      },
+      "why": "It answers what shippers now ask in every tender, per container."
+    },
+    {
+      "name": "Empty Moves Planner",
+      "what_it_does": "Forecasts where empty containers pile up and proposes the repositioning moves for the coming week.",
+      "issues": ["swot-I4"],
+      "audience": "Equipment control",
+      "room": [
+        "The depots appear with their stock of empties",
+        "The agent forecasts demand by port",
+        "It proposes the moves for the week",
+        "It drafts the instructions to the depots"
+      ],
+      "how": {
+        "spot": "Spots depots heading for too many or too few empties",
+        "check": "Checks the sailings that can carry them",
+        "calculate": "Works out the cost of each move and of waiting",
+        "propose": "Proposes the week's moves",
+        "prepare": "Drafts the depot instructions",
+        "decision": "The equipment controller approves the moves"
+      },
+      "key_figures": [
+        { "name": "Cost of moving empty containers", "today": "", "source": "", "public": false, "demo": "Falls as moves follow the forecast" },
+        { "name": "Detection to decision", "today": "", "source": "", "public": false, "demo": "Drops from a weekly plan to a daily one" }
+      ],
+      "data": ["Published port volumes", "Synthetic depot stocks"],
+      "risks": ["The forecast rests on synthetic data"],
+      "effort_days": { "low": 12, "high": 16 },
+      "live_inputs": { "model_calls": 14, "web_searches": 0 },
+      "ratings": {
+        "value": { "score": 4, "reason": "Moves saved are easy to price" },
+        "evidence": { "score": 2, "reason": "Depot data is the company's own" },
+        "buildable": { "score": 3, "reason": "Depot stocks must be invented" },
+        "agentic": { "score": 4, "reason": "It plans moves and asks before they happen" },
+        "relevance": { "score": 3, "reason": "A known weakness, not this year's main pain" },
+        "demo": { "score": 3, "reason": "A map of depots needs some explaining" },
+        "risk": { "score": 5, "reason": "No sensitive topic" }
+      },
+      "why": "It shows planning by forecast where judgement rules today."
+    },
+    {
+      "name": "Invoice Explainer",
+      "what_it_does": "Spots surcharge lines customers are likely to dispute and explains each one on the invoice before it goes out.",
+      "issues": ["pestel-I3"],
+      "audience": "Finance and billing",
+      "room": [
+        "An invoice with an emissions surcharge comes up",
+        "The agent spots the lines that drew disputes before",
+        "It writes a plain explanation for each",
+        "It adds the explanation and flags the invoice for review"
+      ],
+      "how": {
+        "spot": "Spots surcharge lines like those disputed before",
+        "check": "Checks each line against the published surcharge",
+        "calculate": "Works out how the line was priced",
+        "propose": "Proposes a plain explanation",
+        "prepare": "Prepares the invoice with the explanation",
+        "decision": "Billing approves the invoice"
+      },
+      "key_figures": [
+        { "name": "Disputed invoices", "today": "", "source": "", "public": false, "demo": "Fall as surcharge lines get explained first" },
+        { "name": "Lead time", "today": "", "source": "", "public": false, "demo": "Payment arrives sooner without a dispute" }
+      ],
+      "data": ["Published surcharge notices", "Synthetic invoices"],
+      "risks": ["Dispute history is the company's own", "Explanations must match contract terms"],
+      "effort_days": { "low": 5, "high": 8 },
+      "live_inputs": { "model_calls": 6, "web_searches": 0 },
+      "ratings": {
+        "value": { "score": 3, "reason": "Faster payment is clear, but no sum is stated" },
+        "evidence": { "score": 2, "reason": "Disputes are not published" },
+        "buildable": { "score": 5, "reason": "Invoices are easy to simulate" },
+        "agentic": { "score": 3, "reason": "Mostly checks and writes text" },
+        "relevance": { "score": 3, "reason": "It follows from the new surcharge" },
+        "demo": { "score": 4, "reason": "An invoice explained line by line is easy to follow" },
+        "risk": { "score": 5, "reason": "No sensitive topic" }
+      },
+      "why": "It keeps the new surcharge from slowing payment."
+    }
+  ]
+}

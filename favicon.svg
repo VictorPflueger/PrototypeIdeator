@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 103.92">
+  <!-- Prototype Ideator's page icon: Vici's sparkle icon in a lilac hexagon cell, the icon and kind of its
+       card on Victor Pflüger's website (VictorPflueger/VIP, data/prototypes.js). Vici's lilac 100 (#f2e9fd)
+       and lilac 900 (#372544); the icon is drawn larger and bolder than on the card so that it still
+       reads at 16 px. -->
+  <polygon points="120,51.96 90,103.92 30,103.92 0,51.96 30,0 90,0" fill="#f2e9fd"/>
+  <g transform="translate(12 2.06) scale(4)" fill="none" stroke="#372544" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.5 4.8 L11.84 11.66 L17.5 13 L11.84 14.34 L10.5 21.2 L9.16 14.34 L3.5 13 L9.16 11.66 Z"/>
+    <path d="M20.5 5.4 L19.55 7.05 L17.65 7.05 L16.7 5.4 L17.65 3.75 L19.55 3.75 Z" fill="#372544" stroke="none"/>
+  </g>
+</svg>
