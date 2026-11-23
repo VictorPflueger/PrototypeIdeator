@@ -93,7 +93,17 @@ const { SECTORS, KPIS } = await mod("data/kpis.js");
 const H = await mod("js/handoff.js");
 const example = JSON.parse(read("tests/fixtures/strategy-challenge-example.json"));
 const IDS = new Set([...SECTORS.map((s) => s.id), ...KPIS.map((k) => k.id), ...H.readHandoff(example).issues.map((i) => i.id), "bmc-challenger", "swot-challenger", "pestel-challenger"]);
-check(IDS.size > 120, `the data's ids are known (${IDS.size})`);
+// The scenarios' own ids: their issues (bmc-I1, doc-I3 and the rest), documents and ideas (P1 to P8).
+const { scenarios: allScenarios } = await mod("js/scenarios.js");
+const { recordedRun } = await mod("js/simulation.js");
+const IDEA_IDS = new Set();
+for (const sc of allScenarios()) for (const lang of ["en", "de"]) {
+  const run = recordedRun(sc, lang);
+  for (const i of run.issues) IDS.add(i.id);
+  for (const i of run.ideas) IDEA_IDS.add(i.id);
+  for (const d of sc.documents) IDS.add(`${sc.id}-${d.id}`);
+}
+check(IDS.size > 120, `the data's ids are known (${IDS.size}, with ${IDEA_IDS.size} idea ids)`);
 
 // ---- the page as rendered, in English and in German -----------------------------------------------------------
 const browser = await launchBrowser();
@@ -113,6 +123,16 @@ try {
     await p.click("#btn-live");
     await p.waitForTimeout(400);
     views.push(await p.content());
+    // Every step of every scenario, the idea's page, and Score's table and stability views.
+    const steps = [];
+    for (const sc of allScenarios()) for (let step = 1; step <= 6; step++) {
+      await p.goto(`${server.base}?guide=0&lang=${lang}&scenario=${sc.id}&step=${step}`);
+      await p.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+      await p.waitForTimeout(150);
+      steps.push(await p.content());
+      if (step === 3) { await p.click(".comb-tile"); await p.waitForTimeout(250); steps.push(await p.content()); await p.keyboard.press("Escape"); }
+      if (step === 4) for (const v of ["table", "stability"]) { await p.click(`label:has(#view-${v})`); await p.waitForTimeout(150); steps.push(await p.content()); }
+    }
     // The page in one language shows one guide: the other is out of its way (lang.js takes its
     // data-vc-guide-auto and its button), so Vici's guide check sees the page as a one-language page.
     const other = lang === "en" ? "de" : "en";
@@ -123,8 +143,10 @@ try {
     const name = lang === "en" ? "English" : "German";
     check(!rg.length && !rb.length && !rw.length && !ra.length && !errors.length, `rendered in ${name}: the guide, the byline, the writing and the AI notice pass, at the first step and after Run it live${[...rg, ...rb, ...rw, ...ra, ...errors].length ? `: ${[...rg, ...rb, ...rw, ...ra, ...errors].join("; ")}` : ""}`);
     check(new RegExp(`<html[^>]*lang="${lang === "de" ? "de" : "en-GB"}"`).test(views[0]) && views[0].includes(lang === "de" ? AI_NOTICE.de : AI_NOTICE.en), `rendered in ${name}: the page says its language and carries the AI notice in it`);
-    const ri = views.flatMap((v) => recordIdProblems(v, IDS));
-    check(!ri.length, `rendered in ${name}: names, not record ids, on every screen${ri.length ? `: ${ri.join("; ")}` : ""}`);
+    const ri = [...views, ...steps].flatMap((v) => [...recordIdProblems(v, IDS), ...recordIdProblems(v, IDEA_IDS, { min: 2 })]);
+    check(steps.length === 18 + 3 + 6 && !ri.length, `rendered in ${name}: names, not record ids, on every step of S1, S2 and S3, on each idea's page and in every Score view (${steps.length} screens)${ri.length ? `: ${[...new Set(ri)].slice(0, 6).join("; ")}` : ""}`);
+    const sw = steps.flatMap((v) => writingProblems(v));
+    check(!sw.length, `rendered in ${name}: every step keeps Vici's writing rules${sw.length ? `: ${[...new Set(sw)].slice(0, 6).join("; ")}` : ""}`);
     const stores = await p.evaluate(async () => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), databases: (await indexedDB.databases()).map((d) => d.name), caches: await caches.keys(), cookie: document.cookie }));
     const sk = storedKeyProblems(stores, { prefix: "pi" });
     check(!sk.length, `rendered in ${name}: the visit leaves only the allowed keys behind (${[...stores.local, ...stores.session].join(", ") || "none"})${sk.length ? `: ${sk.join("; ")}` : ""}`);

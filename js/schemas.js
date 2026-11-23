@@ -145,16 +145,67 @@ const Answers = closed({
   brief: { anyOf: [{ type: "null" }, { type: "object" }] }
 });
 
-/** A scenario: one of the three fictional companies, its documents and a recorded run in both languages. */
+/** A text, a number or a file name in both languages. */
+const both = (schema) => closed({ en: schema, de: schema });
+
+/** A scenario's document in both languages: a stand-in handoff file, or the S3 annual report as a PDF. */
+const ScenarioDocument = closed({
+  id: { type: "string", pattern: "^d\\d+$" },
+  kind: { enum: ["pdf", "markdown", "text", "csv", "handoff"] },
+  tool: { enum: ["bmc", "swot", "pestel", null] },
+  name: both({ type: "string", minLength: 1 }),
+  href: { anyOf: [{ type: "null" }, both({ type: "string", pattern: "^data/scenarios/[a-z0-9-]+\\.pdf$" })] },
+  stand_in: { type: "boolean" },
+  fictional: { type: "boolean" },
+  bytes: both({ type: "integer", minimum: 1 }),
+  pages: { anyOf: [{ type: "null" }, both({ type: "integer", minimum: 1 })] }
+});
+
+/** A fact a scenario states about the world, as DATA_SOURCES.md lists it. */
+const ScenarioFact = closed({
+  id: { type: "string", pattern: "^S[1-3]-[A-Z]+$" },
+  url: { type: "string", pattern: "^https://" },
+  title: both({ type: "string", minLength: 1 }),
+  read_on: { type: "string", format: "date" }
+});
+
+/** The engine's figures for the recorded choices, frozen so that a change that moves one is caught. */
+const Reference = closed({
+  at_stake: closed({ eur: { type: ["number", "null"] }, stated: { type: "integer", minimum: 0 }, of: { type: "integer", minimum: 0 } }),
+  kept: { type: "integer", minimum: 0 },
+  covered: closed({ covered: { type: "integer", minimum: 0 }, of: { type: "integer", minimum: 0 } }),
+  ideas: { type: "integer", minimum: 1, maximum: LIMITS.ideasMax },
+  order: { type: "array", items: str },
+  top: closed({ id: str, score: { type: "number", minimum: 1, maximum: 5 } }),
+  firsts: { type: "object", additionalProperties: { type: "integer", minimum: 0, maximum: 9 } },
+  shortlist_share: { type: ["number", "null"], minimum: 0, maximum: 1 },
+  cost_cents: both(closed({
+    fast: { type: "array", minItems: 2, maxItems: 2, items: { type: "integer", minimum: 0 } },
+    balanced: { type: "array", minItems: 2, maxItems: 2, items: { type: "integer", minimum: 0 } },
+    thorough: { type: "array", minItems: 2, maxItems: 2, items: { type: "integer", minimum: 0 } }
+  }))
+});
+
+/**
+ * A scenario as js/scenarios.js resolves it: one of the three fictional companies, its documents (each
+ * stand-in handoff file built in both languages in `files`), a recorded run in each language, the
+ * person's recorded choices and the engine's frozen figures.
+ */
 const Scenario = closed({
   schema: { const: "pi-scenario/1" },
   id: { enum: ["s1", "s2", "s3"] },
   source: { enum: ["authored", "recorded"] },
   as_of: { type: "string", format: "date" },
   company: closed({ name: str, sector: { enum: SECTOR_IDS }, country: { type: "string", pattern: "^[A-Z]{2}$" }, fictional: { const: true } }),
-  documents: { type: "array", minItems: 1, items: { $ref: "#/$defs/Document" } },
-  answers: closed({ en: { $ref: "#/$defs/Answers" }, de: { $ref: "#/$defs/Answers" } }),
-  choices: { $ref: "#/$defs/Choices" }
+  pitch: both({ type: "string", minLength: 1 }),
+  count: { type: "integer", minimum: LIMITS.ideasMin, maximum: LIMITS.ideasMax },
+  focus: both(str),
+  documents: { type: "array", minItems: 1, maxItems: LIMITS.files, items: { $ref: "#/$defs/ScenarioDocument" } },
+  files: { type: "object", additionalProperties: both({ type: "object" }) },
+  facts: { type: "array", items: { $ref: "#/$defs/ScenarioFact" } },
+  answers: both({ $ref: "#/$defs/Answers" }),
+  choices: { $ref: "#/$defs/Choices" },
+  reference: { anyOf: [{ type: "null" }, { $ref: "#/$defs/Reference" }] }
 });
 
 /** One event of a run, in the order it happened; js/run.js sorts them into the six steps. */
@@ -176,7 +227,7 @@ const AuditEvent = closed({
 /** Every schema a $ref may name, by its name. */
 export const REGISTRY = Object.freeze({
   ...D,
-  Document, Quote, IssueKpi, IssueRecord, Source, Merge, IssueMap, Recommendation, BuildBrief, Choices, Answers, Scenario, RunEvent, AuditEvent
+  Document, Quote, IssueKpi, IssueRecord, Source, Merge, IssueMap, Recommendation, BuildBrief, Choices, Answers, ScenarioDocument, ScenarioFact, Reference, Scenario, RunEvent, AuditEvent
 });
 
 /** The brief's section 10, name by name. */

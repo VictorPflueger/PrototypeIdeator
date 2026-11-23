@@ -113,12 +113,14 @@ const viciCss = cssLoads(read("vici/dist/vici.min.css"));
 check(!viciCss.length, `Vici's stylesheet loads its fonts and icons from this site${viciCss.length ? `: ${viciCss.slice(0, 3).join(", ")}` : ""}`);
 const jsOut = [...js, ...data, "vici/dist/vici.js"].flatMap((f) => jsLoads(read(f)).map((x) => `${f}: ${x}`));
 check(!jsOut.length, `no script imports or opens anything from another site${jsOut.length ? `: ${jsOut.join(", ")}` : ""}`);
-// Hosts named in code: the API (the only one the page connects to), links a person opens and the
-// schemas' own identifiers.
-const LINK_HOSTS = new Set(["platform.claude.com", "victorpflueger.github.io", "json-schema.org", "example.org"]);
+// Hosts named in code: the API (the only one the page connects to), links a person opens (the repository's
+// DATA_SOURCES.md on GitHub among them), SVG's namespace and the schemas' own identifiers. A scenario's
+// sources are links too, shown under the issue map; each host must be one DATA_SOURCES.md lists.
+const LINK_HOSTS = new Set(["platform.claude.com", "victorpflueger.github.io", "github.com", "www.w3.org", "json-schema.org", "example.org"]);
+const SOURCE_HOSTS = new Set([...read("DATA_SOURCES.md").matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1].toLowerCase()));
 const hosts = new Map();
 for (const f of [...js, ...data]) for (const h of hostsIn(read(f))) if (!hosts.has(h)) hosts.set(h, f);
-const unknown = [...hosts].filter(([h]) => h !== "api.anthropic.com" && !LINK_HOSTS.has(h));
+const unknown = [...hosts].filter(([h, f]) => h !== "api.anthropic.com" && !LINK_HOSTS.has(h) && !(f.startsWith("data/scenarios/") && SOURCE_HOSTS.has(h)));
 check(!unknown.length, `code names api.anthropic.com and links only${unknown.length ? `; also ${unknown.map(([h, f]) => `${h} (${f})`).join(", ")}` : ""}`);
 const fetches = [...js, ...data].flatMap((f) => [...stripComments(read(f)).matchAll(/\bfetch\(\s*([^,)]+)/g)].map((m) => `${f}: ${m[1].trim()}`));
 const okFetch = (x) => /ANTHROPIC\.(messagesUrl|modelsUrl|countTokensUrl)|\burl\b/.test(x);

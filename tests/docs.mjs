@@ -1,5 +1,6 @@
-// The documents of version 0.1.0 are complete and agree with the code:
-//   - README.md, TECH_NOTES.md, REVIEW.md, tests/README.md and vici/README.md exist with their sections,
+// The documents are complete and agree with the code:
+//   - README.md, TECH_NOTES.md, REVIEW.md, DATA_SOURCES.md, tests/README.md and vici/README.md exist with
+//     their sections,
 //     and README.md and TECH_NOTES.md name the version js/config.js does;
 //   - every repository path a document names in backticks or as a relative link exists (PLAN.md is the
 //     approved plan and names files of later versions, so it is left out of this check);
@@ -27,7 +28,8 @@ const DOCS = {
   "TECH_NOTES.md": { sections: ["1. Models and prices", "2. The API from the browser", "3. The policy and what the browser keeps", "4. The engine", "5. Contracts and output schemas", "6. Shared parts and the sibling tools", "7. The fact audit", "8. The prompts and the Ideator probe", "9. Decisions and deviations", "10. Tests"], version: `Version ${APP.version}` },
   "REVIEW.md": { sections: ["Shared with the sibling tools", "Live client, key and session", "Page, languages and settings", "Tests and tools", "Not taken"] },
   "tests/README.md": { sections: ["What runs", "Setup for the browser suites", "The private term list", "The golden cases"] },
-  "vici/README.md": { sections: [] }
+  "vici/README.md": { sections: [] },
+  "DATA_SOURCES.md": { sections: ["1. S1 Tidewell Lines", "2. S2 Arvento Drives", "3. S3 Auental Energie", "4. What is not used"], version: `Version ${APP.version}` }
 };
 const headings = (text) => [...text.matchAll(/^#{2,3} (.+)$/gm)].map((m) => m[1].trim());
 

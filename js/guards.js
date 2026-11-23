@@ -18,7 +18,7 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const STOCK = new RegExp(`(?<![\\p{L}])(${STOCK_WORDS.map((w) => esc(w).replace(/'/g, "['’]")).join("|")})(?![\\p{L}])`, "iu");
 // Vici's rule: no em dash as punctuation; an en dash counts when it stands between spaces, not in a
 // range such as "Europe–Asia".
-const DASH = /\S ?— ?\S|\S – \S/u;
+const DASH = /\S\s*—\s*\S|\S\s+–\s+\S/u;
 
 /** Every prose field of an idea the model wrote, with its path, for the fact audit and the writing notes. */
 export function ideaTexts(idea, n) {

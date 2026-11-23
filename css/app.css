@@ -36,6 +36,9 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .app-shell * { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
 .vc-skip-link { position: fixed; z-index: 4000; }
 .kpi-value, .vc-num { font-variant-numeric: tabular-nums; }
+/* Inter's tabular figures also widen the hyphen, so "person-days" would read "person - days". Vici's tables
+   turn them on for every cell; here only number cells keep them, so words with hyphens stay whole. */
+.vc-table th:not(.vc-num), .vc-table td:not(.vc-num) { font-variant-numeric: normal; }
 
 /* ---- header ------------------------------------------------------------------------------------------ */
 .app-header {
@@ -52,7 +55,6 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .header-actions { display: flex; align-items: center; gap: 8px 10px; min-width: 0; }
 .header-actions .vc-button, .header-actions .vc-icon-button { --_h: 40px; white-space: nowrap; }
 .mode-tag.vc-tag { cursor: help; font-weight: var(--vc-weight-bold); letter-spacing: var(--vc-tracking-caps); }
-.mode-tag[data-mode="live"] { background: var(--vc-accent); color: var(--vc-on-accent); border-color: var(--vc-accent); }
 .lang-switch .vc-button { --_h: 40px; min-width: 2.75rem; justify-content: center; }
 .lang-switch .vc-button[aria-pressed="true"] { background: var(--vc-accent); border-color: var(--vc-accent); color: var(--vc-on-accent); }
 
@@ -63,7 +65,7 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .kpi .vc-stat__label { font-size: var(--vc-font-size-xs); line-height: 1.2; text-wrap: balance; }
 .kpi .vc-stat__value { font-size: var(--fs-kpi); line-height: 1.05; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 0.3em; }
 .kpi .vc-stat__value .vc-stat__was { margin-inline-end: 0; }
-.kpi .kpi-note { font-size: var(--vc-font-size-xs); line-height: 1.25; color: var(--vc-text-muted); text-wrap: balance; }
+.kpi .kpi-note { font-size: var(--vc-font-size-xs); line-height: 1.25; color: var(--vc-text-muted); text-wrap: balance; hyphens: auto; }
 .kpi[data-state="waiting"] .kpi-value { color: var(--vc-text-subtle); letter-spacing: 0.06em; }
 
 /* One sentence on what the page does and how real its data is, beside the byline. */
@@ -83,6 +85,8 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .steps .vc-step__button { min-height: var(--hit); padding-block: 2px; }
 .steps .vc-step__label { font-weight: var(--vc-weight-semibold); white-space: nowrap; }
 .steps .vc-step__button:disabled { cursor: default; }
+/* The hint line under a step keeps its height when empty, so the bar does not jump between steps. */
+.steps .vc-step__hint { min-height: calc(var(--vc-font-size-xs) * 1.5); }
 /* Run it live stands after the steps, so nobody takes it for the way to start; the AI notice beside it. */
 .live-group { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px 10px; flex: none; max-width: 30rem; }
 .ai-notice.vc-tag { gap: 6px; flex: none; }
@@ -90,8 +94,11 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 /* ---- stage ---------------------------------------------------------------------------------------------- */
 .stage { min-height: 0; overflow: hidden; background-color: var(--vc-bg-sunken); background-image: var(--vc-honeycomb-pattern); background-size: var(--vc-honeycomb-pattern-size); }
 .stage:focus { outline: none; }
+.panel .vc-table-wrap { position: relative; }
 .step { height: 100%; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); padding: var(--gutter); }
-.panel { min-height: 0; overflow: auto; background: var(--vc-surface); border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-xl); box-shadow: var(--vc-shadow-sm); padding: clamp(16px, 1.6vw, 28px); }
+/* position: relative keeps visually hidden text inside the panel that scrolls it; without it, such text
+   deep in a long table would make the whole page scroll. */
+.panel { position: relative; min-height: 0; overflow: auto; background: var(--vc-surface); border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-xl); box-shadow: var(--vc-shadow-sm); padding: clamp(16px, 1.6vw, 28px); }
 .story { display: flex; flex-direction: column; gap: 14px; }
 .step-title { margin: 0; font-family: var(--vc-font-display); font-weight: var(--vc-weight-display); font-size: clamp(1.6rem, 1.5vw + 0.9rem, 2.4rem); line-height: 1.08; letter-spacing: var(--vc-tracking-display); text-wrap: balance; color: var(--vc-text); }
 .step-title:focus { outline: none; }
@@ -136,6 +143,229 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
    on a tall screen. */
 .public-note { margin-top: 2px; }
 
+/* Play reads the step: the action's foot fills as the reading time runs (--fill), and the note beside it
+   says when Play moves on. Paused for six seconds, the action draws the eye (vc-attention-late). */
+.cta.vc-button { position: relative; overflow: hidden; }
+.cta::after { content: ""; position: absolute; inset: auto 0 0; height: 4px; background: currentColor; opacity: 0.55; transform: scaleX(var(--fill, 0)); transform-origin: left; pointer-events: none; }
+.vc-attention-late { box-shadow: 0 0 0 4px color-mix(in oklab, var(--vc-accent) 28%, transparent); }
+.foot-note { margin: 0; color: var(--vc-on-accent-soft); font-size: var(--vc-font-size-sm); font-variant-numeric: tabular-nums; }
+.foot-note:empty, .turn-reason:empty { display: none; }
+.turn-reason { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-on-accent-soft); }
+.turn-text { margin: 0; }
+.turn-bar--next.vc-callout { background: var(--vc-surface); border-color: var(--vc-border-subtle); }
+.turn-bar--next .vc-callout__cell { background: var(--vc-bg-subtle); color: var(--vc-text-muted); }
+.turn-bar--next .vc-callout__title, .turn-bar--next .turn-text { color: var(--vc-text); }
+.turn-bar--next .foot-note { color: var(--vc-text-muted); }
+.turn-bar--next .cta.vc-button { --vc-accent: revert-layer; }
+.cta.vc-button:disabled { cursor: not-allowed; }
+.story > .turn-bar { margin-top: auto; }
+
+/* What an agent did, in lilac with its tag: what the AI wrote or suggested. */
+.agent-line { display: flex; align-items: baseline; gap: 10px; margin: 0; color: var(--vc-text); font-size: var(--vc-font-size-md); line-height: 1.4; max-width: 56ch; }
+.ai-tag.vc-tag { flex: none; gap: 4px; }
+.fiction-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
+.fiction-tag.vc-tag { font-weight: var(--vc-weight-semibold); }
+.step-company { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -4px 0 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
+.step-company__name { font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
+.stale-link { font-weight: var(--vc-weight-semibold); }
+.muted { color: var(--vc-text-muted); }
+
+/* ---- Start: the companies and their documents ----------------------------------------------------------- */
+.scenario-picker { display: grid; gap: 6px; justify-items: start; }
+.scenario-switch.vc-segmented > label > span { min-height: 34px; font-size: var(--vc-font-size-md); }
+.scenario-pitch { margin: 0; font-size: var(--vc-font-size-md); line-height: 1.35; color: var(--vc-text); }
+.doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.doc-chip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "cell title tags" "cell meta meta"; align-items: center; column-gap: 10px; padding: 4px 10px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-surface); }
+.doc-chip__cell { grid-area: cell; }
+.doc-chip__title { grid-area: title; min-width: 0; font-weight: var(--vc-weight-semibold); line-height: 1.3; }
+.doc-chip__tags { grid-area: tags; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.doc-chip__meta { grid-area: meta; min-width: 0; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); overflow-wrap: anywhere; }
+
+/* ---- Read: the issue map ---------------------------------------------------------------------------------- */
+.issue-table { width: 100%; }
+.issue-table th, .issue-table td { vertical-align: top; }
+.issue-cell { font-weight: var(--vc-weight-regular); min-width: 14rem; }
+.issue-title { display: block; font-weight: var(--vc-weight-semibold); color: var(--vc-text); line-height: 1.3; }
+.issue-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+.found { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.found-quote { display: block; flex-basis: 100%; font-style: italic; color: var(--vc-text-muted); }
+.found-check { font-style: normal; color: var(--vc-text-subtle); }
+.issue-kpis { display: inline; }
+.issue-kpis__label { font-weight: var(--vc-weight-semibold); margin-right: 4px; }
+.issue-status { display: block; margin-top: 4px; font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
+.issue-why { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; font-size: var(--vc-font-size-xs); color: var(--vc-feature-text); }
+.issue-row--member > th { padding-left: 28px; position: relative; }
+.issue-row--member > th::before { content: ""; position: absolute; left: 12px; top: 0; bottom: 50%; width: 10px; border-left: 2px solid var(--vc-border); border-bottom: 2px solid var(--vc-border); }
+.issue-row--parked .issue-title { color: var(--vc-text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.stake-cell { white-space: nowrap; }
+.stake-cell > * { display: block; }
+.stake-cell .ai-tag { display: inline-flex; margin-top: 3px; }
+.stake-sub, .stake-stated { font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); white-space: normal; max-width: 12rem; margin-left: auto; }
+.decide-cell { min-width: 15.5rem; }
+.decide-group { display: flex; gap: 4px; }
+.decide-btn.vc-button { --_h: 36px; min-width: 0; padding-inline: 10px; }
+.decide-btn.is-on, .place-btn.is-on { background: var(--vc-accent); border-color: var(--vc-accent); color: var(--vc-on-accent); }
+.decide-detail { display: block; margin-top: 6px; }
+.decide-detail .vc-select { width: 100%; max-width: 15.5rem; }
+.sources summary { cursor: pointer; font-weight: var(--vc-weight-semibold); min-height: 40px; display: flex; align-items: center; gap: 6px; list-style: none; }
+/* A summary drawn as flex loses the browser's triangle, so a chevron says it opens, and turns when it does. */
+.summary-chevron { flex: none; transition: transform var(--vc-duration-quick) var(--vc-ease-standard); }
+details[open] > summary > .summary-chevron { transform: rotate(90deg); }
+summary::-webkit-details-marker { display: none; }
+.source-list { margin: 4px 0 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: var(--vc-font-size-sm); }
+.source-date { margin-left: 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-xs); }
+
+/* ---- Ideate: the honeycomb and the idea's page ------------------------------------------------------------- */
+.ideas-comb { --vc-honeycomb-cell: clamp(7rem, 12vh, 10rem); --vc-honeycomb-gap: 8px; margin: 4px auto 0; }
+.ideas-comb--1 { --vc-honeycomb-cols: 1; }
+.ideas-comb--2 { --vc-honeycomb-cols: 2; }
+.ideas-comb--3 { --vc-honeycomb-cols: 3; }
+.ideas-comb--4 { --vc-honeycomb-cols: 4; }
+.ideas-comb--5 { --vc-honeycomb-cols: 5; }
+.comb-cell { display: grid; }
+button.vc-tile { border: 0; font: inherit; font-weight: var(--vc-weight-semibold); cursor: pointer; padding: 0 14%; }
+button.vc-tile:hover, button.vc-tile:focus-visible { --_bg: var(--vc-accent); --_fg: var(--vc-on-accent); outline: none; }
+.comb-name { font-size: var(--vc-font-size-sm); line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
+.comb-place { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); }
+.comb-tile--pick { --_bg: var(--vc-merlot-700); --_fg: var(--vc-neutral-50); }
+.comb-note { margin-top: 8px; }
+.idea-drawer.vc-dialog--drawer { width: min(46rem, 96vw); }
+.idea-drawer__head { display: grid; gap: 4px; }
+.idea-page { display: grid; gap: 18px; }
+.idea-what { margin: 0; font-size: var(--vc-font-size-lg); line-height: 1.4; }
+.idea-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.idea-facts p { margin: 0; display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-bg-subtle); }
+.idea-facts strong { font-size: var(--vc-font-size-xl); line-height: 1.1; }
+.idea-facts .muted { font-size: var(--vc-font-size-xs); }
+.idea-label { font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); font-weight: var(--vc-weight-semibold); }
+.idea-section { display: grid; gap: 6px; }
+.idea-section ul, .idea-section ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.idea-section p { margin: 0; }
+.idea-h { margin: 0; font-family: var(--vc-font-display); font-size: var(--vc-font-size-lg); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); }
+.idea-issues { list-style: none; padding-left: 0 !important; }
+.idea-issues li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: var(--vc-weight-semibold); }
+.idea-how { margin: 0; display: grid; gap: 0; }
+.idea-how > div { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 4px 14px; padding: 7px 0; border-top: 1px solid var(--vc-border-subtle); }
+.idea-how dt { font-weight: var(--vc-weight-semibold); }
+.idea-how dd { margin: 0; }
+.idea-how .how-decision { background: var(--vc-accent-soft); color: var(--vc-on-accent-soft); padding-inline: 8px; border-radius: var(--vc-radius-sm); }
+.figures-table td, .figures-table th { vertical-align: top; }
+.figure-source { display: block; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+.ratings-table td:last-child { color: var(--vc-text-muted); }
+.rating-cells { display: inline-flex; gap: 2px; }
+.rating-cells .vc-rating__cell { width: 14px; height: 12px; }
+
+/* ---- Score: weights, chart and table ------------------------------------------------------------------------ */
+.score-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.score-actions .vc-button { --_h: var(--hit); }
+.weights { display: grid; gap: 4px; padding: 7px 12px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-lg); background: var(--vc-bg-subtle); }
+.weights-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 18px; }
+.weight-field.vc-field { gap: 0; }
+.weight-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.weight-label.vc-label { font-size: var(--vc-font-size-xs); }
+.weight-out { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; font-weight: var(--vc-weight-semibold); font-size: var(--vc-font-size-sm); }
+.weight-share { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-regular); color: var(--vc-text-muted); }
+.weight-field .vc-slider { width: 100%; }
+.weights-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.weights-sum { margin: 0; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+.weights-sum.is-refused { color: var(--vc-danger-text); font-weight: var(--vc-weight-semibold); }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.score-figure { margin: 0; display: grid; gap: 4px; }
+.score-figure__title { font-weight: var(--vc-weight-semibold); font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
+.score-figure__plot { position: relative; }
+.score-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-grid line { stroke: var(--vc-chart-grid); stroke-width: 1; }
+.chart-axis line { stroke: var(--vc-chart-axis); stroke-width: 1; }
+.chart-axis text { fill: var(--vc-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-axis .chart-axis-title { font-variant-numeric: normal; }
+.chart-axis .chart-axis-title { fill: var(--vc-text-muted); font-size: 11px; font-weight: var(--vc-weight-semibold); }
+.chart-point { --pi-idea: var(--vc-lilac-600); --pi-pick: var(--vc-merlot-700); cursor: default; outline: none; }
+/* Dark: merlot-600 and lilac-500 pass contrast and colour-blind separation on the dark surface (the dataviz
+   validator, 24 November 2026); like every dark step of Vici they read soft, so fill, place and label
+   carry the difference too. */
+html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --pi-idea: var(--vc-lilac-500); --pi-pick: var(--vc-merlot-600); }
+.chart-whisker { stroke: var(--pi-idea); stroke-width: 2; opacity: 0.45; }
+.chart-hit { fill: transparent; }
+.chart-hex { fill: var(--vc-surface); stroke: var(--pi-idea); stroke-width: 2.5; }
+.chart-point--pick .chart-hex { fill: var(--pi-pick); stroke: var(--vc-surface); stroke-width: 2; }
+.chart-point--pick .chart-whisker { stroke: var(--pi-pick); }
+.chart-place { fill: var(--vc-neutral-0); font-size: 10px; font-weight: var(--vc-weight-bold); pointer-events: none; }
+.chart-label { fill: var(--vc-text); font-size: 11.5px; pointer-events: none; paint-order: stroke; stroke: var(--vc-surface); stroke-width: 3px; stroke-linejoin: round; }
+.chart-point:focus-visible .chart-hex, .chart-point:hover .chart-hex { stroke: var(--vc-focus); stroke-width: 3; }
+.chart-tip { position: absolute; z-index: 2; transform: translate(12px, -50%); padding: 6px 10px; border: 1px solid var(--vc-border); border-radius: var(--vc-radius-sm); background: var(--vc-surface-raised); box-shadow: var(--vc-shadow-md); font-size: var(--vc-font-size-xs); line-height: 1.35; pointer-events: none; white-space: nowrap; }
+.chart-tip[data-side="left"] { transform: translate(calc(-100% - 12px), -50%); }
+.chart-tip-sub { color: var(--vc-text-muted); }
+.chart-legend.vc-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+.chart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+/* The legend keeps Vici's type and spacing but draws the chart's own two markers: filled for the shortlist,
+   outlined for the other ideas, so the difference holds without colour. */
+.chart-legend.vc-legend > li::before { content: none; }
+.chart-legend { --pi-idea: var(--vc-lilac-600); --pi-pick: var(--vc-merlot-700); }
+.legend-hex { width: 14px; height: 12px; clip-path: var(--vc-hex); background: var(--pi-idea); position: relative; }
+.legend-hex::after { content: ""; position: absolute; inset: 2.5px 3px; clip-path: var(--vc-hex); background: var(--vc-surface); }
+.legend-hex--pick { background: var(--pi-pick); }
+.legend-hex--pick::after { display: none; }
+.score-table .crit-col { color: var(--vc-text-muted); }
+/* Below 1600 px the table keeps what the weights act on: the seven ratings and the score. Build effort is
+   the chart's axis and the cost of a run is on each idea's page, so their columns wait for a wide screen. */
+@media (max-width: 1599px) { .score-table .wide-col { display: none; } }
+.score-table .link-button { white-space: normal; text-align: left; }
+.score-table tr.is-pick > * { background: color-mix(in oklab, var(--vc-accent-soft) 60%, transparent); }
+.score-value strong { font-size: var(--vc-font-size-md); }
+.link-button { padding: 0; border: 0; background: none; font: inherit; font-weight: var(--vc-weight-semibold); color: var(--vc-text-link); text-align: left; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; min-height: 32px; }
+.link-button:focus-visible { outline: var(--vc-stroke-focus) solid var(--vc-focus); outline-offset: 2px; }
+.stability { display: grid; gap: 14px; }
+.stability-sentence { margin: 0; font-size: var(--vc-font-size-lg); }
+
+/* ---- Shortlist ---------------------------------------------------------------------------------------------- */
+.pick-summary { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pick-summary li { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding: 8px 12px; border: 1px solid var(--vc-accent); border-radius: var(--vc-radius-md); background: var(--vc-accent-soft); color: var(--vc-on-accent-soft); }
+.pick-summary li.is-empty { border-style: dashed; border-color: var(--vc-border); background: transparent; color: var(--vc-text-muted); }
+.pick-place { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); text-transform: uppercase; letter-spacing: var(--vc-tracking-caps); }
+.pick-name { font-weight: var(--vc-weight-semibold); }
+.pick-points { font-size: var(--vc-font-size-xs); }
+.pick-table th, .pick-table td { vertical-align: middle; }
+.pick-idea { font-weight: var(--vc-weight-regular); }
+.pick-idea .link-button { display: block; min-height: 0; }
+.pick-issue { display: block; margin-top: 2px; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); line-height: 1.3; }
+.pick-table tr.is-pick > * { background: color-mix(in oklab, var(--vc-accent-soft) 60%, transparent); }
+.place-cell { white-space: nowrap; }
+.place-group { display: flex; gap: 4px; }
+.place-btn.vc-button { --_h: 36px; min-width: 2.75rem; justify-content: center; }
+
+/* ---- Report: the short version ------------------------------------------------------------------------------- */
+.report-page { display: grid; gap: 14px; max-width: 46rem; padding: 18px 22px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-surface); box-shadow: var(--vc-shadow-sm); }
+.report-kicker { margin: 0; font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); text-transform: uppercase; letter-spacing: var(--vc-tracking-caps); color: var(--vc-text-muted); }
+.report-headline { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; font-family: var(--vc-font-display); font-size: var(--vc-font-size-2xl); line-height: 1.15; letter-spacing: var(--vc-tracking-heading); }
+.report-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.report-stat.vc-stat { padding: 8px 10px; }
+.report-stat .vc-stat__value { font-size: var(--vc-font-size-xl); font-variant-numeric: tabular-nums; }
+.report-block { display: grid; gap: 4px; }
+.report-block p { margin: 0; line-height: 1.45; }
+.report-h { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--vc-font-size-md); font-weight: var(--vc-weight-semibold); }
+.report-picks { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+.report-pick__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.report-pick__head span { font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
+.report-foot { margin: 0; padding-top: 10px; border-top: 1px solid var(--vc-border-subtle); font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+
+/* ---- Start, live: the drop zone and the fields ------------------------------------------------------------------ */
+/* The zone takes the story's free height; its file list scrolls inside it, never under the Your turn bar. */
+.story > .intake-zone { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.intake-zone .vc-dropzone__target { flex: none; min-height: 0; padding-block: 14px; }
+.intake-zone .vc-dropzone__notice { flex: none; }
+.intake-summary { flex: none; margin: 0; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
+.intake-zone .vc-dropzone__files { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.intake-zone .vc-dropzone__files:empty { display: none; }
+/* Once files are in, the zone shrinks to one line, so the list has the room. */
+.intake-zone--files .vc-dropzone__target { display: flex; align-items: center; justify-content: center; min-height: 44px; padding-block: 6px; }
+.intake-zone--files .vc-dropzone__target > .vc-cell, .intake-zone--files .vc-dropzone__hint { display: none; }
+.intake-problems { display: flex; gap: 10px; margin: 0; }
+.intake-problems ul { margin: 0; padding-left: 1.1em; }
+.count-field { max-width: 22rem; }
+.count-field .vc-select { max-width: 7rem; }
+.intake-more summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; gap: 6px; list-style: none; font-weight: var(--vc-weight-semibold); }
+.intake-fields { display: grid; gap: 10px; padding-top: 6px; }
+
 /* ---- guides ------------------------------------------------------------------------------------------------ */
 .vc-guide .vc-guide__say { font-style: normal; }
 .guide-steps th, .guide-figures th, .guide-criteria th { white-space: nowrap; }
@@ -173,7 +403,7 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
   .brand { gap: 10px; }
   /* The name takes two lines, so the four key figures keep their notes whole. */
   .brand-name { max-width: 5.5em; font-size: var(--vc-font-size-lg); white-space: normal; }
-  .kpis { grid-template-columns: repeat(4, minmax(0, 9.2rem)); }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 9.4rem)); }
   .stepbar { gap: 10px; }
   .steps.vc-stepper { --_m: 1.6rem; }
 }
@@ -196,7 +426,7 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 /* Laptop screens shared at 1280 × 720 or 1366 × 768: everything stays in view. */
 @media (max-height: 820px) and (min-width: 961px) {
   .app-header { padding-block: 5px; }
-  .kpi.vc-stat { padding: 4px 10px 5px; }
+  .kpi.vc-stat { padding: 4px 8px 5px; }
   .intro { padding-block: 2px; }
   .stepbar { padding-block: 5px; }
   .stepbar .vc-button { --_h: 40px; }
@@ -206,12 +436,13 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
   .story, .evidence { gap: 10px; }
   .step-title { font-size: clamp(1.45rem, 1.2vw + 0.85rem, 2rem); }
   .step-lead { font-size: var(--vc-font-size-md); }
-  .figure-list > div { padding: 9px 0; }
+  .figure-list > div { padding: 7px 0; }
   .cta.vc-button { --_h: 44px; }
   .turn-bar.vc-callout { padding: 8px 12px; gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .kpi.vc-stat { transition: none; }
+  .summary-chevron { transition: none; }
   .boot { transition: none; }
 }
 @media (forced-colors: active) {

@@ -17,6 +17,7 @@ const { validate, describeErrors } = await import(path.join(ROOT, "js", "schema.
 const E = await import(path.join(ROOT, "js", "engine.js"));
 const H = await import(path.join(ROOT, "js", "handoff.js"));
 const { t } = await import(path.join(ROOT, "js", "i18n", "index.js"));
+const SCENARIOS = (await import(path.join(ROOT, "js", "scenarios.js"))).scenarios();
 const r = createReport("schemas");
 const json = (f) => JSON.parse(readFileSync(path.join(ROOT, f), "utf8"));
 const ok = (value, schema, registry = S.REGISTRY) => validate(value, schema, registry);
@@ -155,16 +156,8 @@ const SAMPLES = {
   Issue: H.readHandoff(example, { file: "a.json" }).issues[0],
   Stability: (() => { const st = E.stability(ideas, E.DEFAULT_WEIGHTS); return { of: st.of, rankings: st.rankings, counts: st.counts, sentence: "x" }; })(),
   IssueMap: { company: { name: "Tidewell Lines", sector: "transport_logistics", goals: [], targets: [], fictional: true }, issues: H.readHandoff(example, { file: "a.json" }).issues, merges: [] },
-  Scenario: {
-    schema: "pi-scenario/1", id: "s1", source: "authored", as_of: "2026-11-23",
-    company: { name: "Tidewell Lines", sector: "transport_logistics", country: "DE", fictional: true },
-    documents: [{ id: "d1", name: "tidewell-bmc.json", kind: "handoff", bytes: 4096, pages: null, stand_in: true, fictional: true, from: "scenario" }],
-    answers: {
-      en: { reader: null, merges: { merges: [] }, ideas: { ideas: [] }, recommendation: { headline: "h", looked_at: "l", found: "f", needed: "n" }, brief: null },
-      de: { reader: null, merges: { merges: [] }, ideas: { ideas: [] }, recommendation: { headline: "h", looked_at: "l", found: "f", needed: "n" }, brief: null }
-    },
-    choices: { issues: [{ id: "bmc-I1", action: "keep", into: null, reason: null }], weights: null, shortlist: ["P1", "P2", "P3"], brief_idea: null }
-  }
+  // The real scenarios, resolved: each must take the contract as it is.
+  Scenario: SCENARIOS[0]
 };
 for (const name of NAMES) {
   const v = ok(SAMPLES[name], S.CONTRACTS[name]);

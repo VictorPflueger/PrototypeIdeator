@@ -274,8 +274,11 @@ export function factValues({ issues = [], ideas = [], weights = DEFAULT_WEIGHTS,
       facts[`idea.${r.id}.cost`] = { type: "eur_cents", value: liveRunEstimate({ model, calls: inputs.model_calls, searches: inputs.web_searches }).eur };
     }
   }
-  for (const i of kept(issues)) {
-    const v = groupValue(i, issues);
+  // Every issue with an amount: a kept one at its group's value (D15), a merged or parked one at its own,
+  // so an idea's text that cites an issue still reads right whatever the person decided.
+  for (const i of issues) {
+    const own = typeof i.eur_year_expected === "number" && Number.isFinite(i.eur_year_expected) ? i.eur_year_expected : null;
+    const v = i.status === "kept" ? groupValue(i, issues) : own;
     if (v !== null) facts[`issue.${i.id}.eur`] = { type: "eur", value: v };
   }
   if (Array.isArray(shortlist)) facts["shortlist.share"] = { type: "share", value: shortlistShare(issues, ideas, shortlist).share };

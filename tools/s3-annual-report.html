@@ -1,0 +1,182 @@
+<!doctype html>
+<!-- The annual-report excerpt of scenario S3, Auental Energie: a fictional municipal utility. Written for the
+     Prototype Ideator's scenario and printed to PDF by tools/build-s3-pdf.mjs, once per language
+     (the build script sets the html element's lang to en or de); the PDFs are committed under data/scenarios/, so the page needs no build step.
+     Each section is one A4 page, and the Reader's quotes in data/scenarios/s3.js cite these pages by
+     number; tests/scenarios.mjs checks every quote against the text of the page it names. The company,
+     its people and its figures are invented. What it says about the world (the heat-plan deadline, the
+     heating law, the smart-meter quota, dynamic tariffs) is listed in DATA_SOURCES.md, section 3. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Auental Energie GmbH: Annual report 2025 (excerpt)</title>
+<style>
+  @font-face { font-family: "Inter"; font-weight: 100 900; src: url("../vici/assets/fonts/inter-latin.woff2") format("woff2"); }
+  @font-face { font-family: "Inter"; font-weight: 100 900; src: url("../vici/assets/fonts/inter-latin-ext.woff2") format("woff2"); unicode-range: U+0100-024F, U+20AC; }
+  @page { size: A4; margin: 22mm 20mm 24mm; }
+  html { font-family: "Inter", sans-serif; font-size: 10.5pt; line-height: 1.5; color: #1d2a30; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; hyphens: none; }
+  body { margin: 0; }
+  section { break-after: page; position: relative; height: 246mm; overflow: hidden; }
+  section:last-of-type { break-after: auto; }
+  .masthead { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #0f6e6a; padding-bottom: 6pt; margin-bottom: 18pt; }
+  .masthead b { color: #0f6e6a; font-size: 12pt; letter-spacing: 0.02em; }
+  .masthead span { font-size: 9pt; color: #5a6b72; }
+  h1 { font-size: 20pt; line-height: 1.2; margin: 0 0 12pt; color: #0b3f3d; }
+  h2 { font-size: 12pt; margin: 16pt 0 4pt; color: #0b3f3d; }
+  p { margin: 0 0 8pt; max-width: 160mm; }
+  .sign { margin-top: 16pt; font-style: italic; color: #3c4c53; }
+  table { border-collapse: collapse; width: 150mm; margin: 6pt 0 14pt; font-variant-numeric: tabular-nums; }
+  th, td { padding: 4pt 6pt; border-bottom: 0.5pt solid #c9d3d6; text-align: left; }
+  td.n, th.n { text-align: right; }
+  thead th { border-bottom: 1.2pt solid #0f6e6a; font-size: 9.5pt; }
+  .label { position: absolute; bottom: 0; left: 0; right: 0; font-size: 8pt; color: #6b7b82; border-top: 0.5pt solid #c9d3d6; padding-top: 4pt; display: flex; justify-content: space-between; }
+  [data-lang] { display: none; }
+  html[lang="en"] [data-lang="en"], html[lang="de"] [data-lang="de"] { display: block; }
+</style>
+</head>
+<body>
+<div data-lang="en">
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Annual report 2025 (excerpt), published September 2026</span></div>
+    <h1>Letter from the management</h1>
+    <p>Dear readers,</p>
+    <p>2025 was a year of building. We supply around 45,000 people in our town with electricity, gas, district heat and water. We run the local power and gas grids and operate 140 public charging points. Our customers trust us because we are here: our customer centre is in the town centre, and our staff live where they work.</p>
+    <p>Three tasks shape the coming years. First, the town must present its municipal heat plan by the end of 2026. It will decide which streets get district heat and which keep gas. Second, the power grid has to carry heat pumps and electric cars, and we invest ahead of the revenue the regulator allows us. Third, our customers want new products, from dynamic tariffs to solar panels on their roofs, and our IT must keep up.</p>
+    <p>We invested €14.8 million in 2025, more than in any year before. We will report on the heat plan as soon as the town council has decided.</p>
+    <p class="sign">The management of Auental Energie GmbH</p>
+    <div class="label"><span>Fictional company. Written for a scenario of the Prototype Ideator; all figures are illustrative.</span><span>Page 1</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Annual report 2025 (excerpt)</span></div>
+    <h1>The year in figures</h1>
+    <table>
+      <thead><tr><th></th><th class="n">2025</th><th class="n">2024</th></tr></thead>
+      <tbody>
+        <tr><td>Revenue</td><td class="n">€96.4m</td><td class="n">€101.2m</td></tr>
+        <tr><td>EBIT</td><td class="n">€4.1m</td><td class="n">€5.0m</td></tr>
+        <tr><td>Investment</td><td class="n">€14.8m</td><td class="n">€11.3m</td></tr>
+        <tr><td>Free cash flow</td><td class="n">−€3.2m</td><td class="n">€0.9m</td></tr>
+        <tr><td>Electricity sold</td><td class="n">182 GWh</td><td class="n">179 GWh</td></tr>
+        <tr><td>Gas sold</td><td class="n">410 GWh</td><td class="n">436 GWh</td></tr>
+        <tr><td>District heat sold</td><td class="n">58 GWh</td><td class="n">57 GWh</td></tr>
+        <tr><td>Electricity customers</td><td class="n">28,100</td><td class="n">28,400</td></tr>
+        <tr><td>Gas customers</td><td class="n">11,500</td><td class="n">11,900</td></tr>
+        <tr><td>District heat customers</td><td class="n">2,100</td><td class="n">2,050</td></tr>
+        <tr><td>Customers on a dynamic tariff</td><td class="n">312</td><td class="n">41</td></tr>
+        <tr><td>Smart meters fitted in mandatory cases</td><td class="n">1,850 of 9,400</td><td class="n">1,120 of 9,300</td></tr>
+        <tr><td>Employees</td><td class="n">260</td><td class="n">255</td></tr>
+      </tbody>
+    </table>
+    <p>Gas sales fell 6 % as customers fitted heat pumps and a mild winter cut demand. Revenue fell with lower wholesale prices, which we passed on to our customers.</p>
+    <div class="label"><span>Fictional company. Written for a scenario of the Prototype Ideator; all figures are illustrative.</span><span>Page 2</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Annual report 2025 (excerpt)</span></div>
+    <h1>Grid and metering</h1>
+    <h2>Investment ahead of revenue</h2>
+    <p>The power grid will need about €62 million of investment by 2030 for heat pumps, charging points and solar panels. The regulator's approved revenue follows our investment with a delay of several years. Until it catches up, financing the gap costs us about €1.2 million a year.</p>
+    <h2>Smart meters</h2>
+    <p>At the end of 2025 we had fitted smart meters in 19.7 % of the mandatory cases, just below the 20 % quota. We are behind because fitters are scarce and many appointments with households fail.</p>
+    <h2>Billing</h2>
+    <p>Our billing system dates from 2009. It cannot bill dynamic tariffs in quarter-hour intervals, so the 312 customers on a dynamic tariff are billed by hand. That costs about €0.4 million a year in staff time and corrections.</p>
+    <div class="label"><span>Fictional company. Written for a scenario of the Prototype Ideator; all figures are illustrative.</span><span>Page 3</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Annual report 2025 (excerpt)</span></div>
+    <h1>Heat and gas</h1>
+    <h2>The heat plan</h2>
+    <p>Lower Saxony requires middle-order centres such as our town to present a municipal heat plan by the end of 2026. Together with the town, we are mapping heat demand street by street. The plan will show where district heat makes sense, where heat pumps will dominate and where the gas grid stays.</p>
+    <h2>Gas</h2>
+    <p>Gas sales fell to 410 GWh. Each household that leaves gas for a heat pump takes about €1,000 of gross margin a year with it. In 2025 the lost margin came to about €2 million.</p>
+    <p>The new building modernisation law of July 2026 allows new gas heating again, with a rising share of climate-friendly fuel from 2029. Many homeowners will wait for the heat plan before they decide.</p>
+    <h2>District heat</h2>
+    <p>We connected 50 new buildings to district heat in 2025 and plan to extend the network into two more quarters of the town.</p>
+    <div class="label"><span>Fictional company. Written for a scenario of the Prototype Ideator; all figures are illustrative.</span><span>Page 4</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Annual report 2025 (excerpt)</span></div>
+    <h1>Risks and outlook</h1>
+    <h2>Risks</h2>
+    <p>Gas grid: if large parts of the town switch to heat pumps or district heat, parts of the gas grid will carry too little gas to pay for themselves. The residual book value of the gas grid is €38 million.</p>
+    <p>Competitors: national providers sell solar panels, batteries and heat pumps directly to homeowners, some in cooperation with other municipal utilities.</p>
+    <p>Staff: fitters and IT specialists are hard to hire.</p>
+    <p>IT: the billing system limits new products.</p>
+    <h2>Outlook for 2026</h2>
+    <p>We expect revenue of about €95 million and EBIT of about €3.5 million. We will replace the billing system by 2028, speed up the smart-meter rollout with a partner and present the heat plan with the town by the end of 2026.</p>
+    <div class="label"><span>Fictional company. Written for a scenario of the Prototype Ideator; all figures are illustrative.</span><span>Page 5</span></div>
+  </section>
+</div>
+
+<div data-lang="de">
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Geschäftsbericht 2025 (Auszug), erschienen im September 2026</span></div>
+    <h1>Brief der Geschäftsführung</h1>
+    <p>Liebe Leserinnen und Leser,</p>
+    <p>2025 war ein Jahr des Bauens. Wir versorgen rund 45.000 Menschen in unserer Stadt mit Strom, Gas, Fernwärme und Wasser. Wir betreiben das örtliche Strom- und Gasnetz und 140 öffentliche Ladepunkte. Unsere Kundinnen und Kunden vertrauen uns, weil wir hier sind: Unser Kundenzentrum liegt in der Innenstadt, und unsere Mitarbeitenden leben, wo sie arbeiten.</p>
+    <p>Drei Aufgaben prägen die kommenden Jahre. Erstens muss die Stadt ihre kommunale Wärmeplanung bis Ende 2026 vorlegen. Sie entscheidet, welche Straßen Fernwärme bekommen und welche beim Gas bleiben. Zweitens muss das Stromnetz Wärmepumpen und Elektroautos tragen, und wir investieren vor den Erlösen, die uns die Regulierung erlaubt. Drittens wollen unsere Kundinnen und Kunden neue Produkte, von dynamischen Tarifen bis zur Solaranlage auf dem Dach, und unsere IT muss Schritt halten.</p>
+    <p>Wir haben 2025 14,8 Millionen Euro investiert, mehr als in jedem Jahr zuvor. Über die Wärmeplanung berichten wir, sobald der Rat entschieden hat.</p>
+    <p class="sign">Die Geschäftsführung der Auental Energie GmbH</p>
+    <div class="label"><span>Fiktives Unternehmen. Geschrieben für ein Szenario des Prototype Ideator; alle Zahlen sind illustrativ.</span><span>Seite 1</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Geschäftsbericht 2025 (Auszug)</span></div>
+    <h1>Das Jahr in Zahlen</h1>
+    <table>
+      <thead><tr><th></th><th class="n">2025</th><th class="n">2024</th></tr></thead>
+      <tbody>
+        <tr><td>Umsatz</td><td class="n">96,4 Mio. €</td><td class="n">101,2 Mio. €</td></tr>
+        <tr><td>EBIT</td><td class="n">4,1 Mio. €</td><td class="n">5,0 Mio. €</td></tr>
+        <tr><td>Investitionen</td><td class="n">14,8 Mio. €</td><td class="n">11,3 Mio. €</td></tr>
+        <tr><td>Freier Cashflow</td><td class="n">−3,2 Mio. €</td><td class="n">0,9 Mio. €</td></tr>
+        <tr><td>Stromabsatz</td><td class="n">182 GWh</td><td class="n">179 GWh</td></tr>
+        <tr><td>Gasabsatz</td><td class="n">410 GWh</td><td class="n">436 GWh</td></tr>
+        <tr><td>Fernwärmeabsatz</td><td class="n">58 GWh</td><td class="n">57 GWh</td></tr>
+        <tr><td>Stromkunden</td><td class="n">28.100</td><td class="n">28.400</td></tr>
+        <tr><td>Gaskunden</td><td class="n">11.500</td><td class="n">11.900</td></tr>
+        <tr><td>Fernwärmekunden</td><td class="n">2.100</td><td class="n">2.050</td></tr>
+        <tr><td>Kunden mit dynamischem Tarif</td><td class="n">312</td><td class="n">41</td></tr>
+        <tr><td>Intelligente Messsysteme in Pflichtfällen</td><td class="n">1.850 von 9.400</td><td class="n">1.120 von 9.300</td></tr>
+        <tr><td>Mitarbeitende</td><td class="n">260</td><td class="n">255</td></tr>
+      </tbody>
+    </table>
+    <p>Der Gasabsatz sank um 6 %, weil Kundinnen und Kunden Wärmepumpen einbauten und ein milder Winter die Nachfrage senkte. Der Umsatz sank mit niedrigeren Großhandelspreisen, die wir weitergegeben haben.</p>
+    <div class="label"><span>Fiktives Unternehmen. Geschrieben für ein Szenario des Prototype Ideator; alle Zahlen sind illustrativ.</span><span>Seite 2</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Geschäftsbericht 2025 (Auszug)</span></div>
+    <h1>Netz und Messwesen</h1>
+    <h2>Investitionen vor den Erlösen</h2>
+    <p>Das Stromnetz braucht bis 2030 rund 62 Millionen Euro an Investitionen für Wärmepumpen, Ladepunkte und Solaranlagen. Die genehmigten Erlöse folgen unseren Investitionen mit einem Verzug von mehreren Jahren. Bis sie aufholen, kostet uns die Finanzierung der Lücke rund 1,2 Millionen Euro im Jahr.</p>
+    <h2>Intelligente Messsysteme</h2>
+    <p>Ende 2025 hatten wir in 19,7 % der Pflichtfälle intelligente Messsysteme eingebaut, knapp unter der Quote von 20 %. Wir liegen zurück, weil Monteure knapp sind und viele Termine bei Haushalten scheitern.</p>
+    <h2>Abrechnung</h2>
+    <p>Unser Abrechnungssystem stammt aus dem Jahr 2009. Es kann dynamische Tarife nicht im Viertelstundentakt abrechnen, deshalb werden die 312 Kunden mit dynamischem Tarif von Hand abgerechnet. Das kostet rund 0,4 Millionen Euro im Jahr an Arbeitszeit und Korrekturen.</p>
+    <div class="label"><span>Fiktives Unternehmen. Geschrieben für ein Szenario des Prototype Ideator; alle Zahlen sind illustrativ.</span><span>Seite 3</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Geschäftsbericht 2025 (Auszug)</span></div>
+    <h1>Wärme und Gas</h1>
+    <h2>Die Wärmeplanung</h2>
+    <p>Niedersachsen verpflichtet Mittelzentren wie unsere Stadt, bis Ende 2026 eine kommunale Wärmeplanung vorzulegen. Gemeinsam mit der Stadt erfassen wir den Wärmebedarf Straße für Straße. Die Planung zeigt, wo Fernwärme sinnvoll ist, wo Wärmepumpen vorherrschen werden und wo das Gasnetz bleibt.</p>
+    <h2>Gas</h2>
+    <p>Der Gasabsatz sank auf 410 GWh. Jeder Haushalt, der vom Gas zur Wärmepumpe wechselt, nimmt rund 1.000 Euro Rohmarge im Jahr mit. 2025 summierte sich die verlorene Marge auf rund 2 Millionen Euro.</p>
+    <p>Das neue Gebäudemodernisierungsgesetz vom Juli 2026 erlaubt neue Gasheizungen wieder, mit einem steigenden Anteil klimafreundlicher Brennstoffe ab 2029. Viele Eigentümer werden die Wärmeplanung abwarten, bevor sie entscheiden.</p>
+    <h2>Fernwärme</h2>
+    <p>2025 haben wir 50 neue Gebäude an die Fernwärme angeschlossen, und wir planen, das Netz in zwei weitere Stadtviertel zu erweitern.</p>
+    <div class="label"><span>Fiktives Unternehmen. Geschrieben für ein Szenario des Prototype Ideator; alle Zahlen sind illustrativ.</span><span>Seite 4</span></div>
+  </section>
+  <section>
+    <div class="masthead"><b>Auental Energie GmbH</b><span>Geschäftsbericht 2025 (Auszug)</span></div>
+    <h1>Risiken und Ausblick</h1>
+    <h2>Risiken</h2>
+    <p>Gasnetz: Wechseln große Teile der Stadt zu Wärmepumpen oder Fernwärme, transportieren Teile des Gasnetzes zu wenig Gas, um sich zu tragen. Der Restbuchwert des Gasnetzes beträgt 38 Millionen Euro.</p>
+    <p>Wettbewerb: Überregionale Anbieter verkaufen Solaranlagen, Speicher und Wärmepumpen direkt an Eigentümer, teils gemeinsam mit anderen Stadtwerken.</p>
+    <p>Personal: Monteure und IT-Fachleute sind schwer zu gewinnen.</p>
+    <p>IT: Das Abrechnungssystem begrenzt neue Produkte.</p>
+    <h2>Ausblick auf 2026</h2>
+    <p>Wir erwarten einen Umsatz von rund 95 Millionen Euro und ein EBIT von rund 3,5 Millionen Euro. Bis 2028 ersetzen wir das Abrechnungssystem, beschleunigen den Einbau intelligenter Messsysteme mit einem Partner und legen die Wärmeplanung bis Ende 2026 mit der Stadt vor.</p>
+    <div class="label"><span>Fiktives Unternehmen. Geschrieben für ein Szenario des Prototype Ideator; alle Zahlen sind illustrativ.</span><span>Seite 5</span></div>
+  </section>
+</div>
+</body>
+</html>
