@@ -1,8 +1,9 @@
 // The parts the four tools share (brief §4.1) are the same files in every repository: the KPI library,
 // the handoff file's schema and its module twin, js/risk.js (whose money format the Ideator imports), the
-// live client (anthropic.js, sse.js, cost.js) and the key store held in memory. Each is compared byte for byte with the first sibling, in the brief's order
-// (the canvas, SWOT, PESTEL), whose checkout sits beside this repository and has the file. A part no
-// sibling has yet is this tool's to set: the result names it, and the next tool copies it unchanged.
+// live client (anthropic.js, sse.js, cost.js) and the key store held in memory. Each is compared byte for
+// byte with every sibling whose checkout sits beside this repository and has the file: the first tool to
+// merge a shared file is its source, and every other copies it unchanged, so all of them must agree. A
+// part no sibling has yet is this tool's to set: the result names it, and the next tool copies it.
 // js/anthropic.js can be identical in all four because it names the tool through config.js.
 // Siblings are looked for in SIBLINGS_DIR, else next to this repository (../BMC-challenger and so on).
 // Without any checkout the suite says so and passes, unless --require-siblings is given.
@@ -42,13 +43,12 @@ if (!present.length) {
   for (const f of SHARED) {
     const ours = path.join(APP_ROOT, f);
     if (!existsSync(ours)) continue;
-    const first = present.find((s) => existsSync(path.join(s.dir, f)));
-    if (!first) {
+    const holders = present.filter((s) => existsSync(path.join(s.dir, f)));
+    if (!holders.length) {
       r.check(true, `${f}: no sibling has it yet, so this tool sets it`);
       continue;
     }
-    const same = readFileSync(ours).equals(readFileSync(path.join(first.dir, f)));
-    r.check(same, `${f}: the same bytes as the ${first.name}'s`);
+    for (const h of holders) r.check(readFileSync(ours).equals(readFileSync(path.join(h.dir, f))), `${f}: the same bytes as the ${h.name}'s`);
   }
 }
 

@@ -1,9 +1,9 @@
 // Copies Vici's files from a ViciDesign checkout into vici/, unchanged, and names the checkout's commit in
 // vici/README.md and in the GitHub Actions workflow, so tests/vici.mjs compares against the same commit.
 // The files are the ones a prototype needs (Vici's prototype brief): the stylesheet, the script, the theme
-// script that runs before the first paint and the token values from dist/, the fonts with their licences, the portrait for the byline, LinkedIn's mark
-// with its notes, and the licence. Run it after a ViciDesign change is merged on main, then run the tests
-// and look at the page in both themes.
+// script that runs before the first paint and the token values from dist/, the fonts with their licences,
+// the portrait for the byline, LinkedIn's mark with its notes, and the licence. Run it after a ViciDesign
+// change is merged on main, then run the tests and look at the page in both themes.
 // Usage: node tools/update-vici.mjs [path to ViciDesign]   (default: ../ViciDesign, else ../vicidesign)
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
