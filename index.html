@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Everything comes from this site. A live run reaches api.anthropic.com with the visitor's own key;
+       nothing else can be reached. js/config.js holds the same policy, and tests/policy.mjs compares the two. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src https://api.anthropic.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Prototype Ideator: AI agents read documents about a company, map its business issues and KPIs, and propose agentic-AI prototypes that each improve a named KPI. Code scores and ranks them; a person shortlists the one to build.">
+  <title>Prototype Ideator: from documents to agentic-AI prototypes worth building</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vici/dist/vici.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="js/theme.js"></script>
+  <script src="vici/dist/vici.js" defer></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body class="app-shell">
+  <!-- The texts below are the English defaults: an element that names its key in data-i18n (or
+       data-i18n-attr for attributes) gets its words from js/i18n/, in English or German. -->
+  <a class="vc-skip-link" href="#stage" data-i18n="p.skip">Skip to the step on screen</a>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="vc-cell vc-cell--lilac" aria-hidden="true"><span class="vc-icon vc-icon--sparkle"></span></span>
+      <span data-i18n="app.name" class="brand-name">Prototype Ideator</span>
+    </div>
+
+    <div class="header-actions">
+      <span class="vc-tooltip-anchor">
+        <span class="vc-tag vc-tag--lg mode-tag" id="mode-tag" data-mode="simulation" tabindex="0" aria-describedby="tip-mode"><span id="mode-text">SIMULATION</span></span>
+        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-mode" data-i18n="p.mode.tip">A replay of recorded agent answers through the real scoring rules: no model is called. Run it live calls Claude with your own key.</span>
+      </span>
+      <!-- One guide per language, each with its own button; js/lang.js shows the page's. -->
+      <button type="button" class="vc-button vc-button--secondary guide-open" data-vc-guide-open="guide-en" lang="en"><span class="vc-icon vc-icon--info" aria-hidden="true"></span>How it works</button>
+      <button type="button" class="vc-button vc-button--secondary guide-open" data-vc-guide-open="guide-de" lang="de" hidden><span class="vc-icon vc-icon--info" aria-hidden="true"></span>So funktioniert's</button>
+      <div class="vc-button-group lang-switch" role="group" aria-label="Language" data-i18n-attr="aria-label:p.lang">
+        <button type="button" class="vc-button vc-button--secondary lang-option" data-lang="en" lang="en" title="English" aria-pressed="true">EN</button>
+        <button type="button" class="vc-button vc-button--secondary lang-option" data-lang="de" lang="de" title="Deutsch" aria-pressed="false">DE</button>
+      </div>
+      <span class="vc-tooltip-anchor">
+        <button type="button" class="vc-icon-button" data-vc-theme-toggle aria-labelledby="tip-theme"><span class="vc-icon vc-icon--moon vc-when-light" aria-hidden="true"></span><span class="vc-icon vc-icon--sun vc-when-dark" aria-hidden="true"></span></button>
+        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-theme" data-i18n="p.theme">Dark or light theme</span>
+      </span>
+    </div>
+
+    <!-- The four key figures. data-vc-kpi names each in English, data-vc-kpi-de in German; each guide
+         explains them in a row of its How it works chapter. They answer first: a scenario shows its
+         figures before it plays; until there is a run, each shows the ellipsis and what it waits for. -->
+    <div class="kpis" role="group" aria-label="Key figures" data-i18n-attr="aria-label:p.kpis">
+      <div class="kpi vc-stat" id="kpi-stake" data-vc-kpi="At stake a year" data-vc-kpi-de="Pro Jahr auf dem Spiel" data-state="waiting">
+        <p class="vc-stat__label" data-i18n="kpi.atStake.label">At stake a year</p>
+        <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.atStake.wait">after the Reader</p>
+      </div>
+      <div class="kpi vc-stat" id="kpi-covered" data-vc-kpi="Issues covered" data-vc-kpi-de="Abgedeckte Themen" data-state="waiting">
+        <p class="vc-stat__label" data-i18n="kpi.covered.label">Issues covered</p>
+        <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.covered.wait">after the ideas</p>
+      </div>
+      <div class="kpi vc-stat" id="kpi-top" data-vc-kpi="Top score" data-vc-kpi-de="Bester Wert" data-state="waiting">
+        <p class="vc-stat__label" data-i18n="kpi.top.label">Top score</p>
+        <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.top.wait">out of 5, after the ideas</p>
+      </div>
+      <div class="kpi vc-stat" id="kpi-cost" data-vc-kpi="Session cost" data-vc-kpi-de="Sitzungskosten" data-state="waiting">
+        <p class="vc-stat__label" data-i18n="kpi.cost.label">Session cost</p>
+        <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.cost.wait">after a run</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- What the prototype does and how real its data is, beside the byline. -->
+  <div class="intro">
+    <p class="intro-text" data-i18n="p.strip">AI agents read your documents, map the business issues and propose agentic-AI prototypes that each improve a named KPI, scored so you can choose one to build. The simulation uses fictional companies; a live run uses your documents and your Claude key.</p>
+    <p class="vc-byline">
+      <span class="vc-byline__label" data-i18n="p.byline.label">Built by</span>
+      <a class="vc-byline__person" href="https://www.linkedin.com/in/victorpflueger" rel="author noopener" target="_blank">
+        <span class="vc-avatar vc-avatar--xs"><img src="vici/assets/brand/portrait-96.jpg" alt="" width="96" height="96"></span>
+        <span class="vc-byline__name">Victor Pflüger</span>
+        <img class="vc-platform-mark" src="vici/assets/marks/linkedin.png" alt="" width="840" height="779">
+        <span class="vc-visually-hidden" data-i18n="p.byline.linkedin"> on LinkedIn (opens in a new tab)</span>
+      </a>
+      <span class="vc-tooltip-anchor">
+        <a class="vc-byline__icon" href="https://victorpflueger.github.io/VIP/index.html" rel="author noopener" target="_blank" aria-label="Victor Pflüger's website (opens in a new tab)" data-i18n-attr="aria-label:p.byline.website"><span class="vc-icon vc-icon--globe-hex" aria-hidden="true"></span></a>
+        <span class="vc-tooltip vc-tooltip--bottom" aria-hidden="true" data-i18n="p.byline.tip">Website</span>
+      </span>
+    </p>
+  </div>
+
+  <!-- The step bar: Play, Back, the six steps, Next, then Run it live with the AI notice beside it. -->
+  <nav class="stepbar" aria-label="Steps" data-i18n-attr="aria-label:p.steps">
+    <button type="button" class="vc-button vc-button--secondary play" id="btn-play" data-state="play" disabled><span class="vc-icon vc-icon--play" aria-hidden="true"></span><span id="play-text" data-i18n="p.play">Play</span></button>
+    <button type="button" class="vc-button vc-button--ghost stepbar-back" id="btn-back" disabled><span class="vc-icon vc-icon--chevron-left" aria-hidden="true"></span><span data-i18n="p.back">Back</span></button>
+    <ol class="vc-stepper steps" id="steps">
+      <li class="vc-step vc-step--current" data-step="start"><button type="button" class="vc-step__button" aria-current="step"><span class="vc-step__marker" aria-hidden="true">1</span><span class="vc-step__label" data-i18n="p.step.start">Start</span></button></li>
+      <li class="vc-step" data-step="read"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">2</span><span class="vc-step__label" data-i18n="p.step.read">Read</span></button></li>
+      <li class="vc-step" data-step="ideate"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">3</span><span class="vc-step__label" data-i18n="p.step.ideate">Ideate</span></button></li>
+      <li class="vc-step" data-step="score"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">4</span><span class="vc-step__label" data-i18n="p.step.score">Score</span></button></li>
+      <li class="vc-step" data-step="shortlist"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">5</span><span class="vc-step__label" data-i18n="p.step.shortlist">Shortlist</span></button></li>
+      <li class="vc-step" data-step="report"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">6</span><span class="vc-step__label" data-i18n="p.step.report">Report</span></button></li>
+    </ol>
+    <button type="button" class="vc-button vc-button--secondary stepbar-next" id="btn-next" disabled><span data-i18n="p.next">Next</span><span class="vc-icon vc-icon--chevron-right" aria-hidden="true"></span></button>
+    <div class="live-group">
+      <button type="button" class="vc-button vc-button--outline live-button" id="btn-live" data-vc-live><span class="vc-icon vc-icon--key" aria-hidden="true"></span><span data-i18n="p.live">Run it live</span></button>
+      <span class="vc-tag vc-tag--feature ai-notice"><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span><span data-i18n="p.ai">You are interacting with an AI system</span></span>
+    </div>
+  </nav>
+
+  <p class="vc-visually-hidden" id="announce" aria-live="polite"></p>
+
+  <!-- The stage: one step at a time, the story on the left and its evidence on the right. Version 0.1.0
+       shows the first step as the frame around what the scenarios will play from version 0.2.0. -->
+  <main id="stage" class="stage" tabindex="-1">
+    <div class="step" data-step="start">
+      <section class="panel story" aria-labelledby="start-title">
+        <h1 class="step-title" id="start-title" data-i18n="p.start.title">From the documents you have to a ranked shortlist</h1>
+        <p class="step-lead" data-i18n="p.start.lead">The Reader maps the business issues and KPIs in your documents. The Ideator proposes prototypes for them, code scores and ranks them, and you pick the three to build.</p>
+        <p class="vc-alert vc-alert--neutral version-note" role="note"><span class="vc-icon vc-icon--info" aria-hidden="true"></span><span data-i18n="p.start.version">Version 0.1.0 holds the frame, the scoring engine and the guide. The three fictional companies play from version 0.2.0, live runs from version 0.3.0.</span></p>
+        <!-- What the page waits for, asked where the eye is: one sentence and the one primary action. -->
+        <div class="vc-callout turn-bar" id="turn">
+          <span class="vc-callout__cell" aria-hidden="true"><span class="vc-icon vc-icon--hand"></span></span>
+          <div class="vc-callout__body">
+            <p class="vc-callout__title" data-i18n="p.turn.lead">Your turn</p>
+            <p data-i18n="p.start.turn">Read how the tool works. The replay starts here from version 0.2.0.</p>
+          </div>
+          <button type="button" class="vc-button vc-attention cta" id="turn-primary"><span class="vc-icon vc-icon--info" aria-hidden="true"></span><span data-i18n="p.start.turnAction">How it works</span></button>
+        </div>
+      </section>
+      <section class="panel evidence" aria-labelledby="figures-title">
+        <h2 class="panel-title" id="figures-title" data-i18n="p.figures.title">The four figures at the top</h2>
+        <dl class="figure-list">
+          <div><dt data-i18n="kpi.atStake.label">At stake a year</dt><dd data-i18n="p.figures.atStake">The money the kept issues put at stake a year, as the documents or the challengers state it.</dd></div>
+          <div><dt data-i18n="kpi.covered.label">Issues covered</dt><dd data-i18n="p.figures.covered">Kept issues that at least one idea answers, of all kept issues.</dd></div>
+          <div><dt data-i18n="kpi.top.label">Top score</dt><dd data-i18n="p.figures.top">The highest weighted score out of 5; after your decision, your first pick.</dd></div>
+          <div><dt data-i18n="kpi.cost.label">Session cost</dt><dd data-i18n="p.figures.cost">What the model calls cost: measured in a live run, estimated in a replay.</dd></div>
+        </dl>
+        <div class="challengers">
+          <p class="step-note" data-i18n="p.start.challengers">No documents yet? Challenge a business model, a SWOT or a PESTEL first.</p>
+          <ul class="challenger-links">
+            <li><a class="vc-link" href="https://victorpflueger.github.io/BMC-challenger/" rel="noopener" target="_blank"><span>Business Model Canvas Challenger</span><span class="vc-icon vc-icon--external" aria-hidden="true"></span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></li>
+            <li><a class="vc-link" href="https://victorpflueger.github.io/SWOT-challenger/" rel="noopener" target="_blank"><span>SWOT Challenger</span><span class="vc-icon vc-icon--external" aria-hidden="true"></span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></li>
+            <li><a class="vc-link" href="https://victorpflueger.github.io/PESTEL-challenger/" rel="noopener" target="_blank"><span>PESTEL Challenger</span><span class="vc-icon vc-icon--external" aria-hidden="true"></span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></li>
+          </ul>
+        </div>
+        <p class="step-note public-note" data-i18n="p.public">Public information only: never enter confidential, personal or otherwise protected data.</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- How it works, once in English and once in German: Vici's guide. vici.js builds each chapter rail and
+       opens the guide of the page's language once per browser tab (js/lang.js keeps the other one closed);
+       ?guide=0 keeps it closed, ?guide=present opens the talk track. The figures in the data-fig spans
+       come from the scenario's run from version 0.2.0, so the guide cannot drift from the page. -->
+  <dialog class="vc-dialog vc-guide" id="guide-en" lang="en-GB" aria-labelledby="guide-en-title" data-vc-guide data-vc-guide-auto data-vc-guide-count="{n} of {total}" data-vc-guide-rail="Chapters">
+    <header class="vc-dialog__header">
+      <h2 class="vc-dialog__title" id="guide-en-title">How the prototype works</h2>
+      <button type="button" class="vc-icon-button" data-vc-close aria-label="Close"><span class="vc-icon vc-icon--close" aria-hidden="true"></span></button>
+    </header>
+    <div class="vc-guide__chapters">
+      <section class="vc-guide__chapter" data-vc-chapter="what" data-vc-nav="What it does">
+        <h3>From a company's documents to prototypes worth building</h3>
+        <p class="vc-guide__lead">Give it a company's documents, such as a challenger's report or an annual report. AI agents map the business issues and KPIs and propose prototypes, each tied to a KPI. Code ranks them, and you choose.</p>
+        <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-steps">
+          <caption>Six steps</caption>
+          <tbody>
+            <tr><th scope="row">Start</th><td>The documents go in: up to five files, or a scenario's three reports.</td></tr>
+            <tr><th scope="row">Read</th><td>The Reader maps the issues and KPIs; you keep, merge or park each.</td></tr>
+            <tr><th scope="row">Ideate</th><td>The Ideator proposes up to ten prototypes, each on its own page.</td></tr>
+            <tr><th scope="row">Score</th><td>Code scores every idea on seven criteria and checks how stable the ranking is.</td></tr>
+            <tr><th scope="row">Shortlist</th><td>You rank your top three.</td></tr>
+            <tr><th scope="row">Report</th><td>The Writer writes the recommendation, and the report downloads.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="how" data-vc-nav="How it works">
+        <h3>Four figures follow the run from documents to decision</h3>
+        <p class="vc-guide__lead">Each tile answers first: a scenario shows what is at stake before it plays, and a live run shows the ellipsis and what it waits for. Code computes every figure; the agents only rate and describe.</p>
+        <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-figures">
+          <caption>Key figures</caption>
+          <thead><tr><th scope="col">Figure</th><th scope="col">What it measures</th><th scope="col" class="vc-num">Value</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">At stake a year</th><td>The money the kept issues put at stake a year, as the documents or the challengers state it, on the issues that state it</td><td class="vc-num"><span data-fig="kpi.atStake">…</span></td></tr>
+            <tr><th scope="row">Issues covered</th><td>Kept issues that at least one idea answers, of all kept issues</td><td class="vc-num"><span data-fig="kpi.covered">…</span></td></tr>
+            <tr><th scope="row">Top score</th><td>The highest weighted score out of 5; after your decision, your first pick and its score</td><td class="vc-num"><span data-fig="kpi.top">…</span></td></tr>
+            <tr><th scope="row">Session cost</th><td>The model calls: measured in a live run against your budget cap, estimated in a replay</td><td class="vc-num"><span data-fig="kpi.cost">…</span></td></tr>
+          </tbody>
+        </table></div>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="real" data-vc-nav="What is real">
+        <h3>Fictional companies, real rules, nothing kept</h3>
+        <p class="vc-guide__lead">The simulation plays three fictional companies with recorded agent answers through the real scoring rules. A live run sends your documents to Anthropic's API under your own key. Nothing is stored, and a reload ends the session.</p>
+        <ul>
+          <li>The three companies and their figures are invented; what they say about the world is real and dated.</li>
+          <li>A replay calls no model and costs nothing.</li>
+          <li>Code computes every score, rank and figure, the same way in a replay and in a live run.</li>
+          <li>Public information only: never enter confidential, personal or otherwise protected data.</li>
+          <li>Costs convert at a fixed 0.894 euros a dollar.</li>
+        </ul>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="scored" data-vc-nav="How ideas are scored">
+        <h3>Seven criteria, with weights you can change</h3>
+        <p class="vc-guide__lead">Each idea gets a rating from 1 to 5 on seven criteria, each with its reason. Code weighs them, ranks the ideas and checks how stable the ranking stays when the weights change.</p>
+        <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-criteria">
+          <caption>Criteria and default weights</caption>
+          <thead><tr><th scope="col">Criterion</th><th scope="col" class="vc-num">Weight</th><th scope="col">The question</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Business value</th><td class="vc-num">20&nbsp;%</td><td>Is the money or time at stake clear to someone outside the field?</td></tr>
+            <tr><th scope="row">Evidence</th><td class="vc-num">10&nbsp;%</td><td>Do public figures back the problem, ideally the company's own?</td></tr>
+            <tr><th scope="row">Buildable without their data</th><td class="vc-num">20&nbsp;%</td><td>Can it be built credibly on open and synthetic data, reusing what exists?</td></tr>
+            <tr><th scope="row">Agentic fit</th><td class="vc-num">15&nbsp;%</td><td>Does it need an agent that checks, prices and asks a person, rather than one model call?</td></tr>
+            <tr><th scope="row">Relevance to the company</th><td class="vc-num">15&nbsp;%</td><td>Does it hit the company's strategy, a published target or this year's pain?</td></tr>
+            <tr><th scope="row">Demo impact</th><td class="vc-num">15&nbsp;%</td><td>Will the room get it in five minutes and remember it?</td></tr>
+            <tr><th scope="row">Low risk</th><td class="vc-num">5&nbsp;%</td><td>Is it free of safety, legal, political or partner sensitivities?</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="present" data-vc-nav="How to present">
+        <h3>Show it in five minutes</h3>
+        <p class="vc-guide__lead">Five steps, five minutes. It plays by itself and stops where you act; Space pauses while you talk.</p>
+        <ol class="vc-guide__path">
+          <li><strong>Point at the four figures.</strong> <span class="vc-guide__say">“Before anything runs, the figures say what is at stake: <span data-fig="talk.atStake">…</span>.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Read: three reports on one carrier.</strong> <span class="vc-guide__say">“Three challengers looked at Tidewell Lines, and the Reader merged the emissions issue all three raise.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Ideate: open one idea.</strong> <span class="vc-guide__say">“Each cell is a prototype tied to a KPI; this one answers <span data-fig="talk.issue">…</span>.”</span> <span class="vc-guide__time">1.5 min</span></li>
+          <li><strong>Score: change a weight.</strong> <span class="vc-guide__say">“Weigh business value differently, and the ranking holds: <span data-fig="talk.stable">…</span>.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Shortlist, report and build brief.</strong> <span class="vc-guide__say">“You pick three, and the report and the build brief download for your team.”</span> <span class="vc-guide__time">0.5 min</span></li>
+        </ol>
+      </section>
+    </div>
+    <footer class="vc-dialog__footer vc-guide__footer">
+      <span class="vc-guide__count"></span>
+      <button type="button" class="vc-button vc-button--ghost" data-vc-guide-back><span class="vc-icon vc-icon--chevron-left" aria-hidden="true"></span>Back</button>
+      <button type="button" class="vc-button" data-vc-guide-next data-vc-guide-done="Start">Next<span class="vc-icon vc-icon--chevron-right" aria-hidden="true"></span></button>
+    </footer>
+  </dialog>
+
+  <dialog class="vc-dialog vc-guide" id="guide-de" lang="de" aria-labelledby="guide-de-title" data-vc-guide data-vc-guide-auto data-vc-guide-count="{n} von {total}" data-vc-guide-rail="Kapitel">
+    <header class="vc-dialog__header">
+      <h2 class="vc-dialog__title" id="guide-de-title">So funktioniert der Prototyp</h2>
+      <button type="button" class="vc-icon-button" data-vc-close aria-label="Schließen"><span class="vc-icon vc-icon--close" aria-hidden="true"></span></button>
+    </header>
+    <div class="vc-guide__chapters">
+      <section class="vc-guide__chapter" data-vc-chapter="what" data-vc-nav="Was er tut">
+        <h3>Von Dokumenten zu Prototypen, die sich lohnen</h3>
+        <p class="vc-guide__lead">Geben Sie ihm die Dokumente eines Unternehmens, etwa den Bericht eines Challengers oder einen Geschäftsbericht. KI-Agenten ordnen die geschäftlichen Themen und Kennzahlen und schlagen Prototypen vor, jeden mit einer Kennzahl. Code reiht sie, Sie wählen.</p>
+        <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-steps">
+          <caption>Sechs Schritte</caption>
+          <tbody>
+            <tr><th scope="row">Start</th><td>Die Dokumente kommen hinein: bis zu fünf Dateien oder die drei Berichte eines Szenarios.</td></tr>
+            <tr><th scope="row">Lesen</th><td>Der Leser ordnet Themen und Kennzahlen; Sie behalten, führen zusammen oder stellen zurück.</td></tr>
+            <tr><th scope="row">Ideen</th><td>Der Ideenfinder schlägt bis zu zehn Prototypen vor, jeden auf einer eigenen Seite.</td></tr>
+            <tr><th scope="row">Bewerten</th><td>Code bewertet jede Idee nach sieben Kriterien und prüft, wie stabil die Rangfolge ist.</td></tr>
+            <tr><th scope="row">Auswahl</th><td>Sie reihen Ihre drei Favoriten.</td></tr>
+            <tr><th scope="row">Bericht</th><td>Der Autor schreibt die Empfehlung, und der Bericht lässt sich herunterladen.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="how" data-vc-nav="So funktioniert's">
+        <h3>Vier Kennzahlen begleiten den Lauf bis zur Entscheidung</h3>
+        <p class="vc-guide__lead">Jede Kachel antwortet zuerst: Ein Szenario zeigt vor dem Abspielen, was auf dem Spiel steht, und ein Live-Lauf zeigt die drei Punkte und worauf er wartet. Code berechnet jede Zahl; die Agenten bewerten und beschreiben nur.</p>
+        <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-figures">
+          <caption>Kennzahlen</caption>
+          <thead><tr><th scope="col">Kennzahl</th><th scope="col">Was sie misst</th><th scope="col" class="vc-num">Wert</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Pro Jahr auf dem Spiel</th><td>Das Geld, das die behaltenen Themen pro Jahr aufs Spiel setzen, wie die Dokumente oder die Challenger es angeben, bei den Themen, die es angeben</td><td class="vc-num"><span data-fig="kpi.atStake">…</span></td></tr>
+            <tr><th scope="row">Abgedeckte Themen</th><td>Behaltene Themen, auf die mindestens eine Idee antwortet, von allen behaltenen Themen</td><td class="vc-num"><span data-fig="kpi.covered">…</span></td></tr>
+            <tr><th scope="row">Bester Wert</th><td>Der höchste gewichtete Wert von 5; nach Ihrer Entscheidung Ihre erste Wahl und ihr Wert</td><td class="vc-num"><span data-fig="kpi.top">…</span></td></tr>
+            <tr><th scope="row">Sitzungskosten</th><td>Die Modellaufrufe: im Live-Lauf gegen Ihr Kostenlimit gemessen, in der Wiedergabe geschätzt</td><td class="vc-num"><span data-fig="kpi.cost">…</span></td></tr>
+          </tbody>
+        </table></div>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="real" data-vc-nav="Was echt ist">
+        <h3>Fiktive Unternehmen, echte Regeln, nichts wird gespeichert</h3>
+        <p class="vc-guide__lead">Die Simulation spielt drei fiktive Unternehmen mit aufgezeichneten Agentenantworten und den echten Bewertungsregeln ab. Ein Live-Lauf schickt Ihre Dokumente unter Ihrem eigenen Schlüssel an Anthropics API. Nichts wird gespeichert, ein Neuladen beendet die Sitzung.</p>
+        <ul>
+          <li>Die drei Unternehmen und ihre Zahlen sind erfunden; was sie über die Welt sagen, ist echt und datiert.</li>
+          <li>Eine Wiedergabe ruft kein Modell auf und kostet nichts.</li>
+          <li>Code berechnet jeden Wert, jeden Rang und jede Zahl, in der Wiedergabe wie im Live-Lauf.</li>
+          <li>Nur öffentliche Informationen: Geben Sie nie vertrauliche, personenbezogene oder anderweitig geschützte Daten ein.</li>
+          <li>Kosten werden zum festen Kurs von 0,894 Euro je Dollar umgerechnet.</li>
+        </ul>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="scored" data-vc-nav="So wird bewertet">
+        <h3>Sieben Kriterien, deren Gewichte Sie ändern können</h3>
+        <p class="vc-guide__lead">Jede Idee erhält zu sieben Kriterien eine Bewertung von 1 bis 5, jede mit ihrem Grund. Code gewichtet sie, reiht die Ideen und prüft, wie stabil die Rangfolge bleibt, wenn sich die Gewichte ändern.</p>
+        <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-criteria">
+          <caption>Kriterien und Standardgewichte</caption>
+          <thead><tr><th scope="col">Kriterium</th><th scope="col" class="vc-num">Gewicht</th><th scope="col">Die Frage</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Geschäftlicher Nutzen</th><td class="vc-num">20&nbsp;%</td><td>Ist das Geld oder die Zeit, um die es geht, auch Fachfremden klar?</td></tr>
+            <tr><th scope="row">Belege</th><td class="vc-num">10&nbsp;%</td><td>Stützen öffentliche Zahlen das Problem, am besten die des Unternehmens selbst?</td></tr>
+            <tr><th scope="row">Ohne ihre Daten baubar</th><td class="vc-num">20&nbsp;%</td><td>Lässt es sich glaubwürdig auf offenen und synthetischen Daten bauen, mit dem, was schon da ist?</td></tr>
+            <tr><th scope="row">Passt zu einem Agenten</th><td class="vc-num">15&nbsp;%</td><td>Braucht es einen Agenten, der prüft, rechnet und einen Menschen fragt, statt eines einzigen Modellaufrufs?</td></tr>
+            <tr><th scope="row">Relevanz für das Unternehmen</th><td class="vc-num">15&nbsp;%</td><td>Trifft es die Strategie, ein veröffentlichtes Ziel oder den Schmerz dieses Jahres?</td></tr>
+            <tr><th scope="row">Wirkung in der Demo</th><td class="vc-num">15&nbsp;%</td><td>Versteht der Raum es in fünf Minuten und behält es?</td></tr>
+            <tr><th scope="row">Geringes Risiko</th><td class="vc-num">5&nbsp;%</td><td>Ist es frei von Sicherheits-, Rechts-, Politik- oder Partnerrisiken?</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+      <section class="vc-guide__chapter" data-vc-chapter="present" data-vc-nav="Präsentieren">
+        <h3>In fünf Minuten vorführen</h3>
+        <p class="vc-guide__lead">Fünf Schritte, fünf Minuten. Es spielt von selbst und hält, wo Sie handeln; die Leertaste pausiert, während Sie sprechen.</p>
+        <ol class="vc-guide__path">
+          <li><strong>Auf die vier Kennzahlen zeigen.</strong> <span class="vc-guide__say">„Bevor etwas läuft, sagen die Kennzahlen, was auf dem Spiel steht: <span data-fig="talk.atStake">…</span>.“</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Lesen: drei Berichte zu einer Reederei.</strong> <span class="vc-guide__say">„Drei Challenger haben Tidewell Lines geprüft, und der Leser hat das Emissionsthema zusammengeführt, das alle drei nennen.“</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Ideen: eine Idee öffnen.</strong> <span class="vc-guide__say">„Jede Zelle ist ein Prototyp mit einer Kennzahl; dieser antwortet auf <span data-fig="talk.issue">…</span>.“</span> <span class="vc-guide__time">1,5 min</span></li>
+          <li><strong>Bewerten: ein Gewicht ändern.</strong> <span class="vc-guide__say">„Gewichten Sie den Nutzen anders, und die Rangfolge hält: <span data-fig="talk.stable">…</span>.“</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Auswahl, Bericht und Bau-Briefing.</strong> <span class="vc-guide__say">„Sie wählen drei, und Bericht und Bau-Briefing lassen sich für Ihr Team herunterladen.“</span> <span class="vc-guide__time">0,5 min</span></li>
+        </ol>
+      </section>
+    </div>
+    <footer class="vc-dialog__footer vc-guide__footer">
+      <span class="vc-guide__count"></span>
+      <button type="button" class="vc-button vc-button--ghost" data-vc-guide-back><span class="vc-icon vc-icon--chevron-left" aria-hidden="true"></span>Zurück</button>
+      <button type="button" class="vc-button" data-vc-guide-next data-vc-guide-done="Starten">Weiter<span class="vc-icon vc-icon--chevron-right" aria-hidden="true"></span></button>
+    </footer>
+  </dialog>
+
+  <!-- Boot screen: removed by js/main.js once the page runs. Without JavaScript modules (opened from disk
+       via file://) it stays and explains what to do, in the page's language. -->
+  <div id="boot" class="boot" data-state="loading">
+    <div class="boot-card">
+      <div class="boot-brand">
+        <span class="vc-cell vc-cell--lilac vc-cell--xl" aria-hidden="true"><span class="vc-icon vc-icon--sparkle"></span></span>
+        <span class="brand-name">Prototype Ideator</span>
+      </div>
+      <p class="boot-status" role="status"><span class="vc-spinner" aria-hidden="true"></span><span id="boot-status"><span data-boot-lang="en">Starting the Prototype Ideator…</span><span data-boot-lang="de" lang="de" hidden>Der Prototype Ideator startet…</span></span></p>
+      <p id="boot-detail" class="vc-alert vc-alert--danger boot-detail" hidden></p>
+      <p class="boot-help" data-boot-lang="en">Still on this screen? Serve the folder over http, for example with <code>python -m http.server 8000</code>, and open <code>http://localhost:8000</code>. Browsers don't run its modules from a file.</p>
+      <p class="boot-help" data-boot-lang="de" lang="de" hidden>Hängt es hier? Liefern Sie den Ordner über http aus, etwa mit <code>python -m http.server 8000</code>, und öffnen Sie <code>http://localhost:8000</code>. Aus einer Datei führen Browser die Module nicht aus.</p>
+      <noscript><p class="boot-detail">The Prototype Ideator needs JavaScript. Allow it for this site and reload the page. / Der Prototype Ideator braucht JavaScript. Erlauben Sie es für diese Seite und laden Sie sie neu.</p></noscript>
+    </div>
+  </div>
+
+  <script src="js/lang.js"></script>
+</body>
+</html>

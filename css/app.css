@@ -1,0 +1,219 @@
+/* Prototype Ideator: the page around Vici (vici/dist/vici.min.css, loaded first). Vici sits in cascade
+ * layers, so these unlayered rules refine it without !important, with Vici's semantic tokens and type
+ * scale, which switch with the theme. What each colour means (DESIGN.md):
+ *   merlot (--vc-accent)    you: the current step, your turn, the one primary action, your decisions
+ *   lilac (--vc-feature-*)  the AI: what an agent wrote, suggested or estimated, and the AI notice
+ *   success, warning        a figure your decision moved; a figure at risk; each with a word as well
+ *   ink and neutrals        everything else; SIMULATION is neutral
+ * Adapted from the Data Quality Agent 2.2.0 and the Sovereignty Assessment 2.0.0 (frame, step bar,
+ * stage, Your turn bar and boot screen); nothing is round, since Vici's hexagons replace circles.
+ */
+
+:root {
+  --hit: 44px;
+  --gutter: clamp(14px, 1.3vw, 26px);
+  --fs-kpi: var(--vc-font-size-2xl);
+}
+
+/* Never below Vici's sizes (16 px at 1280 px wide), a little larger on a 1920 projector, and it follows
+   the reader's own text-size setting. */
+html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
+::selection { background: var(--vc-accent-soft); color: var(--vc-on-accent-soft); }
+:is(input, textarea) { caret-color: var(--vc-accent); }
+
+/* The page: header, the strip under it, the step bar and the stage fill the window; only the stage's
+   panels scroll. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--vc-bg);
+  color: var(--vc-text);
+}
+.app-shell * { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
+.vc-skip-link { position: fixed; z-index: 4000; }
+.kpi-value, .vc-num { font-variant-numeric: tabular-nums; }
+
+/* ---- header ------------------------------------------------------------------------------------------ */
+.app-header {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 16px;
+  padding: 8px var(--gutter);
+  background: var(--vc-surface);
+  border-bottom: 1px solid var(--vc-border-subtle);
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-name { font-family: var(--vc-font-display); font-weight: var(--vc-weight-display); font-size: var(--vc-font-size-2xl); letter-spacing: var(--vc-tracking-display); line-height: 1.05; white-space: nowrap; color: var(--vc-text); }
+.header-actions { display: flex; align-items: center; gap: 8px 10px; min-width: 0; }
+.header-actions .vc-button, .header-actions .vc-icon-button { --_h: 40px; white-space: nowrap; }
+.mode-tag.vc-tag { cursor: help; font-weight: var(--vc-weight-bold); letter-spacing: var(--vc-tracking-caps); }
+.mode-tag[data-mode="live"] { background: var(--vc-accent); color: var(--vc-on-accent); border-color: var(--vc-accent); }
+.lang-switch .vc-button { --_h: 40px; min-width: 2.75rem; justify-content: center; }
+.lang-switch .vc-button[aria-pressed="true"] { background: var(--vc-accent); border-color: var(--vc-accent); color: var(--vc-on-accent); }
+
+/* The four key figures, top right. A value waiting for its run shows the ellipsis in a quieter ink, and
+   its note says what it waits for. */
+.kpis { justify-self: end; display: grid; grid-template-columns: repeat(4, minmax(0, 11.5rem)); gap: 8px; }
+.kpi.vc-stat { min-width: 0; padding: 7px 12px 8px; gap: 1px; justify-content: flex-start; transition: background-color var(--vc-duration-base) var(--vc-ease-standard), border-color var(--vc-duration-base) var(--vc-ease-standard); }
+.kpi .vc-stat__label { font-size: var(--vc-font-size-xs); line-height: 1.2; text-wrap: balance; }
+.kpi .vc-stat__value { font-size: var(--fs-kpi); line-height: 1.05; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 0.3em; }
+.kpi .vc-stat__value .vc-stat__was { margin-inline-end: 0; }
+.kpi .kpi-note { font-size: var(--vc-font-size-xs); line-height: 1.25; color: var(--vc-text-muted); text-wrap: balance; }
+.kpi[data-state="waiting"] .kpi-value { color: var(--vc-text-subtle); letter-spacing: 0.06em; }
+
+/* One sentence on what the page does and how real its data is, beside the byline. */
+.intro { display: flex; align-items: center; justify-content: space-between; gap: 4px 24px; padding: 4px var(--gutter); background: var(--vc-surface); border-bottom: 1px solid var(--vc-border-subtle); }
+.intro-text { margin: 0; min-width: 0; flex: 1 1 32rem; max-width: 120ch; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); line-height: 1.35; }
+.intro .vc-byline { flex: none; flex-wrap: nowrap; white-space: nowrap; margin: 0; }
+.intro .vc-byline__person { min-height: 40px; }
+.intro .vc-byline__icon { min-width: var(--hit); min-height: 40px; }
+
+/* ---- step bar ------------------------------------------------------------------------------------------ */
+.stepbar { display: flex; align-items: center; gap: 12px; padding: 8px var(--gutter); background: var(--vc-bg-subtle); border-bottom: 1px solid var(--vc-border-subtle); }
+.stepbar .vc-button { --_h: var(--hit); flex: none; }
+/* Play, Pause and Replay keep one width, so the steps beside them stay put. */
+.play.vc-button { min-width: 7.5rem; justify-content: center; }
+.steps.vc-stepper { flex: 1 1 auto; margin: 0; min-width: 0; --_m: 1.9rem; }
+.steps .vc-step { min-width: 0; }
+.steps .vc-step__button { min-height: var(--hit); padding-block: 2px; }
+.steps .vc-step__label { font-weight: var(--vc-weight-semibold); white-space: nowrap; }
+.steps .vc-step__button:disabled { cursor: default; }
+/* Run it live stands after the steps, so nobody takes it for the way to start; the AI notice beside it. */
+.live-group { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px 10px; flex: none; max-width: 30rem; }
+.ai-notice.vc-tag { gap: 6px; flex: none; }
+
+/* ---- stage ---------------------------------------------------------------------------------------------- */
+.stage { min-height: 0; overflow: hidden; background-color: var(--vc-bg-sunken); background-image: var(--vc-honeycomb-pattern); background-size: var(--vc-honeycomb-pattern-size); }
+.stage:focus { outline: none; }
+.step { height: 100%; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); padding: var(--gutter); }
+.panel { min-height: 0; overflow: auto; background: var(--vc-surface); border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-xl); box-shadow: var(--vc-shadow-sm); padding: clamp(16px, 1.6vw, 28px); }
+.story { display: flex; flex-direction: column; gap: 14px; }
+.step-title { margin: 0; font-family: var(--vc-font-display); font-weight: var(--vc-weight-display); font-size: clamp(1.6rem, 1.5vw + 0.9rem, 2.4rem); line-height: 1.08; letter-spacing: var(--vc-tracking-display); text-wrap: balance; color: var(--vc-text); }
+.step-title:focus { outline: none; }
+.step-lead { margin: 0; font-size: var(--vc-font-size-lg); line-height: 1.4; color: var(--vc-text); max-width: 46ch; text-wrap: pretty; }
+.step-note { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); max-width: 52ch; }
+.version-note.vc-alert { display: flex; align-items: flex-start; gap: 10px; margin: 0; max-width: 52ch; }
+.version-note .vc-icon { flex: none; margin-top: 2px; }
+.challengers { display: grid; gap: 6px; }
+.challenger-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
+.challenger-links li { display: flex; align-items: center; margin: 0; }
+.challenger-links .vc-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-weight: var(--vc-weight-semibold); }
+.challenger-links .vc-icon { --vc-icon-size: 15px; }
+
+/* What the page waits for, asked where the eye is: Vici's merlot callout with the one primary action, right
+   under what just happened, and in view however long the story grows. The callout stays pastel in
+   both themes, so the button inside it keeps the light theme's merlot. */
+.turn-bar.vc-callout {
+  position: sticky;
+  bottom: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  --vc-accent: var(--vc-merlot-950);
+  --vc-accent-hover: var(--vc-merlot-800);
+  --vc-accent-pressed: var(--vc-merlot-900);
+  --vc-on-accent: var(--vc-neutral-50);
+}
+.turn-bar .vc-callout__body > * + * { margin-top: 2px; }
+.turn-bar .vc-callout__title { font-size: var(--vc-font-size-lg); line-height: 1.2; }
+.cta.vc-button { --_h: 50px; --_fs: var(--vc-font-size-md); flex: none; white-space: nowrap; }
+
+/* The evidence: the four figures, one line each. */
+.evidence { display: flex; flex-direction: column; gap: 14px; }
+.panel-title { margin: 0; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: var(--vc-font-size-xl); letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
+.figure-list { margin: 0; display: grid; gap: 0; }
+.figure-list > div { display: grid; grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr); gap: 4px 18px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--vc-border-subtle); }
+.figure-list > div:last-child { border-bottom: 1px solid var(--vc-border-subtle); }
+.figure-list dt { font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
+.figure-list dd { margin: 0; color: var(--vc-text-muted); line-height: 1.4; max-width: 60ch; }
+.public-note { margin-top: auto; }
+
+/* ---- guides ------------------------------------------------------------------------------------------------ */
+.vc-guide .vc-guide__say { font-style: normal; }
+.guide-steps th, .guide-figures th, .guide-criteria th { white-space: nowrap; }
+.guide-figures td, .guide-criteria td, .guide-steps td { line-height: 1.4; }
+
+/* ---- boot screen ----------------------------------------------------------------------------------------- */
+.boot { position: fixed; inset: 0; z-index: var(--vc-z-modal); display: grid; place-items: center; padding: 24px; background: var(--vc-bg); transition: opacity 0.3s ease; }
+.boot[data-state="done"] { opacity: 0; pointer-events: none; }
+.boot-card { width: min(640px, 100%); }
+.boot-brand { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+.boot-brand .brand-name { font-size: 2.1rem; }
+.boot-status { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: var(--vc-font-size-lg); }
+.boot[data-state="failed"] .boot-status .vc-spinner { display: none; }
+.boot-detail { margin: 0 0 14px; }
+.boot-help { margin: 0 0 10px; max-width: var(--vc-container-prose); color: var(--vc-text-muted); opacity: 0; visibility: hidden; animation: bootReveal 0.3s ease 6s forwards; }
+.boot[data-state="failed"] .boot-help { animation: none; opacity: 1; visibility: visible; }
+@keyframes bootReveal { to { opacity: 1; visibility: visible; } }
+
+/* ---- larger and smaller windows ---------------------------------------------------------------------------- */
+@media (min-width: 1700px) {
+  :root { --fs-kpi: var(--vc-font-size-3xl); }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 13rem)); }
+}
+@media (max-width: 1500px) {
+  .kpis { grid-template-columns: repeat(4, minmax(0, 10.5rem)); gap: 6px; }
+  .kpi.vc-stat { padding: 6px 10px 7px; }
+  .brand-name { font-size: var(--vc-font-size-xl); }
+  .steps .vc-step__label { font-size: var(--vc-font-size-sm); }
+}
+@media (max-width: 1366px) {
+  .app-header { gap: 8px 12px; }
+  .header-actions { gap: 6px; }
+  .header-actions .vc-button:not(.lang-option) { --_px: 12px; }
+  .lang-switch .vc-button { min-width: 40px; --_px: 8px; }
+  .brand { gap: 10px; }
+  /* The name takes two lines, so the four key figures keep their notes whole. */
+  .brand-name { max-width: 5.5em; font-size: var(--vc-font-size-lg); white-space: normal; }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 9.2rem)); }
+  .stepbar { gap: 10px; }
+  .steps.vc-stepper { --_m: 1.6rem; }
+}
+@media (max-width: 1100px) {
+  .app-header { grid-template-columns: minmax(0, 1fr) auto; }
+  .kpis { grid-column: 1 / -1; justify-self: stretch; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stepbar { flex-wrap: wrap; }
+  .step { grid-template-columns: minmax(0, 1fr); overflow: auto; height: auto; min-height: 100%; }
+}
+@media (max-width: 760px) {
+  .app-shell { height: auto; overflow: visible; }
+  .stage { overflow: visible; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .header-actions { flex-wrap: wrap; }
+  .intro { flex-wrap: wrap; }
+  .figure-list > div { grid-template-columns: minmax(0, 1fr); }
+  .turn-bar.vc-callout { grid-template-columns: auto minmax(0, 1fr); }
+  .turn-bar .cta { grid-column: 1 / -1; justify-self: start; }
+}
+/* Laptop screens shared at 1280 × 720 or 1366 × 768: everything stays in view. */
+@media (max-height: 820px) and (min-width: 961px) {
+  .app-header { padding-block: 5px; }
+  .kpi.vc-stat { padding: 4px 10px 5px; }
+  .intro { padding-block: 2px; }
+  .stepbar { padding-block: 5px; }
+  .stepbar .vc-button { --_h: 40px; }
+  .steps .vc-step__button { min-height: 40px; }
+  .step { padding: 14px var(--gutter); gap: 14px; }
+  .panel { padding: 16px 20px; }
+  .story, .evidence { gap: 10px; }
+  .step-title { font-size: clamp(1.45rem, 1.2vw + 0.85rem, 2rem); }
+  .step-lead { font-size: var(--vc-font-size-md); }
+  .figure-list > div { padding: 9px 0; }
+  .cta.vc-button { --_h: 44px; }
+  .turn-bar.vc-callout { padding: 8px 12px; gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kpi.vc-stat { transition: none; }
+  .boot { transition: none; }
+}
+@media (forced-colors: active) {
+  .vc-attention { outline: 3px solid Highlight; outline-offset: 2px; }
+  .turn-bar.vc-callout { border: 2px solid CanvasText; }
+  .lang-switch .vc-button[aria-pressed="true"] { outline: 2px solid Highlight; }
+}
