@@ -8,7 +8,7 @@ export default {
   "app.name": "Prototype Ideator",
   "app.title": "Prototype Ideator: from documents to agentic-AI prototypes worth building",
   "p.skip": "Skip to the step on screen",
-  "p.mode.tip": "A replay of recorded agent answers through the real scoring rules: no model is called. Run it live calls Claude with your own key.",
+  "p.mode.tip": "A replay of recorded agent answers through the real scoring rules. It calls no model. Run it live calls Claude with your own key.",
   "p.theme": "Dark or light theme",
   "p.lang": "Language",
   "p.lang.now": "The page is now in English.",
@@ -23,7 +23,7 @@ export default {
 
   // ---- the key figures ----------------------------------------------------------------------------------
   "kpi.atStake.label": "At stake a year",
-  "kpi.atStake.wait": "after the Reader",
+  "kpi.atStake.wait": "after reading",
   "kpi.covered.label": "Issues covered",
   "kpi.covered.wait": "after the ideas",
   "kpi.top.label": "Top score",
@@ -49,11 +49,11 @@ export default {
 
   // ---- the first step -----------------------------------------------------------------------------------
   "p.start.title": "From the documents you have to a ranked shortlist",
-  "p.start.lead": "The Reader maps the business issues and KPIs in your documents. The Ideator proposes prototypes for them, code scores and ranks them, and you pick the three to build.",
+  "p.start.lead": "The Reader maps the business issues and KPIs in your documents. The Ideator proposes prototypes for them. Code scores and ranks them; you rank your top three and choose the one to build.",
   "p.start.version": "Version 0.1.0 holds the frame, the scoring engine and the guide. The three fictional companies play from version 0.2.0, live runs from version 0.3.0.",
   "p.start.challengers": "No documents yet? Challenge a business model, a SWOT or a PESTEL first.",
   "p.turn.lead": "Your turn",
-  "p.start.turn": "Read how the tool works. The replay starts here from version 0.2.0.",
+  "p.start.turn": "Read how the tool works. From version 0.2.0, the replay starts here.",
   "p.start.turnAction": "How it works",
   "p.figures.title": "The four figures at the top",
   "p.figures.atStake": "The money the kept issues put at stake a year, as the documents or the challengers state it.",
@@ -62,7 +62,7 @@ export default {
   "p.figures.cost": "What the model calls cost: measured in a live run, estimated in a replay.",
 
   // ---- start-up and errors ------------------------------------------------------------------------------
-  "p.boot.failed": "The page could not start.",
+  "p.boot.failed": "The page could not start. Reload it to try again.",
   "p.boot.module": "A part of the page did not load: {error}",
   "p.error.title": "Something went wrong",
 

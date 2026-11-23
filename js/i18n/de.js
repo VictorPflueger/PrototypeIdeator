@@ -8,12 +8,12 @@ export default {
   "app.name": "Prototype Ideator",
   "app.title": "Prototype Ideator: von Dokumenten zu Agentic-AI-Prototypen, die sich lohnen",
   "p.skip": "Zum Schritt auf dem Bildschirm springen",
-  "p.mode.tip": "Eine Wiedergabe aufgezeichneter Agentenantworten mit den echten Bewertungsregeln: Es wird kein Modell aufgerufen. „Live starten“ ruft Claude mit Ihrem eigenen Schlüssel auf.",
+  "p.mode.tip": "Eine Wiedergabe aufgezeichneter Agentenantworten mit den echten Bewertungsregeln. Sie ruft kein Modell auf. „Live starten“ ruft Claude mit Ihrem eigenen Schlüssel auf.",
   "p.theme": "Dunkles oder helles Design",
   "p.lang": "Sprache",
   "p.lang.now": "Die Seite ist jetzt auf Deutsch.",
   "p.kpis": "Kennzahlen",
-  "p.strip": "KI-Agenten lesen Ihre Dokumente, ordnen die Geschäftsthemen und schlagen bewertete Agentic-AI-Prototypen vor, die je eine Kennzahl verbessern; Sie wählen einen zum Bauen. Die Simulation nutzt fiktive Unternehmen, ein Live-Lauf Ihre Dokumente und Ihren Claude-Schlüssel.",
+  "p.strip": "KI-Agenten lesen Ihre Dokumente, ordnen die Geschäftsthemen und schlagen bewertete Agentic-AI-Prototypen vor, die je eine Kennzahl verbessern; Sie wählen einen zum Bauen. Die Simulation nutzt fiktive Firmen, ein Live-Lauf Ihre Dokumente und Ihren Claude-Schlüssel.",
   "p.byline.label": "Erstellt von",
   "p.byline.linkedin": " auf LinkedIn (öffnet einen neuen Tab)",
   "p.byline.website": "Website von Victor Pflüger (öffnet einen neuen Tab)",
@@ -23,7 +23,7 @@ export default {
 
   // ---- die Kennzahlen -----------------------------------------------------------------------------------
   "kpi.atStake.label": "Pro Jahr auf dem Spiel",
-  "kpi.atStake.wait": "nach dem Leser",
+  "kpi.atStake.wait": "nach dem Lesen",
   "kpi.covered.label": "Abgedeckte Themen",
   "kpi.covered.wait": "nach den Ideen",
   "kpi.top.label": "Bester Wert",
@@ -49,11 +49,11 @@ export default {
 
   // ---- der erste Schritt --------------------------------------------------------------------------------
   "p.start.title": "Von Ihren Dokumenten zur gereihten Auswahl",
-  "p.start.lead": "Der Leser ordnet die geschäftlichen Themen und Kennzahlen Ihrer Dokumente. Der Ideenfinder schlägt Prototypen dafür vor, Code bewertet und reiht sie, und Sie wählen die drei, die gebaut werden.",
+  "p.start.lead": "Der Leser ordnet die Geschäftsthemen und Kennzahlen Ihrer Dokumente. Der Ideenfinder schlägt Prototypen dafür vor. Code bewertet und reiht sie; Sie reihen Ihre drei Favoriten und wählen den, der gebaut wird.",
   "p.start.version": "Version 0.1.0 enthält den Rahmen, die Bewertungs-Engine und die Anleitung. Die drei fiktiven Unternehmen laufen ab Version 0.2.0, Live-Läufe ab Version 0.3.0.",
   "p.start.challengers": "Noch keine Dokumente? Prüfen Sie zuerst ein Geschäftsmodell, eine SWOT- oder eine PESTEL-Analyse.",
   "p.turn.lead": "Sie sind dran",
-  "p.start.turn": "Lesen Sie, wie das Werkzeug arbeitet. Die Wiedergabe startet hier ab Version 0.2.0.",
+  "p.start.turn": "Lesen Sie, wie das Werkzeug arbeitet. Ab Version 0.2.0 startet hier die Wiedergabe.",
   "p.start.turnAction": "So funktioniert's",
   "p.figures.title": "Die vier Kennzahlen oben",
   "p.figures.atStake": "Das Geld, das die behaltenen Themen pro Jahr aufs Spiel setzen, wie die Dokumente oder die Challenger es angeben.",
@@ -62,7 +62,7 @@ export default {
   "p.figures.cost": "Was die Modellaufrufe kosten: im Live-Lauf gemessen, in der Wiedergabe geschätzt.",
 
   // ---- Start und Fehler ---------------------------------------------------------------------------------
-  "p.boot.failed": "Die Seite konnte nicht starten.",
+  "p.boot.failed": "Die Seite konnte nicht starten. Laden Sie sie neu, um es noch einmal zu versuchen.",
   "p.boot.module": "Ein Teil der Seite wurde nicht geladen: {error}",
   "p.error.title": "Etwas ist schiefgelaufen",
 

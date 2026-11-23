@@ -31,7 +31,7 @@
     <div class="header-actions">
       <span class="vc-tooltip-anchor">
         <span class="vc-tag vc-tag--lg mode-tag" id="mode-tag" data-mode="simulation" tabindex="0" aria-describedby="tip-mode"><span id="mode-text">SIMULATION</span></span>
-        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-mode" data-i18n="p.mode.tip">A replay of recorded agent answers through the real scoring rules: no model is called. Run it live calls Claude with your own key.</span>
+        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-mode" data-i18n="p.mode.tip">A replay of recorded agent answers through the real scoring rules. It calls no model. Run it live calls Claude with your own key.</span>
       </span>
       <!-- One guide per language, each with its own button; js/lang.js shows the page's. -->
       <button type="button" class="vc-button vc-button--secondary guide-open" data-vc-guide-open="guide-en" lang="en"><span class="vc-icon vc-icon--info" aria-hidden="true"></span>How it works</button>
@@ -53,7 +53,7 @@
       <div class="kpi vc-stat" id="kpi-stake" data-vc-kpi="At stake a year" data-vc-kpi-de="Pro Jahr auf dem Spiel" data-state="waiting">
         <p class="vc-stat__label" data-i18n="kpi.atStake.label">At stake a year</p>
         <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
-        <p class="vc-stat__note kpi-note" data-i18n="kpi.atStake.wait">after the Reader</p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.atStake.wait">after reading</p>
       </div>
       <div class="kpi vc-stat" id="kpi-covered" data-vc-kpi="Issues covered" data-vc-kpi-de="Abgedeckte Themen" data-state="waiting">
         <p class="vc-stat__label" data-i18n="kpi.covered.label">Issues covered</p>
@@ -118,14 +118,14 @@
     <div class="step" data-step="start">
       <section class="panel story" aria-labelledby="start-title">
         <h1 class="step-title" id="start-title" data-i18n="p.start.title">From the documents you have to a ranked shortlist</h1>
-        <p class="step-lead" data-i18n="p.start.lead">The Reader maps the business issues and KPIs in your documents. The Ideator proposes prototypes for them, code scores and ranks them, and you pick the three to build.</p>
+        <p class="step-lead" data-i18n="p.start.lead">The Reader maps the business issues and KPIs in your documents. The Ideator proposes prototypes for them. Code scores and ranks them; you rank your top three and choose the one to build.</p>
         <p class="vc-alert vc-alert--neutral version-note" role="note"><span class="vc-icon vc-icon--info" aria-hidden="true"></span><span data-i18n="p.start.version">Version 0.1.0 holds the frame, the scoring engine and the guide. The three fictional companies play from version 0.2.0, live runs from version 0.3.0.</span></p>
         <!-- What the page waits for, asked where the eye is: one sentence and the one primary action. -->
         <div class="vc-callout turn-bar" id="turn">
           <span class="vc-callout__cell" aria-hidden="true"><span class="vc-icon vc-icon--hand"></span></span>
           <div class="vc-callout__body">
             <p class="vc-callout__title" data-i18n="p.turn.lead">Your turn</p>
-            <p data-i18n="p.start.turn">Read how the tool works. The replay starts here from version 0.2.0.</p>
+            <p data-i18n="p.start.turn">Read how the tool works. From version 0.2.0, the replay starts here.</p>
           </div>
           <button type="button" class="vc-button vc-attention cta" id="turn-primary"><span class="vc-icon vc-icon--info" aria-hidden="true"></span><span data-i18n="p.start.turnAction">How it works</span></button>
         </div>
@@ -245,7 +245,7 @@
     <div class="vc-guide__chapters">
       <section class="vc-guide__chapter" data-vc-chapter="what" data-vc-nav="Was er tut">
         <h3>Von Dokumenten zu Prototypen, die sich lohnen</h3>
-        <p class="vc-guide__lead">Geben Sie ihm die Dokumente eines Unternehmens, etwa den Bericht eines Challengers oder einen Geschäftsbericht. KI-Agenten ordnen die geschäftlichen Themen und Kennzahlen und schlagen Prototypen vor, jeden mit einer Kennzahl. Code reiht sie, Sie wählen.</p>
+        <p class="vc-guide__lead">Geben Sie ihm die Dokumente eines Unternehmens, etwa den Bericht eines Challengers oder einen Geschäftsbericht. KI-Agenten ordnen die Geschäftsthemen und Kennzahlen und schlagen Prototypen vor, jeden an eine Kennzahl gebunden. Code reiht sie, Sie wählen.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-steps">
           <caption>Sechs Schritte</caption>
           <tbody>

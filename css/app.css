@@ -132,7 +132,9 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .figure-list > div:last-child { border-bottom: 1px solid var(--vc-border-subtle); }
 .figure-list dt { font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
 .figure-list dd { margin: 0; color: var(--vc-text-muted); line-height: 1.4; max-width: 60ch; }
-.public-note { margin-top: auto; }
+/* The public-information note stays with the links it qualifies, rather than drifting to the panel's foot
+   on a tall screen. */
+.public-note { margin-top: 2px; }
 
 /* ---- guides ------------------------------------------------------------------------------------------------ */
 .vc-guide .vc-guide__say { font-style: normal; }

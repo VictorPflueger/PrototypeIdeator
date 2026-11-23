@@ -56,7 +56,7 @@ The browser keeps `vc-theme` (Vici's theme) and `pi.lang` (the language) in loca
 
 ## 6. Shared parts and the sibling tools
 
-The SWOT Challenger merged its M1 first, on 23 November 2026 at 21:35 (commit a52fd6f, merged as 617b122). By the brief's rule the first tool to merge a shared file is its source, so these come from it unchanged: `data/kpis.js` (115 KPIs in thirteen sectors), `schemas/strategy-challenge-1.json` with its module twin, `js/risk.js` and `tools/schema-module.mjs`, which writes the twin, with its `tests/kpis.mjs`. The Ideator's money at stake takes the format of `js/risk.js`: millions with one decimal ("€2.8m", "2,8 Mio. €"), so PI4's range shows as €2.0m–€6.0m where the brief writes "€2m–€6m" (section 9).
+The SWOT Challenger merged its M1 first, on 23 November 2026 at 21:35 (commit a52fd6f, merged as 617b122). By the brief's rule the first tool to merge a shared file is its source, so these come from it unchanged: `data/kpis.js` (115 KPIs in thirteen sectors) with its test, `tests/kpis.mjs`; `schemas/strategy-challenge-1.json` with its module twin and `tools/schema-module.mjs`, which writes the twin; and `js/risk.js`. The Ideator's money at stake takes the format of `js/risk.js`: millions with one decimal ("€2.8m", "2,8 Mio. €"), so PI4's range shows as €2.0m–€6.0m where the brief writes "€2m–€6m" (section 9).
 
 No sibling had the live client or the key store yet, so this tool sets them for the others to copy: `js/anthropic.js`, `js/sse.js` and `js/cost.js` from the Sovereignty Assessment 2.0.0 (35c0dea), with the app's name read from `config.js` so the file can be byte-identical in all four tools, and `js/keystore.js`, held in memory only.
 
