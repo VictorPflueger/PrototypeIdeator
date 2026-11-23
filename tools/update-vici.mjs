@@ -1,7 +1,7 @@
 // Copies Vici's files from a ViciDesign checkout into vici/, unchanged, and names the checkout's commit in
 // vici/README.md and in the GitHub Actions workflow, so tests/vici.mjs compares against the same commit.
-// The files are the ones a prototype needs (Vici's prototype brief): the stylesheet, the script and the
-// token values from dist/, the fonts with their licences, the portrait for the byline, LinkedIn's mark
+// The files are the ones a prototype needs (Vici's prototype brief): the stylesheet, the script, the theme
+// script that runs before the first paint and the token values from dist/, the fonts with their licences, the portrait for the byline, LinkedIn's mark
 // with its notes, and the licence. Run it after a ViciDesign change is merged on main, then run the tests
 // and look at the page in both themes.
 // Usage: node tools/update-vici.mjs [path to ViciDesign]   (default: ../ViciDesign, else ../vicidesign)
@@ -19,7 +19,7 @@ if (!existsSync(path.join(from, "dist", "vici.min.css"))) {
 const commit = execFileSync("git", ["-C", from, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const date = execFileSync("git", ["-C", from, "log", "-1", "--format=%cs"], { encoding: "utf8" }).trim();
 const fonts = readdirSync(path.join(from, "assets", "fonts")).filter((f) => /\.(woff2|txt)$/.test(f)).map((f) => `assets/fonts/${f}`);
-const FILES = ["dist/vici.min.css", "dist/vici.js", "dist/tokens.json", ...fonts, "assets/brand/portrait-96.jpg", "assets/marks/linkedin.png", "assets/marks/README.md", "LICENSE"];
+const FILES = ["dist/vici.min.css", "dist/vici.js", "dist/vici-theme.js", "dist/tokens.json", ...fonts, "assets/brand/portrait-96.jpg", "assets/marks/linkedin.png", "assets/marks/README.md", "LICENSE"];
 for (const f of FILES) {
   const to = path.join(APP, "vici", f);
   mkdirSync(path.dirname(to), { recursive: true });

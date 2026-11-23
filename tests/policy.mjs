@@ -134,13 +134,16 @@ const jsInl = [...js, ...data].flatMap((f) => jsInline(read(f)).map((x) => `${f}
 check(!jsInl.length, `no code writes a style attribute, a handler or a script as text, or evaluates text${jsInl.length ? `: ${jsInl.join("; ")}` : ""}`);
 
 // ---- storage ---------------------------------------------------------------------------------------
-const ALLOWED = new Set(["js/theme.js", "js/lang.js", "js/i18n/index.js"]);
-const using = [...js, ...data].filter((f) => STORAGE_API.test(stripComments(read(f))));
+// The theme before the first paint is Vici's own script (vici/dist/vici-theme.js), loaded from vici/.
+const THEME = "vici/dist/vici-theme.js";
+const ALLOWED = new Set([THEME, "js/lang.js", "js/i18n/index.js"]);
+check(/<html lang="en-GB" data-vc-theme-default="light">/.test(html) && /<script src="vici\/dist\/vici-theme\.js"><\/script>\s*<script src="vici\/dist\/vici\.js" defer><\/script>/.test(html), "the head runs Vici's theme script first, as a plain script, with light as the default before anyone chooses");
+const using = [...js, ...data, THEME].filter((f) => STORAGE_API.test(stripComments(read(f))));
 const strayModules = using.filter((f) => !ALLOWED.has(f));
 check(!strayModules.length, `localStorage and sessionStorage appear only in ${[...ALLOWED].join(", ")}${strayModules.length ? `; also in ${strayModules.join(", ")}` : ` (${using.length} module(s) use them)`}`);
 const other = [...js, ...data, "index.html"].filter((f) => OTHER_STORES.test(stripComments(read(f))));
 check(!other.length, `no IndexedDB, Cache API or cookie anywhere${other.length ? `: ${other.join(", ")}` : ""}`);
-const literal = js.flatMap((f) => storageKeys(read(f)).map((k) => [f, k]));
+const literal = [...js, THEME].flatMap((f) => storageKeys(read(f)).map((k) => [f, k]));
 const strays = literal.filter(([, k]) => k !== "pi.lang" && k !== "vc-theme" && !k.startsWith("vc-guide:"));
 check(!strays.length, `every literal storage key is pi.lang, vc-theme or Vici's vc-guide: note${strays.length ? `: ${strays.map(([f, k]) => `${k} (${f})`).join(", ")}` : ` (${literal.length} uses)`}`);
 const prefix = /id:\s*"([a-z]+)"/.exec(config)[1];

@@ -24,8 +24,10 @@ import { renderFacts } from "./facts.js";
 import { fmtScore } from "./format.js";
 import { streamMessage, withRetry } from "./anthropic.js";
 import { usageCostUsd } from "./cost.js";
-import { SECTORS } from "../data/kpis.js";
+import { kpisFor, kpiById } from "../data/kpis.js";
 
+/** A KPI of the shared library by its id, as a challenger's file names it; or one the library lacks. */
+const lib = (id) => { const k = kpiById(id); return { id: k.id, name: k.name.en, unit: k.unit }; };
 const kpi = (id, name, unit) => ({ id, name, unit });
 const issue = (id, title, area, description, eur, basis, kpis, response, extra = {}) => ({
   id, title, area, description,
@@ -45,50 +47,50 @@ export const S1 = Object.freeze({
     issue("bmc-I1", "Emission allowances raise the cost of every European call", "Cost structure, Revenue streams",
       "Since 2024, voyages to and from EU ports need emission allowances: for all emissions between EU ports and half of those on voyages into or out of the EU. Carriers surrendered allowances for 40 % of 2024's emissions and 70 % of 2025's, and must surrender them for all emissions from 2026 on, methane and nitrous oxide included. Tidewell's emissions surcharge covers only part of the cost.",
       [2000000, 6000000, 2800000], "Containers on Europe services times the uncovered allowance cost per container",
-      [kpi("transport_logistics.cost_per_teu", "Cost per container moved", "EUR per TEU"), kpi("transport_logistics.surcharge_recovery", "Extra cost recovered through surcharges", "% of extra cost")],
+      [lib("transport_logistics.ets_cost_per_teu"), lib("transport_logistics.cost_per_teu")],
       "Charge the full allowance cost through a published surcharge"),
     issue("swot-I1", "Emissions trading costs press on margins", "Threats",
       "The EU emissions trading system covers shipping, and the share of emissions carriers pay for rises every year until 2026.",
-      [1500000, 4000000, 2400000], "Allowance price times the fleet's emissions on EU voyages", [kpi("transport_logistics.cost_per_teu", "Cost per container moved", "EUR per TEU")], null,
+      [1500000, 4000000, 2400000], "Allowance price times the fleet's emissions on EU voyages", [lib("transport_logistics.cost_per_teu")], null,
       { status: "merged", merged_into: "bmc-I1" }),
     issue("pestel-I1", "Emissions trading for shipping reaches full coverage", "Legal, Environmental",
       "From the emissions of 2026 on, carriers surrender allowances for all of them, methane and nitrous oxide included.",
-      [2000000, 5000000, 3100000], "Allowance price times the fleet's emissions on EU voyages, at full coverage", [kpi("transport_logistics.emissions_per_teu_km", "Emissions per container kilometre", "g CO2e per TEU-km")], null,
+      [2000000, 5000000, 3100000], "Allowance price times the fleet's emissions on EU voyages, at full coverage", [lib("transport_logistics.ets_cost_per_teu")], null,
       { status: "merged", merged_into: "bmc-I1" }),
     issue("pestel-I2", "FuelEU Maritime fines loom for the older ships", "Legal, Environmental",
       "Since January 2025, FuelEU Maritime caps the greenhouse-gas intensity of the energy used on board: 2 % below 91.16 g CO2e per MJ from 2025, 6 % below from 2030 and 14.5 % below from 2035. A ship above the limit pays a penalty unless it pools with cleaner ships. A third of Tidewell's fleet burns heavy fuel oil.",
       [400000, 1800000, 900000], "Penalty for the energy above the limit, for the ships above it",
-      [kpi("transport_logistics.emissions_per_teu_km", "Emissions per container kilometre", "g CO2e per TEU-km"), kpi("transport_logistics.fuel_cost_per_voyage", "Fuel cost per voyage", "EUR per voyage")],
+      [lib("transport_logistics.co2_per_teu_km"), lib("transport_logistics.fuel_cost_per_teu")],
       "Pool the older ships with the dual-fuel newbuilds"),
     issue("swot-I2", "Closed sea routes stretch the Asia loops", "Threats",
       "The war with Iran from late February 2026 shut or limited the Strait of Hormuz and cut Tidewell's Gulf calls; war-risk cover was withdrawn or repriced, and attacks on ships are still reported in November 2026. Carriers have been returning to the Red Sea since September 2026, and a full return through Suez is expected by the first quarter of 2027. Until then, Tidewell's Asia loops sail round the Cape of Good Hope, with more fuel and more ships per weekly service.",
       [3000000, 9000000, 4500000], "Extra fuel and charter cost per rerouted loop, times loops a year",
-      [kpi("transport_logistics.schedule_reliability", "Schedule reliability", "% on time"), kpi("transport_logistics.fuel_cost_per_voyage", "Fuel cost per voyage", "EUR per voyage")],
+      [lib("transport_logistics.schedule_reliability"), lib("transport_logistics.fuel_cost_per_teu")],
       "Plan each loop's route every week from the security picture"),
     issue("bmc-I2", "Freight rates swing faster than contracts reprice", "Revenue streams",
       "Drewry's World Container Index stood at $1,859 per 40 ft container on 13 November 2025, $2,557 on 8 January 2026 and $4,176 on 19 November 2026, its fourth weekly fall. Most of Tidewell's contract rates reprice once a quarter, so its margins swing with the spot market.",
       [2500000, 8000000, 3800000], "Contract volume times the gap between spot and contract rates over a quarter",
-      [kpi("transport_logistics.load_factor", "Load factor", "% of capacity"), kpi(null, "Average freight rate", "USD per 40 ft container")],
+      [lib("transport_logistics.average_freight_rate"), lib("transport_logistics.vessel_utilisation")],
       "Link part of the contract rates to a published index"),
     issue("swot-I3", "Digital forwarders win small shippers' bookings", "Threats, Channels",
       "Digital forwarders give small and mid-sized shippers instant online quotes and bookings. Tidewell answers spot booking requests by e-mail, within a working day on average.",
       [800000, 2500000, 1200000], "Small shippers' volume lost a year, times the margin per container",
-      [kpi("transport_logistics.booking_response_time", "Booking response time", "minutes")],
+      [lib("transport_logistics.online_booking_share"), kpi(null, "Booking response time", "h")],
       "Quote spot bookings online within minutes"),
     issue("bmc-I3", "Shippers ask for emissions per container", "Value propositions, Customer relationships",
       "CountEmissionsEU sets one method for counting transport emissions, based on EN ISO 14083: the Council agreed its position on 26 February 2026 and Parliament adopted it in April 2026. Shippers who report their transport emissions now ask carriers for figures per shipment. Tidewell sends yearly fleet averages.",
       [500000, 3000000, 1500000], "Tender volume at risk, times the margin per container",
-      [kpi("transport_logistics.emissions_per_teu_km", "Emissions per container kilometre", "g CO2e per TEU-km")],
+      [lib("transport_logistics.co2_per_teu_km")],
       "Send an emissions statement with every bill of lading"),
     issue("swot-I4", "Empty containers pile up after the rate peak", "Weaknesses",
       "As volumes fell after the summer peak, empty containers piled up in North European depots while Asian ports ran short. Tidewell's planners reposition empties week by week, by judgement.",
       [1000000, 3500000, 1800000], "Empty moves a year, times the cost per move",
-      [kpi("transport_logistics.empty_moves", "Empty container moves", "% of moves"), kpi("transport_logistics.dwell_time", "Dwell time", "days")],
+      [lib("transport_logistics.empty_repositioning_cost")],
       "Reposition empties from a daily forecast"),
     issue("pestel-I3", "Customers dispute the new surcharge invoices", "Customer relationships",
       "Since the emissions surcharge started, customers dispute more invoices, and each dispute holds up payment until someone in finance explains the surcharge line.",
       null, null,
-      [kpi("transport_logistics.invoice_accuracy", "Invoice accuracy", "% of invoices")],
+      [kpi(null, "Disputed invoices", "%")],
       "Explain each surcharge line on the invoice")
   ]
 });
@@ -109,13 +111,13 @@ export function presetById(id) {
 
 /** What the probe sends and checks against: S1's facts, the Ideator's input and the evidence for the audit. */
 export function probeState({ lang = "en", count = 8 } = {}) {
-  const sector = SECTORS.find((s) => s.id === S1.company.sector);
+  const kpis = kpisFor(S1.company.sector);
   const facts = factValues({ issues: S1.issues, lang });
-  const input = ideatorInput({ company: S1.company, issues: S1.issues, count, kpis: sector.kpis, facts, lang });
+  const input = ideatorInput({ company: S1.company, issues: S1.issues, count, kpis, facts, lang });
   const citable = JSON.parse(input).facts;
   const evidence = {
     titles: S1.issues.map((i) => i.title),
-    texts: [S1.company.description, ...S1.issues.flatMap((i) => [i.description, i.eur_basis || "", i.response?.title || "", ...i.kpis.flatMap((k) => [k.name, k.unit])]), ...sector.kpis.flatMap((k) => [k.name[lang] || k.name.en, k.unit[lang] || k.unit.en])],
+    texts: [S1.company.description, ...S1.issues.flatMap((i) => [i.description, i.eur_basis || "", i.response?.title || "", ...i.kpis.flatMap((k) => [k.name, k.unit])]), ...kpis.flatMap((k) => [k.name[lang] || k.name.en, k.unit])],
     urls: []
   };
   return { facts, citable, input, evidence };

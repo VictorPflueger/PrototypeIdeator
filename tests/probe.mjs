@@ -79,7 +79,7 @@ const gap = res.ideas.find((x) => x.name === "Allowance Gap Agent");
 const st = E.stability(JSON.parse(GOOD).ideas.map((x, i) => ({ id: `P${i + 1}`, ...x })), E.DEFAULT_WEIGHTS);
 r.check(gap.firsts === `${st.counts.P1.firsts} of ${st.of}` && gap.firsts === "8 of 9" && gap.ratings === "5 4 5 4 5 5 4" && gap.issues === "bmc-I1 pestel-I3", `each idea row carries its stability count, its issues and its ratings (${gap.firsts}; ${gap.ratings})`);
 const index = res.ideas.find((x) => x.name === "Rate Index Watch");
-r.check(/Average freight rate: \$4,176 per 40 ft container on 19 November 2026 \(Drewry World Container Index\)/.test(index.key_figures) && /Load factor: not public/.test(index.key_figures), "key figures show today's value with its source, or not public");
+r.check(/Average freight rate: \$4,176 per 40 ft container on 19 November 2026 \(Drewry World Container Index\)/.test(index.key_figures) && /Vessel utilisation: not public/.test(index.key_figures), "key figures show today's value with its source, or not public");
 
 const rec = globalThis.piProbe;
 r.check(rec && rec.runs.length === 3 && rec.runs.every((x) => x.answer && x.request && x.ranking.length === 8 && x.stability.of === 9), "the full record stays in this tab's memory in piProbe: request, answer, ranking and stability");

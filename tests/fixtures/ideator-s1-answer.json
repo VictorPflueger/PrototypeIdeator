@@ -20,7 +20,7 @@
         "decision": "Pricing approves or changes the surcharge before it goes out"
       },
       "key_figures": [
-        { "name": "Extra cost recovered through surcharges", "today": "", "source": "", "public": false, "demo": "Rises loop by loop as the proposed surcharge closes the gap" },
+        { "name": "Emission allowance cost per container", "today": "", "source": "", "public": false, "demo": "Set beside the surcharge, loop by loop, until the gap closes" },
         { "name": "Money at stake a year", "today": "", "source": "", "public": false, "demo": "The uncovered allowance cost across Europe services, {{fact:issue.bmc-I1.eur}} a year" }
       ],
       "data": ["Published sailing schedules and port calls", "Published allowance prices", "Synthetic container volumes per loop"],
@@ -58,7 +58,7 @@
         "decision": "The fleet manager chooses which pools to register"
       },
       "key_figures": [
-        { "name": "Emissions per container kilometre", "today": "", "source": "", "public": false, "demo": "Falls for the pooled fleet against the limit" },
+        { "name": "CO2 per container-kilometre", "today": "", "source": "", "public": false, "demo": "Falls for the pooled fleet against the limit" },
         { "name": "Money saved a year", "today": "", "source": "", "public": false, "demo": "The penalty avoided, against {{fact:issue.pestel-I2.eur}} at stake" }
       ],
       "data": ["The FuelEU Maritime limits and penalty rules", "Synthetic fuel use per ship"],
@@ -135,7 +135,7 @@
       },
       "key_figures": [
         { "name": "Average freight rate", "today": "$4,176 per 40 ft container on 19 November 2026", "source": "Drewry World Container Index", "public": true, "demo": "Contract rates follow the index with a lag the agent closes" },
-        { "name": "Load factor", "today": "", "source": "", "public": false, "demo": "Holds while rates move" }
+        { "name": "Vessel utilisation", "today": "", "source": "", "public": false, "demo": "Holds while rates move" }
       ],
       "data": ["The published weekly freight index", "Synthetic contract book"],
       "risks": ["Customers may resist index clauses", "The contract book is synthetic"],
@@ -210,7 +210,7 @@
         "decision": "Sustainability signs off the method once, sales sends each statement"
       },
       "key_figures": [
-        { "name": "Emissions per container kilometre", "today": "", "source": "", "public": false, "demo": "Shown per shipment instead of a yearly average" },
+        { "name": "CO2 per container-kilometre", "today": "", "source": "", "public": false, "demo": "Shown per shipment instead of a yearly average" },
         { "name": "Money at stake a year", "today": "", "source": "", "public": false, "demo": "The tender volume at risk, {{fact:issue.bmc-I3.eur}} a year" }
       ],
       "data": ["The EN ISO 14083 method", "Published ship particulars", "Synthetic shipments"],
@@ -248,8 +248,8 @@
         "decision": "The equipment controller approves the moves"
       },
       "key_figures": [
-        { "name": "Empty container moves", "today": "", "source": "", "public": false, "demo": "Falls as moves follow the forecast" },
-        { "name": "Dwell time", "today": "", "source": "", "public": false, "demo": "Shortens in the North European depots" }
+        { "name": "Cost of moving empty containers", "today": "", "source": "", "public": false, "demo": "Falls as moves follow the forecast" },
+        { "name": "Detection to decision", "today": "", "source": "", "public": false, "demo": "Drops from a weekly plan to a daily one" }
       ],
       "data": ["Published port volumes", "Synthetic depot stocks"],
       "risks": ["The forecast rests on synthetic data"],
@@ -286,7 +286,7 @@
         "decision": "Billing approves the invoice"
       },
       "key_figures": [
-        { "name": "Invoice accuracy", "today": "", "source": "", "public": false, "demo": "Rises as disputed lines get explained first" },
+        { "name": "Disputed invoices", "today": "", "source": "", "public": false, "demo": "Fall as surcharge lines get explained first" },
         { "name": "Lead time", "today": "", "source": "", "public": false, "demo": "Payment arrives sooner without a dispute" }
       ],
       "data": ["Published surcharge notices", "Synthetic invoices"],

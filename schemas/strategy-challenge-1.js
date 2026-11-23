@@ -1,10 +1,11 @@
-// The module twin of strategy-challenge-1.json: a page under a strict security policy can't import JSON, so it imports
-// this file. Written from the JSON by tools/sync-schemas.mjs; never edit it by hand.
+// The handoff schema of schemas/strategy-challenge-1.json as a module: the page cannot import a .json
+// module under its security policy (connect-src blocks it, PLAN.md probe 19). tests/schemas.mjs holds the
+// two equal; change the JSON file and run `node tools/schema-module.mjs` to write this one again.
 export default {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://victorpflueger.github.io/PrototypeIdeator/schemas/strategy-challenge-1.json",
+  "$id": "strategy-challenge-1.json",
   "title": "strategy-challenge/1",
-  "description": "The handoff file a challenger (Business Model Canvas, SWOT or PESTEL) exports and the Prototype Ideator reads without a model call. The same file in all four repositories. A change to the shape means a new schema name. Figures are numbers, never text; it carries no API key, no prompt and no thinking.",
+  "description": "The handoff file every challenger exports and the Prototype Ideator reads without a model call (build brief 4.3). The same file in all four tools; a change to the shape means a new schema name.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -38,14 +39,19 @@ export default {
       ],
       "properties": {
         "id": {
-          "type": "string",
-          "description": "bmc-challenger, swot-challenger or pestel-challenger"
+          "enum": [
+            "bmc-challenger",
+            "swot-challenger",
+            "pestel-challenger"
+          ]
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
         },
         "url": {
           "type": "string",
@@ -55,8 +61,7 @@ export default {
     },
     "created": {
       "type": "string",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$",
-      "description": "When the file was written, as an ISO 8601 date and time"
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
     },
     "language": {
       "enum": [
@@ -74,8 +79,7 @@ export default {
       "type": [
         "string",
         "null"
-      ],
-      "description": "The model's API id in a live run; null in a simulation"
+      ]
     },
     "company": {
       "type": "object",
@@ -94,7 +98,7 @@ export default {
         },
         "sector": {
           "type": "string",
-          "description": "A sector id of data/kpis.js, or other"
+          "pattern": "^[a-z_]+$"
         },
         "country": {
           "type": "string",
@@ -109,38 +113,28 @@ export default {
       }
     },
     "framework": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "type",
-        "areas"
-      ],
-      "properties": {
-        "type": {
-          "enum": [
-            "bmc",
-            "swot",
-            "pestel"
-          ]
+      "anyOf": [
+        {
+          "$ref": "#/$defs/swot_framework"
         },
-        "areas": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Area"
-          }
+        {
+          "$ref": "#/$defs/pestel_framework"
+        },
+        {
+          "$ref": "#/$defs/bmc_framework"
         }
-      }
+      ]
     },
     "issues": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/Issue"
+        "$ref": "#/$defs/issue"
       }
     },
     "responses": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/Response"
+        "$ref": "#/$defs/response"
       }
     },
     "figures": {
@@ -155,22 +149,16 @@ export default {
       ],
       "properties": {
         "at_stake_eur_year": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number",
+          "minimum": 0
         },
         "left_eur_year": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number",
+          "minimum": 0
         },
         "upside_eur_year": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number",
+          "minimum": 0
         },
         "score": {
           "type": "object",
@@ -196,16 +184,10 @@ export default {
               ]
             },
             "before": {
-              "type": [
-                "number",
-                "null"
-              ]
+              "type": "number"
             },
             "after": {
-              "type": [
-                "number",
-                "null"
-              ]
+              "type": "number"
             }
           }
         },
@@ -220,7 +202,8 @@ export default {
           ],
           "properties": {
             "label": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "before": {
               "type": "integer",
@@ -247,7 +230,8 @@ export default {
       ],
       "properties": {
         "headline": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "text": {
           "type": "string"
@@ -257,37 +241,16 @@ export default {
     "sources": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/Source"
+        "$ref": "#/$defs/source"
       }
     },
     "disclaimer": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     }
   },
   "$defs": {
-    "Source": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "url",
-        "title",
-        "read_on"
-      ],
-      "properties": {
-        "url": {
-          "type": "string",
-          "pattern": "^https?://"
-        },
-        "title": {
-          "type": "string"
-        },
-        "read_on": {
-          "type": "string",
-          "format": "date"
-        }
-      }
-    },
-    "Item": {
+    "item": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -297,10 +260,12 @@ export default {
       ],
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "text": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "source": {
           "enum": [
@@ -310,9 +275,9 @@ export default {
         },
         "confidence": {
           "enum": [
-            "low",
+            "high",
             "medium",
-            "high"
+            "low"
           ]
         },
         "basis": {
@@ -320,31 +285,140 @@ export default {
         }
       }
     },
-    "Area": {
+    "swot_framework": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "id",
-        "label",
-        "items"
+        "type",
+        "areas"
       ],
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "One of the canvas's nine block ids, the four SWOT quadrants or the six PESTEL dimensions"
+        "type": {
+          "const": "swot"
         },
-        "label": {
-          "type": "string"
-        },
-        "items": {
+        "areas": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Item"
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "items"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "strengths",
+                  "weaknesses",
+                  "opportunities",
+                  "threats"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/item"
+                }
+              }
+            }
           }
         }
       }
     },
-    "Kpi": {
+    "pestel_framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "areas"
+      ],
+      "properties": {
+        "type": {
+          "const": "pestel"
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "items"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "political",
+                  "economic",
+                  "social",
+                  "technological",
+                  "environmental",
+                  "legal"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/item"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "bmc_framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "areas"
+      ],
+      "properties": {
+        "type": {
+          "const": "bmc"
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "items"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z_]+$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/item"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "kpi_effect": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -358,17 +432,16 @@ export default {
       ],
       "properties": {
         "id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "A KPI id of data/kpis.js, such as transport_logistics.cost_per_teu, or null"
+          "type": "string",
+          "pattern": "^[a-z_]+\\.[a-z0-9_]+$"
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "unit": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "direction": {
           "enum": [
@@ -377,23 +450,40 @@ export default {
           ]
         },
         "change_low": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number"
         },
         "change_high": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": "number"
         },
         "basis": {
           "type": "string"
         }
       }
     },
-    "Issue": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "title",
+        "read_on"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "read_on": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "issue": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -417,14 +507,16 @@ export default {
       ],
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^I\\d{1,2}$"
         },
         "title": {
           "type": "string",
           "minLength": 1
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[a-z_]+$"
         },
         "description": {
           "type": "string"
@@ -452,57 +544,108 @@ export default {
           "maximum": 5
         },
         "band": {
-          "type": "string"
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
         },
         "horizon": {
-          "type": "string"
+          "enum": [
+            "now",
+            "1_to_3_years",
+            "over_3_years"
+          ]
         },
         "kpis": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Kpi"
+            "$ref": "#/$defs/kpi_effect"
           }
         },
         "eur_year_low": {
           "type": [
             "number",
             "null"
-          ]
+          ],
+          "minimum": 0
         },
         "eur_year_high": {
           "type": [
             "number",
             "null"
-          ]
+          ],
+          "minimum": 0
         },
         "eur_year_expected": {
           "type": [
             "number",
             "null"
-          ]
+          ],
+          "minimum": 0
         },
         "eur_basis": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "evidence": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Source"
+            "$ref": "#/$defs/source"
           }
         },
         "confidence": {
           "enum": [
-            "low",
+            "high",
             "medium",
-            "high"
+            "low"
           ]
         }
       }
     },
-    "Change": {
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eur_year_low",
+        "eur_year_high",
+        "likelihood",
+        "eur_year_expected"
+      ],
+      "properties": {
+        "impact": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "likelihood": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "band": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "eur_year_low": {
+          "type": "number",
+          "minimum": 0
+        },
+        "eur_year_high": {
+          "type": "number",
+          "minimum": 0
+        },
+        "eur_year_expected": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "change": {
       "anyOf": [
         {
           "type": "object",
@@ -514,7 +657,8 @@ export default {
           ],
           "properties": {
             "area": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[a-z_]+$"
             },
             "action": {
               "enum": [
@@ -545,13 +689,18 @@ export default {
               "const": "rate"
             },
             "item": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "from": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
             },
             "to": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
             }
           }
         },
@@ -569,90 +718,22 @@ export default {
               "const": "watch"
             },
             "item": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "signal": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "trigger": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           }
         }
       ]
     },
-    "Residual": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "impact",
-        "likelihood",
-        "band",
-        "eur_year_low",
-        "eur_year_high",
-        "eur_year_expected"
-      ],
-      "properties": {
-        "impact": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 5
-        },
-        "likelihood": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 5
-        },
-        "band": {
-          "type": "string"
-        },
-        "eur_year_low": {
-          "type": [
-            "number",
-            "null"
-          ]
-        },
-        "eur_year_high": {
-          "type": [
-            "number",
-            "null"
-          ]
-        },
-        "eur_year_expected": {
-          "type": [
-            "number",
-            "null"
-          ]
-        }
-      }
-    },
-    "Upside": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "eur_year_low",
-        "eur_year_high",
-        "likelihood",
-        "eur_year_expected"
-      ],
-      "properties": {
-        "eur_year_low": {
-          "type": "number"
-        },
-        "eur_year_high": {
-          "type": "number"
-        },
-        "likelihood": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 5
-        },
-        "eur_year_expected": {
-          "type": "number"
-        }
-      }
-    },
-    "Response": {
+    "response": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -671,10 +752,12 @@ export default {
       ],
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^R\\d{1,2}$"
         },
         "issue": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^I\\d{1,2}$"
         },
         "kind": {
           "enum": [
@@ -688,7 +771,8 @@ export default {
           "type": "boolean"
         },
         "title": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "first_step": {
           "type": "string"
@@ -699,13 +783,13 @@ export default {
         "changes": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Change"
+            "$ref": "#/$defs/change"
           }
         },
         "residual": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Residual"
+              "$ref": "#/$defs/range"
             },
             {
               "type": "null"
@@ -715,7 +799,7 @@ export default {
         "upside": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Upside"
+              "$ref": "#/$defs/range"
             },
             {
               "type": "null"
@@ -723,7 +807,11 @@ export default {
           ]
         },
         "effort": {
-          "type": "string"
+          "enum": [
+            "S",
+            "M",
+            "L"
+          ]
         },
         "time_to_impact": {
           "type": "string"

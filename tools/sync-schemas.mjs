@@ -1,7 +1,9 @@
-// Writes each JSON schema in schemas/ as a module twin beside it (strategy-challenge-1.json gives
-// strategy-challenge-1.js), because the page's security policy refuses JSON modules (connect-src holds
-// only api.anthropic.com). The JSON file is the source; with --check this tool changes nothing and exits
-// 1 when a twin differs from what it would write, which tests/schemas.mjs runs.
+// Writes this tool's own JSON schema, schemas/prototype-ideas-1.json, as a module twin beside it
+// (prototype-ideas-1.js), because the page's security policy refuses JSON modules (connect-src holds only
+// api.anthropic.com). The JSON file is the source; with --check this tool changes nothing and exits 1
+// when the twin differs from what it would write, which tests/schemas.mjs runs. The shared handoff schema
+// and its twin come unchanged from the SWOT Challenger, with the tool that writes it there
+// (tools/schema-module.mjs), so all four tools hold the same bytes.
 // Usage: node tools/sync-schemas.mjs [--check]
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -14,7 +16,8 @@ const HEADER = (name) => `// The module twin of ${name}: a page under a strict s
 `;
 
 let differ = 0;
-for (const file of readdirSync(DIR).filter((f) => f.endsWith(".json")).sort()) {
+const OWN = ["prototype-ideas-1.json"];
+for (const file of readdirSync(DIR).filter((f) => OWN.includes(f)).sort()) {
   const twin = path.join(DIR, file.replace(/\.json$/, ".js"));
   const schema = JSON.parse(readFileSync(path.join(DIR, file), "utf8"));
   const text = `${HEADER(file)}export default ${JSON.stringify(schema, null, 2)};\n`;

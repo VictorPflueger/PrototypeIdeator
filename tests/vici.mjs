@@ -1,7 +1,9 @@
 // Vici's own rules, checked with Vici's own functions (AC-01; Build a prototype, "Check it"): the How it
 // works guides and their key figures (guideProblems), the byline (bylineProblems), the Writing guideline's
 // checkable patterns (writingProblems), the AI notice of a page that can start a live run
-// (aiNoticeProblems) and names, not record ids (recordIdProblems). They run on the page as served, on the
+// (aiNoticeProblems), names, not record ids (recordIdProblems), the strict security policy
+// (policyProblems) and Nothing is kept (storageProblems on the scripts, storedKeyProblems on what a visit
+// leaves behind). They run on the page as served, on the
 // page as rendered in English and in German (at its first step and after Run it live), on both string
 // files and on the docs. ViciDesign's check-guide-render.mjs drives the guide over http. vici/ holds
 // Vici's files byte for byte, at the commit vici/README.md and the workflow name.
@@ -28,6 +30,8 @@ const { bylineProblems } = await lib("byline.mjs");
 const { writingProblems } = await lib("writing.mjs");
 const { aiNoticeProblems, canRunLive, AI_NOTICE } = await lib("ai.mjs");
 const { recordIdProblems } = await lib("ids.mjs");
+const { policyProblems } = await lib("policy.mjs");
+const { storageProblems, storedKeyProblems } = await lib("storage.mjs");
 const mod = (p) => import(pathToFileURL(path.join(APP_ROOT, p)).href);
 
 const read = (f) => readFileSync(path.join(APP_ROOT, f), "utf8");
@@ -46,6 +50,9 @@ control(guideProblems(html.replace('<div class="kpis"', '<p class="vc-stat" data
 control(bylineProblems(html.replace(/href="https:\/\/victorpflueger\.github\.io\/VIP\/index\.html"/, 'href="#"')).length > 0, "bylineProblems catches a byline without the website link");
 control(writingProblems(page(["The score is 4.75 — much more."])).length > 0 && writingProblems(page(["A seamless shortlist."])).length > 0, "writingProblems catches an em dash and a stock word");
 control(recordIdProblems("<p>The issue is bmc-I1, see transport_logistics.cost_per_teu.</p>", ["bmc-I1", "transport_logistics.cost_per_teu"]).length === 2 && !recordIdProblems("<p>Cost per container moved</p>", ["transport_logistics.cost_per_teu"]).length, "recordIdProblems catches an issue id and a KPI id on a screen, and passes names");
+control(policyProblems(html.replace("</head>", "<style>p{}</style></head>")).length > 0 && policyProblems(html.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")).length > 0, "policyProblems catches a style element and a policy that lets inline scripts in");
+control(storageProblems({ "js/x.js": "localStorage.setItem('pi.notes', text);" }, { allow: ["js/lang.js"] }).length === 1 && storageProblems({ "js/x.js": "const db = indexedDB.open('pi');" }).length === 1 && !storageProblems({ "js/x.js": "// localStorage is not used here" }).length, "storageProblems catches local storage outside the allowed modules and any database, and ignores a comment");
+control(storedKeyProblems({ local: ["vc-theme", "pi.lang", "pi.key"], session: ["vc-guide:/#guide-en"] }, { prefix: "pi" }).length === 1, "storedKeyProblems catches a stray key and lets the three allowed ones pass");
 control(aiNoticeProblems(html.split(AI_NOTICE.en).join("An assistant")).length > 0 && !aiNoticeProblems('<meta http-equiv="Content-Security-Policy" content="connect-src \'none\'"><p>Replay</p>').length, "aiNoticeProblems catches a live page that never says it is an AI, and leaves a page that cannot run live alone");
 
 // ---- the page as served -------------------------------------------------------------------------------------
@@ -71,14 +78,22 @@ const strip = (html.match(/<\/header>(?:\s*<!--[\s\S]*?-->)?\s*<div class="intro
 check(/<p class="intro-text"[^>]*>[^<]{40,300}<\/p>/.test(strip) && /fictional companies/.test(strip) && /class="vc-byline"/.test(strip), "one sentence under the header says what the tool does and that the simulation's companies are fictional, beside the byline");
 check((html.match(/class="vc-byline"/g) || []).length === 1, "the page carries one byline");
 check(/Public information only: never enter confidential, personal or otherwise protected data\./.test(html), "the public-information notice is on the page, in the brief's words");
+const pp = policyProblems(html);
+check(!pp.length, `the page keeps Vici's strict security policy: one policy, nothing inline${pp.length ? `: ${pp.join("; ")}` : ""}`);
+const scripts = [];
+const walkJs = (d) => { for (const f of readdirSync(path.join(APP_ROOT, d))) { const p = `${d}/${f}`; if (statSync(path.join(APP_ROOT, p)).isDirectory()) walkJs(p); else if (/\.m?js$/.test(f)) scripts.push(p); } };
+walkJs("js");
+walkJs("data");
+const sp = storageProblems(Object.fromEntries([...scripts, "index.html"].map((f) => [f, read(f)])), { allow: ["js/lang.js", "js/i18n/index.js"] });
+check(scripts.length > 20 && !sp.length, `Nothing is kept, in the ${scripts.length} scripts and the page: only the language modules touch storage, and nothing uses a database, the Cache API or a cookie${sp.length ? `: ${sp.join("; ")}` : ""}`);
 
 // The ids of the tool's data: sectors, KPIs and the issues of the example handoff file. Vici's names-not-ids
 // rule: none of them may reach a screen.
-const { SECTORS } = await mod("data/kpis.js");
+const { SECTORS, KPIS } = await mod("data/kpis.js");
 const H = await mod("js/handoff.js");
 const example = JSON.parse(read("tests/fixtures/strategy-challenge-example.json"));
-const IDS = new Set([...SECTORS.map((s) => s.id), ...SECTORS.flatMap((s) => s.kpis.map((k) => k.id)), ...H.readHandoff(example).issues.map((i) => i.id), "bmc-challenger", "swot-challenger", "pestel-challenger"]);
-check(IDS.size > 140, `the data's ids are known (${IDS.size})`);
+const IDS = new Set([...SECTORS.map((s) => s.id), ...KPIS.map((k) => k.id), ...H.readHandoff(example).issues.map((i) => i.id), "bmc-challenger", "swot-challenger", "pestel-challenger"]);
+check(IDS.size > 120, `the data's ids are known (${IDS.size})`);
 
 // ---- the page as rendered, in English and in German -----------------------------------------------------------
 const browser = await launchBrowser();
@@ -110,6 +125,9 @@ try {
     check(new RegExp(`<html[^>]*lang="${lang === "de" ? "de" : "en-GB"}"`).test(views[0]) && views[0].includes(lang === "de" ? AI_NOTICE.de : AI_NOTICE.en), `rendered in ${name}: the page says its language and carries the AI notice in it`);
     const ri = views.flatMap((v) => recordIdProblems(v, IDS));
     check(!ri.length, `rendered in ${name}: names, not record ids, on every screen${ri.length ? `: ${ri.join("; ")}` : ""}`);
+    const stores = await p.evaluate(async () => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), databases: (await indexedDB.databases()).map((d) => d.name), caches: await caches.keys(), cookie: document.cookie }));
+    const sk = storedKeyProblems(stores, { prefix: "pi" });
+    check(!sk.length, `rendered in ${name}: the visit leaves only the allowed keys behind (${[...stores.local, ...stores.session].join(", ") || "none"})${sk.length ? `: ${sk.join("; ")}` : ""}`);
     await context.close();
   }
   // ViciDesign's own drive of the guide, over http.
@@ -132,7 +150,7 @@ for (const [lang, D] of [["en", EN], ["de", DE]]) {
   const texts = Object.values(D);
   const p = writingProblems(page(texts, lang === "de" ? "de" : "en-GB"));
   check(texts.length > 50 && !p.length, `${lang === "en" ? "English" : "German"}: the ${texts.length} texts of the string file keep the writing rules${p.length ? `: ${p.join("; ")}` : ""}`);
-  const kpiTexts = SECTORS.flatMap((s) => [s.name[lang], ...s.kpis.flatMap((k) => [k.name[lang], k.unit[lang], k.definition[lang]])]);
+  const kpiTexts = [...SECTORS.map((s) => s.name[lang]), ...KPIS.flatMap((k) => [k.name[lang], k.definition[lang]])];
   const kp = writingProblems(page(kpiTexts, lang === "de" ? "de" : "en-GB"));
   check(!kp.length, `${lang === "en" ? "English" : "German"}: the KPI library's ${kpiTexts.length} names, units and definitions keep the writing rules${kp.length ? `: ${kp.join("; ")}` : ""}`);
 }

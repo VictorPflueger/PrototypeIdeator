@@ -87,7 +87,7 @@ const compact = (v) => JSON.stringify(v);
 
 /**
  * The Ideator's user turn: the state as compact JSON. issues: the kept issues (js/handoff.js and the Reader
- * give them this shape); kpis: the sector's KPIs from data/kpis.js; facts: the keys engine.factValues
+ * give them this shape); kpis: the sector's KPIs from data/kpis.js (kpisFor); facts: the keys engine.factValues
  * returned, of which the Ideator may cite at_stake, issues.kept and issue.<id>.eur.
  */
 export function ideatorInput({ company = {}, issues = [], focus = "", constraints = null, count = 5, kpis = [], facts = {}, lang = "en" } = {}) {
@@ -109,7 +109,7 @@ export function ideatorInput({ company = {}, issues = [], focus = "", constraint
       eur_fact: citable.includes(`issue.${i.id}.eur`) ? `issue.${i.id}.eur` : null,
       response: i.response ? i.response.title : null
     })),
-    sector_kpis: kpis.map((k) => ({ name: k.name[lang] || k.name.en, unit: k.unit[lang] || k.unit.en })),
+    sector_kpis: kpis.map((k) => ({ name: k.name[lang] || k.name.en, unit: k.unit })),
     facts: citable
   });
 }

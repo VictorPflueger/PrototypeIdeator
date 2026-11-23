@@ -155,12 +155,13 @@ function answer(text) {
 }
 
 // ---- money and dates in both languages --------------------------------------------------------------------
+// Money at stake in the format of the shared js/risk.js: millions with one decimal, thousands whole.
 const CASES = [
   [9450000, "€9.5m", "9,5 Mio. €"],
   [950000, "€950k", "950 Tsd. €"],
-  [999500, "€1m", "1 Mio. €"],
+  [999500, "€1.0m", "1,0 Mio. €"],
+  [2000000, "€2.0m", "2,0 Mio. €"],
   [14200000, "€14.2m", "14,2 Mio. €"],
-  [1200000000, "€1.2bn", "1,2 Mrd. €"],
   [800, "€800", "800 €"]
 ];
 for (const [v, en, de] of CASES) r.check(F.fmtEurCompact(v, "en") === en && F.fmtEurCompact(v, "de") === de, `${v} euros: ${en} and ${JSON.stringify(de)}`);

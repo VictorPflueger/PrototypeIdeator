@@ -153,7 +153,7 @@ r.check(E.weightProblems({ value: 20 }).length > 0 && E.weightProblems({ ...E.DE
     r.check(v === (lang === "en" ? "€4.7m on 2 of 3 issues" : "4,7 Mio. € bei 2 von 3 Themen"), `its value says it rests on part of the issues, in ${lang === "en" ? "English" : "German"}: ${JSON.stringify(v)}`);
   }
   const all = E.atStake([{ id: "I1", status: "kept", eur_year_expected: 1000000 }]);
-  r.check(E.atStakeText(all, (k, x) => t(k, x, "en"), "en") === "€1m", "on every issue it is just the amount");
+  r.check(E.atStakeText(all, (k, x) => t(k, x, "en"), "en") === "€1.0m", "on every issue it is just the amount, in the shared money format");
   const none = E.atStake([{ id: "I1", status: "kept", eur_year_expected: null }]);
   r.check(none.eur === null && none.stated === 0 && E.atStakeText(none, (k, x) => t(k, x, "en"), "en") === t("kpi.atStake.none", null, "en"), "no issue states an amount: no figure, never €0");
   const ideaList = [{ id: "X1", issues: ["I1"] }, { id: "X2", issues: ["I3"] }, { id: "X3", issues: ["I6"] }];

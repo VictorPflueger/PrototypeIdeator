@@ -17,12 +17,13 @@
 import IDEAS_FILE from "../schemas/prototype-ideas-1.js";
 import HANDOFF_FILE from "../schemas/strategy-challenge-1.js";
 import { CRITERIA } from "./engine.js";
-import { SECTOR_IDS } from "../data/kpis.js";
+import { SECTORS } from "../data/kpis.js";
 import { LIMITS } from "./config.js";
 
 export { IDEAS_FILE, HANDOFF_FILE };
 
 const D = IDEAS_FILE.$defs;
+const SECTOR_IDS = SECTORS.map((s) => s.id);
 const str = { type: "string" };
 const strOrNull = { type: ["string", "null"] };
 const numOrNull = { type: ["number", "null"] };
