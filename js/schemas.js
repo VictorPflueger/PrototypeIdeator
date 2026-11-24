@@ -154,6 +154,8 @@ const ScenarioDocument = closed({
   kind: { enum: ["pdf", "markdown", "text", "csv", "handoff"] },
   tool: { enum: ["bmc", "swot", "pestel", null] },
   name: both({ type: "string", minLength: 1 }),
+  // A document's name for people, where its file name can't say it (umlauts, spaces); null otherwise.
+  title: { anyOf: [{ type: "null" }, both({ type: "string", minLength: 1 })] },
   href: { anyOf: [{ type: "null" }, both({ type: "string", pattern: "^data/scenarios/[a-z0-9-]+\\.pdf$" })] },
   stand_in: { type: "boolean" },
   fictional: { type: "boolean" },

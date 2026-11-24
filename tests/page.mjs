@@ -210,7 +210,7 @@ try {
         for (const sib of bar.parentElement.children) {
           if (sib === bar || !visible(sib)) continue;
           const r = sib.getBoundingClientRect();
-          if (r.bottom > b.top + 1 && r.top < b.bottom - 1) out.covered.push(sib.className || sib.tagName);
+          if (r.bottom > b.top + 1 && r.top < b.bottom - 1) out.covered.push(`${sib.className || sib.tagName} by ${Math.round(r.bottom - b.top)} px`);
         }
       }
       return out;

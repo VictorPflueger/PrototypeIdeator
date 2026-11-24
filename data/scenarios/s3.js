@@ -28,6 +28,7 @@ const COMPANY = {
 /** The annual-report excerpt as the person would drop it in: one PDF per language, five pages each. */
 const PDF = {
   name: L("Auental-Energie-Annual-Report-2025-excerpt.pdf", "Auental-Energie-Geschaeftsbericht-2025-Auszug.pdf"),
+  title: L("Auental Energie, annual report 2025, excerpt", "Auental Energie, Geschäftsbericht 2025, Auszug"),
   href: L("data/scenarios/s3-annual-report-en.pdf", "data/scenarios/s3-annual-report-de.pdf"),
   // Frozen from tools/build-s3-pdf.mjs; tests/scenarios.mjs compares them with the files.
   bytes: L(105624, 121405),
@@ -402,7 +403,7 @@ export default {
   count: 5,
   focus: L("", ""),
   documents: [
-    { id: "d1", kind: "pdf", name: PDF.name, href: PDF.href, bytes: PDF.bytes, pages: PDF.pages, stand_in: false, fictional: true },
+    { id: "d1", kind: "pdf", name: PDF.name, title: PDF.title, href: PDF.href, bytes: PDF.bytes, pages: PDF.pages, stand_in: false, fictional: true },
     { id: "d2", kind: "handoff", tool: "swot", name: L("swot-challenger-auental-energie-2026-11-23-en.json", "swot-challenger-auental-energie-2026-11-23-de.json"), stand_in: true, fictional: true, spec: SWOT }
   ],
   facts: Object.values(FACTS),

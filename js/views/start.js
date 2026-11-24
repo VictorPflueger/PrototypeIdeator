@@ -14,19 +14,21 @@ export function sizeText(bytes, lang) {
   return t("doc.kb", { n: fmtInt(Math.max(1, Math.round(bytes / 1024)), lang) }, lang);
 }
 
-/** A document's name for people: the challenger that wrote a handoff file, otherwise the file's name
-    without its extension and with spaces for the dashes ("Annual-Report-2025.pdf" → "Annual Report 2025"). */
+/** A document's name for people: its own title where it has one, the challenger that wrote a handoff
+    file, otherwise the file's name without its extension and with spaces for the dashes
+    ("Annual-Report-2025.pdf" → "Annual Report 2025"). */
 export function docTitle(doc) {
+  if (doc.title) return doc.title;
   if (doc.kind === "handoff" && TOOLS[doc.tool]) return TOOLS[doc.tool].name;
   const base = String(doc.name || "").replace(/\.[A-Za-z0-9]{1,5}$/, "").replace(/[-_]+/g, " ").trim();
   return base || String(doc.name || "");
 }
 
-/** A document chip in two lines: its title and tags, then the file's name, size and pages. */
+/** A document chip in one row: its title, size and pages, and its tags; the file's name is its tooltip. */
 export function documentChip(doc, { lang, href = null } = {}) {
-  const meta = [doc.name, sizeText(doc.bytes, lang), doc.pages ? tn("doc.pages", doc.pages, {}, lang) : null].filter(Boolean).join(" · ");
+  const meta = [sizeText(doc.bytes, lang), doc.pages ? tn("doc.pages", doc.pages, {}, lang) : null].filter(Boolean).join(" · ");
   const title = docTitle(doc);
-  return h("li", { class: "doc-chip", dataset: { doc: doc.id } },
+  return h("li", { class: "doc-chip", title: doc.name, dataset: { doc: doc.id } },
     h("span", { class: "vc-cell vc-cell--sm doc-chip__cell", "aria-hidden": "true" }, h("span", { class: `vc-icon vc-icon--${doc.kind === "handoff" ? "layers" : "memo"}` })),
     h("span", { class: "doc-chip__title" },
       href ? h("a", { class: "vc-link", href, target: "_blank", rel: "noopener" }, title, h("span", { class: "vc-visually-hidden" }, t("p.newTab"))) : title),
@@ -72,7 +74,7 @@ export function renderStart(ctx) {
     h("p", { class: "scenario-pitch" }, sc.pitch[lang]),
     fictionalLine(sc, lang, today));
   const docs = h("ul", { class: "doc-list", "aria-label": t("start.documents") }, sc.documents.map((d) => documentChip(
-    { id: d.id, name: d.name[lang], kind: d.kind, tool: d.tool, bytes: d.bytes[lang], pages: d.pages ? d.pages[lang] : null, stand_in: d.stand_in },
+    { id: d.id, name: d.name[lang], title: d.title ? d.title[lang] : null, kind: d.kind, tool: d.tool, bytes: d.bytes[lang], pages: d.pages ? d.pages[lang] : null, stand_in: d.stand_in },
     { lang, href: d.href ? d.href[lang] : null })));
   const started = !ctx.idle;
   return h("div", { class: "step", dataset: { step: "start" } },

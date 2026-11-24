@@ -22,9 +22,9 @@ export function resolveScenario(a) {
   const documents = a.documents.map((d) => {
     if (d.kind === "handoff") {
       files[d.id] = both((l) => standin(d.spec, l));
-      return { id: d.id, kind: d.kind, tool: d.tool, name: both((l) => inLang(d.name, l)), href: null, stand_in: d.stand_in, fictional: d.fictional, bytes: both((l) => bytesOfJson(files[d.id][l])), pages: null };
+      return { id: d.id, kind: d.kind, tool: d.tool, name: both((l) => inLang(d.name, l)), title: null, href: null, stand_in: d.stand_in, fictional: d.fictional, bytes: both((l) => bytesOfJson(files[d.id][l])), pages: null };
     }
-    return { id: d.id, kind: d.kind, tool: null, name: both((l) => inLang(d.name, l)), href: both((l) => inLang(d.href, l)), stand_in: d.stand_in, fictional: d.fictional, bytes: both((l) => inLang(d.bytes, l)), pages: both((l) => inLang(d.pages, l)) };
+    return { id: d.id, kind: d.kind, tool: null, name: both((l) => inLang(d.name, l)), title: d.title ? both((l) => inLang(d.title, l)) : null, href: both((l) => inLang(d.href, l)), stand_in: d.stand_in, fictional: d.fictional, bytes: both((l) => inLang(d.bytes, l)), pages: both((l) => inLang(d.pages, l)) };
   });
   return {
     schema: a.schema,
