@@ -64,7 +64,7 @@ The SWOT Challenger merged its M1 first, on 23 November 2026 at 21:35 (commit a5
 
 No sibling had the live client or the key store yet, so this tool sets them for the others to copy: `js/anthropic.js`, `js/sse.js` and `js/cost.js` from the Sovereignty Assessment 2.0.0 (35c0dea), with the app's name read from `config.js` so the file can be byte-identical in all four tools, and `js/keystore.js`, held in memory only.
 
-The drop zone is this tool's pattern in Vici (ViciDesign PR 32, merged on 24 November 2026 as 2759b7a, "From Prototype Ideator 0.2.0"): a real file input behind a label, the public-information notice, one cancelable `vc:files` event, and file rows with a refused or warning state in words, with its docs on the Forms page and `dropzoneProblems` as its check. `vici/` holds main at 2759b7a.
+The drop zone is this tool's pattern in Vici (ViciDesign PR 32, merged on 24 November 2026 as 2759b7a, "From Prototype Ideator 0.2.0"): a real file input behind a label, the public-information notice, one cancelable `vc:files` event, and file rows with a refused or warning state in words, with its docs on the Forms page and `dropzoneProblems` as its check. `vici/` holds main at 5b8fea3, which adds the PESTEL Challenger's fix to the risk matrix and horizon strip on top of it.
 
 `tests/parity.mjs` compares every shared part with every sibling checkout that has it, and CI clones the three challengers for it. The Business Model Canvas Challenger merged its M1 later the same day (849e6ee) with the same bytes, so on 23 November 2026 three of the four tools hold one KPI library, one handoff schema and one `js/risk.js`; the PESTEL Challenger had not merged its M1 yet.
 
