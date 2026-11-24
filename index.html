@@ -128,6 +128,64 @@
     <div class="vc-dialog__body" id="idea-body"></div>
   </dialog>
 
+  <!-- Run it live: Vici's live-run dialog, its parts in Vici's order. js/live_dialog.js fills the setting's
+       note, Advanced, the warning and the estimate, and checks the key with Anthropic's free model list
+       before it goes into js/keystore.js, the only place it is held. The field sits in no form. -->
+  <dialog class="vc-dialog vc-live" id="live-dialog" aria-labelledby="live-title">
+    <header class="vc-dialog__header">
+      <h2 class="vc-dialog__title" id="live-title" data-i18n="ld.title">Run it live</h2>
+      <button type="button" class="vc-icon-button" data-vc-close aria-label="Close" data-i18n-attr="aria-label:p.close"><span class="vc-icon vc-icon--close" aria-hidden="true"></span></button>
+    </header>
+    <div class="vc-dialog__body vc-live__body">
+      <p class="vc-alert vc-alert--danger live-framed" id="live-framed" role="alert" hidden><span class="vc-icon vc-icon--error" aria-hidden="true"></span><span data-i18n="ld.framed">This page runs inside another page. Open it in its own tab to run it live; the simulation works here.</span></p>
+      <section class="vc-live__part vc-live__key">
+        <label class="vc-label" for="live-key" data-i18n="ld.key">Your Claude API key</label>
+        <div class="vc-live__key-row">
+          <input class="vc-input" id="live-key" type="password" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="sk-ant-…" aria-describedby="live-key-note live-key-msg">
+          <button type="button" class="vc-icon-button" id="live-key-show" aria-controls="live-key" aria-pressed="false" aria-label="Show key" data-i18n-attr="aria-label:ld.key.show"><span class="vc-icon vc-icon--eye" aria-hidden="true"></span></button>
+        </div>
+        <p class="vc-help" id="live-key-note"><span data-i18n="ld.key.note">Use a key from the Claude Console, ideally from a workspace with a monthly spend limit. It stays in this tab's memory until you close or reload it. A paid Claude plan doesn't cover the API, though Max, Ultra and Team plans include monthly API credits.</span> <a class="vc-link" href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener"><span data-i18n="ld.key.get">Get a key</span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></p>
+        <p class="vc-live__current" id="live-current" hidden><span data-i18n="ld.key.held">Key in memory:</span> <span class="vc-live__masked" id="live-masked"></span> <button type="button" class="vc-button vc-button--ghost vc-button--sm vc-live__forget" id="live-forget" data-i18n="ld.key.forget">Forget key</button></p>
+        <p class="live-msg" id="live-key-msg" role="status" aria-live="polite"></p>
+      </section>
+      <fieldset class="vc-live__part vc-live__setting">
+        <legend class="vc-label" data-i18n="ld.setting">Setting</legend>
+        <div class="vc-segmented" role="radiogroup" aria-label="Setting" data-i18n-attr="aria-label:ld.setting">
+          <label><input type="radio" name="live-preset" value="fast"><span data-i18n="ld.preset.fast">Fast</span></label>
+          <label><input type="radio" name="live-preset" value="balanced" checked><span data-i18n="ld.preset.balanced">Balanced</span></label>
+          <label><input type="radio" name="live-preset" value="thorough"><span data-i18n="ld.preset.thorough">Thorough</span></label>
+        </div>
+        <p class="vc-help" id="live-preset-help" aria-live="polite"></p>
+      </fieldset>
+      <details class="vc-live__part vc-live__advanced">
+        <summary data-i18n="ld.advanced">Advanced</summary>
+        <div class="live-advanced">
+          <div class="vc-field"><label class="vc-label" for="live-model" data-i18n="ld.model">Model</label><select class="vc-select" id="live-model"></select></div>
+          <div class="vc-field"><label class="vc-label" for="live-effort" data-i18n="ld.effort">Effort</label><select class="vc-select" id="live-effort"></select></div>
+        </div>
+      </details>
+      <div class="vc-live__part vc-live__cap">
+        <label class="vc-label" for="live-cap" data-i18n="ld.cap">Budget cap for this run</label>
+        <div class="vc-slider-field">
+          <input class="vc-slider" id="live-cap" type="range" min="0.05" max="3" step="0.05" value="0.5" aria-describedby="live-cap-help">
+          <output for="live-cap" id="live-cap-out" data-vc-currency="EUR">€0.50</output>
+        </div>
+        <p class="vc-help" id="live-cap-help" data-i18n="ld.cap.help">The run stops before any request that could pass it.</p>
+      </div>
+      <label class="vc-checkbox vc-live__ack"><input type="checkbox" id="live-ack"> <span data-i18n="ld.ack">I will enter public information only: nothing confidential, personal or otherwise protected.</span></label>
+      <p class="vc-help live-pdfs" id="live-pdfs" data-i18n="ld.pdfs" hidden>This page can't look inside PDFs for private data: check them yourself.</p>
+      <div class="vc-alert vc-alert--warning vc-live__warning" id="live-warning" role="alert" hidden>
+        <span class="vc-icon vc-icon--warning" aria-hidden="true"></span>
+        <div><span data-i18n="ld.warning.lead">Usually private, found in what you entered:</span><ul id="live-warning-list"></ul><span data-i18n="ld.warning.tail">Remove it, or start the run if it is public.</span></div>
+      </div>
+      <p class="vc-live__estimate" id="live-estimate" aria-live="polite"></p>
+    </div>
+    <footer class="vc-dialog__footer vc-live__footer">
+      <span class="vc-tag vc-tag--feature"><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span><span data-i18n="p.ai">You are interacting with an AI system</span></span>
+      <button type="button" class="vc-button vc-live__start" id="live-start" disabled><span class="vc-icon vc-icon--zap" aria-hidden="true"></span><span data-i18n="ld.start">Start the live run</span></button>
+    </footer>
+  </dialog>
+
 
   <!-- How it works, once in English and once in German: Vici's guide. vici.js builds each chapter rail and
        opens the guide of the page's language once per browser tab (js/lang.js keeps the other one closed);
@@ -175,8 +233,8 @@
         <ul>
           <li>The three companies and their own figures are invented, and some challenger reports are stand-ins that say so. What they say about the world, such as a law, a price or a deadline, is real and dated; the repository's DATA_SOURCES.md lists each source.</li>
           <li>A replay calls no model and costs nothing. Code computes every score, rank and figure, the same way in a replay and in a live run.</li>
-          <li>From version 0.3.0, a live run sends your documents to Anthropic's API under your own key. A challenger's report already reads without any request.</li>
-          <li>The cost estimate assumes about four characters a token, 1,500 thinking tokens a step on Balanced and Thorough, and 1,500 to 3,000 text tokens plus 1,568 image tokens a PDF page. Thorough would cost <span data-fig="talk.thorough">…</span> for Tidewell Lines. Costs convert at a fixed 0.894 euros a dollar.</li>
+          <li>A live run sends your documents to Anthropic's API under your own key: one request a step, checked by code and sent back once if it breaks a rule, under the budget cap you set. One challenger's report reads without any request. With no web research, the model knows the world up to June 2026.</li>
+          <li>The cost estimate assumes about four characters a token, 1,500 thinking tokens a step on Balanced and Thorough, and 1,500 to 3,000 text tokens plus 1,568 image tokens a PDF page. Thorough would cost <span data-fig="talk.thorough">…</span> for Tidewell Lines. Before a live run, the estimate takes the answers' sizes from the recorded runs and an assumed output rate, until the first live runs measure them. Costs convert at a fixed 0.894 euros a dollar.</li>
           <li>Public information only: never enter confidential, personal or otherwise protected data.</li>
         </ul>
       </section>
@@ -268,8 +326,8 @@
         <ul>
           <li>Die drei Unternehmen und ihre eigenen Zahlen sind erfunden, und einige Challenger-Berichte sind Platzhalter, die das sagen. Was sie über die Welt sagen, etwa ein Gesetz, ein Preis oder eine Frist, ist echt und datiert; DATA_SOURCES.md im Repository nennt jede Quelle.</li>
           <li>Eine Wiedergabe ruft kein Modell auf und kostet nichts. Code berechnet jeden Wert, jeden Rang und jede Zahl, in der Wiedergabe wie im Live-Lauf.</li>
-          <li>Ab Version 0.3.0 schickt ein Live-Lauf Ihre Dokumente unter Ihrem eigenen Schlüssel an Anthropics API. Den Bericht eines Challengers liest er schon jetzt ohne Anfrage.</li>
-          <li>Die Kostenschätzung nimmt rund vier Zeichen je Token an, 1.500 Denk-Tokens je Schritt bei Ausgewogen und Gründlich und je PDF-Seite 1.500 bis 3.000 Text-Tokens plus 1.568 Bild-Tokens. Gründlich kostete für Tidewell Lines <span data-fig="talk.thorough">…</span>. Kosten werden zum festen Kurs von 0,894 Euro je Dollar umgerechnet.</li>
+          <li>Ein Live-Lauf schickt Ihre Dokumente unter Ihrem eigenen Schlüssel an Anthropics API: eine Anfrage je Schritt, von Code geprüft und bei einem Regelverstoß einmal zurückgeschickt, unter dem Kostenlimit, das Sie setzen. Den Bericht eines einzelnen Challengers liest er ohne Anfrage. Ohne Web-Recherche kennt das Modell die Welt bis Juni 2026.</li>
+          <li>Die Kostenschätzung nimmt rund vier Zeichen je Token an, 1.500 Denk-Tokens je Schritt bei Ausgewogen und Gründlich und je PDF-Seite 1.500 bis 3.000 Text-Tokens plus 1.568 Bild-Tokens. Gründlich kostete für Tidewell Lines <span data-fig="talk.thorough">…</span>. Vor einem Live-Lauf nimmt die Schätzung die Größe der Antworten aus den aufgezeichneten Läufen und eine angenommene Ausgaberate, bis die ersten Live-Läufe sie messen. Kosten werden zum festen Kurs von 0,894 Euro je Dollar umgerechnet.</li>
           <li>Nur öffentliche Informationen: Geben Sie nie vertrauliche, personenbezogene oder anderweitig geschützte Daten ein.</li>
         </ul>
       </section>

@@ -5,7 +5,7 @@
 export const APP = {
   id: "pi",
   name: "Prototype Ideator",
-  version: "0.2.0",
+  version: "0.3.0",
   url: "https://victorpflueger.github.io/PrototypeIdeator/"
 };
 
@@ -102,8 +102,17 @@ export const BUDGET = { minEur: 0.05, maxEur: 3.0, defaultEur: 0.5, stepEur: 0.0
 export const ESTIMATE = {
   charsPerToken: 4,
   thinkingTokens: { fast: 0, balanced: 1500, thorough: 1500 },
-  pdfPage: { textLow: 1500, textHigh: 3000, image: 1568 }
+  pdfPage: { textLow: 1500, textHigh: 3000, image: 1568 },
+  // A live run's estimate before it starts takes the answers' sizes from the three recorded scenarios;
+  // the Reader is assumed to map four to twelve issues from documents. Time: a few seconds a request plus
+  // the output at an assumed rate, until Victor's first live runs measure both (TECH_NOTES §8).
+  readerIssues: [4, 12],
+  requestSeconds: [3, 8],
+  outputTokensPerSecond: { "claude-haiku-5-5": [60, 150], "claude-sonnet-5-5": [30, 80], "claude-opus-5-5": [20, 50] }
 };
+
+// The models the live dialog's Advanced offers (cut C5 of PLAN.md: Opus 5.5 is not needed here).
+export const LIVE_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5"];
 
 // Victor's rule for the cost of one live run of a proposed prototype (brief §6.4, golden case PI3).
 export const IDEA_RUN = { inputTokens: 2000, cacheReadTokens: 15000, outputTokens: 600, usdPerSearch: 0.01 };

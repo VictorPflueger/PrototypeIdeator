@@ -18,9 +18,12 @@
 //   guide      (G12, AC-04) the guide opens once per tab, ?guide=0 and ?guide=present work, How it works shows
 //              each key figure's value of the scenario's run, and the last chapter is a timed script of three
 //              to seven steps with those figures.
+//   switch     (M3 G6) switching company after a choice says what it set aside and offers Undo, which brings
+//              back the company with every choice, in both languages and from the Report step too; a switch
+//              before any choice says nothing.
 // Prints PRESENTER SCENARIOS OK, PRESENTER FIGURES OK, PRESENTER CHOICES OK, PRESENTER WEIGHTS OK,
-// PRESENTER PLAY OK, PRESENTER IDEAS OK and PRESENTER GUIDE OK.
-// Usage: node tests/presenter.mjs [scenarios|figures|choices|weights|play|ideas|guide]
+// PRESENTER PLAY OK, PRESENTER IDEAS OK, PRESENTER GUIDE OK and PRESENTER SWITCH OK.
+// Usage: node tests/presenter.mjs [scenarios|figures|choices|weights|play|ideas|guide|switch]
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, viciDir, REQUIRE_VICI } from "./lib/harness.mjs";
@@ -248,6 +251,103 @@ try {
       await context.close();
     }
     report("choices", res, "PRESENTER CHOICES OK");
+  }
+
+  // ---- switch ---------------------------------------------------------------------------------------------
+  if (want("switch")) {
+    const res = [];
+    const s1 = scenarioById("s1");
+    const undoOf = (page) => page.evaluate(() => { const u = document.querySelector(".switch-undo"); return u ? { text: u.querySelector(".switch-undo__text").textContent.trim(), button: u.querySelector('[data-action="undo-switch"]')?.textContent.trim() || "" } : null; });
+    const chosen = (page) => page.evaluate(() => document.querySelector('.scenario-switch input:checked')?.value || null);
+    for (const lang of ["en", "de"]) {
+      const D = DICT[lang];
+      const { context, page, errors, outside } = await open(`?guide=0&lang=${lang}&scenario=s1`);
+      // Before any choice: a switch says nothing.
+      await page.click('label:has(#scenario-s2)');
+      await page.waitForTimeout(250);
+      const quiet = await undoOf(page);
+      res.push([quiet === null && (await chosen(page)) === "s2", `${lang}: a switch before any choice says nothing (${quiet ? `"${quiet.text}"` : "no notice"})`]);
+      await page.click('label:has(#scenario-s1)');
+      await page.waitForTimeout(250);
+      // Choices: park the first kept issue an idea names, then move one weight two steps.
+      await page.click("#btn-cta");
+      await page.waitForTimeout(300);
+      await pausePlay(page);
+      const preview = recordedRun(s1, lang);
+      const named = new Set(preview.ideas.flatMap((i) => i.issues));
+      const park = preview.issues.find((i) => i.status === "kept" && named.has(i.id));
+      await page.click(`tr[data-issue="${park.id}"] [data-action="decide-park"]`);
+      await page.waitForTimeout(250);
+      const reason = D[`read.reason.${await page.$eval(`tr[data-issue="${park.id}"] select`, (x) => x.value)}`];
+      const decisions = decide(s1.choices.issues || [], park.id, "park", { reason });
+      await page.click("#btn-cta");
+      await page.waitForTimeout(250);
+      await pausePlay(page);
+      await page.click("#btn-cta");
+      await page.waitForTimeout(250);
+      await pausePlay(page);
+      await page.click("#btn-weights");
+      await page.focus("#w-value");
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(120);
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(250);
+      const weights = { ...DEFAULT_WEIGHTS, value: DEFAULT_WEIGHTS.value + 2 * WEIGHT_RULE.step };
+      const before = await tiles(page);
+      // Back to Start and to another company.
+      await page.click("#steps .vc-step:first-child .vc-step__button");
+      await page.waitForTimeout(250);
+      await page.click('label:has(#scenario-s3)');
+      await page.waitForTimeout(300);
+      const notice = await undoOf(page);
+      // Parking an issue that others were merged into keeps those again, so more than one issue changes.
+      const recorded = new Map((s1.choices.issues || []).map((d) => [d.id, d]));
+      const mine = new Map(decisions.map((d) => [d.id, d]));
+      const changed = [...new Set([...recorded.keys(), ...mine.keys()])].filter((id) => (recorded.get(id)?.action || "keep") !== (mine.get(id)?.action || "keep") || (recorded.get(id)?.into || null) !== (mine.get(id)?.into || null)).length;
+      const want = [s1.company.name, D["start.undo.weights"], D[`start.undo.decisions.${changed === 1 ? "one" : "other"}`].replace("{n}", String(changed))];
+      res.push([!!notice && want.every((w) => notice.text.includes(w)) && notice.button === D["start.undo"] && (await chosen(page)) === "s3", `${lang}: after a parked issue and another weight, the switch to Auental Energie says "${notice?.text || "nothing"}" beside "${notice?.button || ""}"`]);
+      await page.click('[data-action="undo-switch"]');
+      await page.waitForTimeout(300);
+      const back = await chosen(page);
+      const gone = await undoOf(page);
+      const after = await tiles(page);
+      const engine = tileModel({ mode: "simulation", run: buildRun(s1, lang, { decisions, weights }), preview, reached: 4, lang });
+      const okTiles = ["stake", "covered", "top"].every((k) => after[k].value === before[k].value && after[k].value === engine[k].value);
+      res.push([back === "s1" && gone === null && okTiles, `${lang}: Undo brings back Tidewell Lines with the tiles of its choices (${["stake", "covered", "top"].map((k) => after[k].value).join(" | ")})`]);
+      // The choices themselves: the issue is still parked and the weight still moved.
+      await page.click("#steps .vc-step:nth-child(2) .vc-step__button");
+      await page.waitForTimeout(250);
+      const parked = await page.$eval(`tr[data-issue="${park.id}"] [data-action="decide-park"]`, (b) => b.classList.contains("is-on")).catch(() => false);
+      await page.click("#steps .vc-step:nth-child(4) .vc-step__button");
+      await page.waitForTimeout(250);
+      if (!(await page.$("#w-value"))) await page.click("#btn-weights");
+      await page.waitForTimeout(150);
+      const value = await page.$eval("#w-value", (x) => Number(x.value)).catch(() => null);
+      res.push([parked && value === weights.value, `${lang}: the parked issue is still parked and Business value still at ${value} %`]);
+      res.push([!outside.length && !errors.length, `${lang}: no request to any other host and no page error`]);
+      await context.close();
+    }
+    // From the Report step: Try another company sets the choices aside the same way.
+    {
+      const lang = "en";
+      const { context, page, errors } = await open(`?guide=0&lang=${lang}&scenario=s1&step=4`);
+      await page.click("#btn-weights");
+      await page.focus("#w-risk");
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(250);
+      await page.click("#btn-cta");
+      await page.waitForTimeout(250);
+      await pausePlay(page);
+      await page.click("#btn-cta");
+      await page.waitForTimeout(300);
+      await pausePlay(page);
+      await page.click("#btn-cta");
+      await page.waitForTimeout(300);
+      const notice = await undoOf(page);
+      res.push([!!notice && notice.text.includes(s1.company.name) && notice.text.includes(EN["start.undo.weights"]) && (await chosen(page)) === "s2" && !errors.length, `from the Report step, Try another company opens Arvento Drives and says "${notice?.text || "nothing"}"`]);
+      await context.close();
+    }
+    report("switch", res, "PRESENTER SWITCH OK");
   }
 
   // ---- weights --------------------------------------------------------------------------------------------

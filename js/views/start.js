@@ -59,7 +59,8 @@ export function figuresPanel() {
 }
 
 /**
- * The Start step of the simulation. ctx: { sc, scenarios, lang, today, idle, onChoose(id), onStart(), onNext() }.
+ * The Start step of the simulation. ctx: { sc, scenarios, lang, today, idle, undo ({ text, onUndo } after a switch
+ * that set choices aside), onChoose(id), onStart(), onNext() }.
  * At 1280 × 720 everything fits above the Your turn bar: the three companies as one row of buttons, the
  * chosen one's line, its documents in two lines each.
  */
@@ -71,7 +72,13 @@ export function renderStart(ctx) {
       h("label", {},
         h("input", { type: "radio", name: "scenario", value: x.id, id: `scenario-${x.id}`, checked: x.id === sc.id || undefined, dataset: { scenario: x.id, action: "choose-scenario" }, on: { change: () => ctx.onChoose(x.id) } }),
         h("span", {}, x.company.name)))),
-    h("p", { class: "scenario-pitch" }, sc.pitch[lang]),
+    // Right after a switch that set choices aside, the line under the companies says so and offers Undo;
+    // the company's own line comes back with the next step.
+    ctx.undo
+      ? h("div", { class: "switch-undo", role: "status" },
+        h("p", { class: "switch-undo__text" }, ctx.undo.text),
+        h("button", { type: "button", class: "vc-button vc-button--secondary vc-button--sm", dataset: { action: "undo-switch" }, on: { click: ctx.undo.onUndo } }, t("start.undo")))
+      : h("p", { class: "scenario-pitch" }, sc.pitch[lang]),
     fictionalLine(sc, lang, today));
   const docs = h("ul", { class: "doc-list", "aria-label": t("start.documents") }, sc.documents.map((d) => documentChip(
     { id: d.id, name: d.name[lang], title: d.title ? d.title[lang] : null, kind: d.kind, tool: d.tool, bytes: d.bytes[lang], pages: d.pages ? d.pages[lang] : null, stand_in: d.stand_in },

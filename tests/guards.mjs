@@ -1,8 +1,12 @@
-// The Ideator's guards (brief §6.7, PLAN.md §8.2 and §8.3): checks the output schema can't hold. A
+// The agents' guards (brief §6.7, PLAN.md §8.2 and §8.3): checks the output schema can't hold. A
 // well-formed answer for Tidewell Lines (tests/fixtures/ideator-s1-answer.json, eight ideas) passes with
 // nothing found; then each rule is broken on a copy of it and must be caught in the right kind: a
 // refusal (sent back once, then the run stops), the fact audit (sent back once, then "Unchecked") or a
-// note (reported only). The cap on ideas holds at ten even when more are asked for (AC-17).
+// note (reported only). The cap on ideas holds at ten even when more are asked for (AC-17). Since 0.3.0
+// the Reader's, the merges request's and the Writer's guards too, on S3's and S1's recorded answers: a
+// text file's quote word for word, a PDF's not checked, sources that name a file of the run, euros with
+// their basis and in order; merges of issues that exist, each in one group; four texts with figures only
+// as placeholders.
 // Prints GUARDS OK.
 // Usage: node tests/guards.mjs
 import { readFileSync } from "node:fs";
@@ -121,6 +125,61 @@ for (const [what, mutate, expect] of NOTES) {
   a.ideas[1].key_figures[1].demo = "The penalty, {{fact:nope}}";
   const msg = G.repairMessage(check(a));
   r.check(/value rating must be a whole number/.test(msg) && /idea 1 what_it_does: write these without numbers, or cite them as a placeholder from "facts": 12, %/.test(msg) && /placeholders are not in "facts": nope/.test(msg) && /Send the whole answer again/.test(msg), "the repair message lists every refusal and every refused token, and asks for the whole answer again");
+}
+
+// ---- the Reader, the merges request and the Writer ------------------------------------------------------------
+{
+  const { scenarioById } = await import(path.join(ROOT, "js", "scenarios.js"));
+  const { evidenceOf } = await import(path.join(ROOT, "js", "simulation.js"));
+  const s3 = scenarioById("s3");
+  const s1 = scenarioById("s1");
+  const pdf = s3.documents.find((d) => d.kind === "pdf").name.en;
+  const files = [{ name: pdf, kind: "pdf", content: null }, { name: "notes.md", kind: "markdown", content: "# Notes\n\nThe grid waits for heat pumps.\n" }];
+  const reader = s3.answers.en.reader;
+  const rp = (a) => G.readerProblems(a, { files, evidence: {} });
+  r.check(rp(reader).refusals.length === 0, `S3's recorded Reader answer passes the Reader's guards (${reader.issues.length} issues)`);
+  const R = [
+    ["a source in a file the run doesn't have", (a) => { a.issues[0].sources[0].file = "other.pdf"; }, /"other\.pdf" is not one of the files/],
+    ["a quote from a text file that isn't in it", (a) => { a.issues[1].sources = [{ file: "notes.md", where: "section 1", quote: "The grid is ready for heat pumps." }]; }, /does not stand in notes\.md word for word/],
+    ["a quote longer than 150 characters", (a) => { a.issues[1].sources[0].quote = "x".repeat(151); }, /151 characters, at most 150/],
+    ["euros a year without their basis", (a) => { a.issues[2].eur_year_expected = 100000; a.issues[2].eur_basis = ""; }, /euros a year without their basis/],
+    ["euros out of order", (a) => { Object.assign(a.issues[2], { eur_year_low: 300000, eur_year_expected: 200000, eur_year_high: 400000, eur_basis: "x" }); }, /must run low, expected, high/],
+    ["a KPI id the library doesn't have", (a) => { a.issues[0].kpis = [{ name: "x", library_id: "energy.nope", today: "", unit: "" }]; }, /has no id "energy\.nope"/],
+    ["two issues with one id", (a) => { a.issues[1].id = a.issues[0].id; }, /the same id as issue 1/]
+  ];
+  for (const [label, plant, re] of R) {
+    const a = structuredClone(reader);
+    plant(a);
+    const found = rp(a);
+    r.check(found.refusals.some((x) => re.test(x)), `the Reader: ${label} is refused (${found.refusals.find((x) => re.test(x)) || found.refusals.join("; ") || "nothing found"})`);
+  }
+  const fromPdf = rp({ ...structuredClone(reader), issues: [{ ...structuredClone(reader.issues[0]), sources: [{ file: pdf, where: "page 3", quote: "Words the PDF may not hold." }] }] });
+  r.check(!fromPdf.refusals.some((x) => /word for word/.test(x)), "a quote from a PDF is not checked word for word: code can't read the PDF's text");
+  // Merges on S1's three reports.
+  const { readHandoffs } = await import(path.join(ROOT, "js", "handoff.js"));
+  const issues = readHandoffs(s1.documents.map((d) => ({ json: s1.files[d.id].en, file: d.name.en }))).issues;
+  const mp = (a) => G.mergesProblems(a, { issues, evidence: evidenceOf(issues) });
+  r.check(mp(s1.answers.en.merges).refusals.length === 0, `S1's recorded merges pass the merges guards (${s1.answers.en.merges.merges.length} groups)`);
+  const M = [
+    ["an id that wasn't sent", (a) => { a.merges[0].merged = ["bmc-I99"]; }, /"bmc-I99" is not one of the issues sent/],
+    ["an issue in two groups", (a) => { a.merges[1].merged = [...a.merges[1].merged, a.merges[0].merged[0]]; }, /is in two groups/],
+    ["a group that merges nothing", (a) => { a.merges[0].merged = []; }, /merges nothing/]
+  ];
+  for (const [label, plant, re] of M) {
+    const a = structuredClone(s1.answers.en.merges);
+    plant(a);
+    const found = mp(a);
+    r.check(found.refusals.some((x) => re.test(x)), `the merges: ${label} is refused`);
+  }
+  // The Writer: four texts, figures only as placeholders.
+  const rec = s1.answers.en.recommendation;
+  const keys = [...new Set(Object.values(rec).join(" ").match(/\{\{fact:([^}]+)\}\}/g) || [])].map((x) => x.slice(7, -2));
+  const wp = (a) => G.writerProblems(a, { facts: keys, evidence: {} });
+  r.check(wp(rec).ok, "S1's recorded Writer answer passes the Writer's guards");
+  const empty = wp({ ...rec, needed: " " });
+  const number = wp({ ...rec, found: "Eight issues put 12.9 million euros a year at stake." });
+  const unknown = wp({ ...rec, headline: "{{fact:nope}} leads." });
+  r.check(empty.refusals.some((x) => /needed is empty/.test(x)) && number.audit.some((x) => x.where === "found" && x.tokens.includes("12.9")) && unknown.audit.some((x) => x.unknownFacts.includes("nope")), "the Writer: an empty text is refused, a bare figure and an unknown placeholder go to the fact audit");
 }
 
 // ---- the planted control: the guards would miss nothing on an answer that breaks everything ------------------

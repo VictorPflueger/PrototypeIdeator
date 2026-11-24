@@ -6,7 +6,9 @@ Live site: <https://victorpflueger.github.io/PrototypeIdeator/>
 
 ## Status
 
-Version 0.2.0 (M2 Simulation), 24 November 2026. The three fictional companies play from Start to Report with no key: Tidewell Lines from three challenger reports, Arvento Drives from two, and Auental Energie from an annual-report excerpt and a SWOT. Each step is one screen: the Reader's issue map with keep, merge and park; the Ideator's ideas as a honeycomb, each opening its own page; the scores as a chart, a table and the stability check, with weights you can change; the shortlist; and the short version of the report. Play walks the steps and stops where you decide, and the guide ends with a five-minute script. Run it live opens the drop zone, which already reads a challenger's report without a request. Live runs of the agents follow in version 0.3.0 and the whole report with its downloads in version 0.4.0. PLAN.md holds the plan.
+Version 0.3.0 (M3 Live), 24 November 2026. The three fictional companies play from Start to Report with no key: Tidewell Lines from three challenger reports, Arvento Drives from two, and Auental Energie from an annual-report excerpt and a SWOT. Each step is one screen: the Reader's issue map with keep, merge and park; the Ideator's ideas as a honeycomb, each opening its own page; the scores as a chart, a table and the stability check, with weights you can change; the shortlist; and the short version of the report. Play walks the steps and stops where you decide, and the guide ends with a five-minute script.
+
+Run it live takes your own documents and your own Claude API key. The Reader reads PDFs, Markdown, text and CSV, or compares the issues of several challengers' reports; the Ideator proposes the ideas; the Writer writes the summary. Each step is one request, checked and sent back once if it breaks a rule, under a budget cap you set; Stop ends a request and keeps what is done, and Save run as simulation downloads the run to replay. The whole report with its PDF, HTML and JSON downloads follows in version 0.4.0. PLAN.md holds the plan.
 
 ## What is real and what is simulated
 
@@ -14,7 +16,7 @@ Real: the scoring rules, the ranking, the stability check and the cost estimates
 
 Simulated: three fictional companies with illustrative figures, Tidewell Lines, Arvento Drives and Auental Energie, whose agent answers are recorded. Some of their challenger reports are stand-ins, written for the scenario until the challenger exports its own, and they say so. A replay needs no key and costs nothing; your choices (an issue parked, a weight, a shortlist) run through the same code a live run uses.
 
-Live, from version 0.3.0: your own documents and your own Claude API key, with a budget cap you set. Already in 0.2.0, a challenger's report you drop in becomes issues with no request at all. The key and everything you enter stay in the browser tab's memory and go only to Anthropic's API; nothing is stored, and a result leaves the page only as a download you start. Public information only: never enter confidential, personal or otherwise protected data.
+Live: your own documents and your own Claude API key, with Fast, Balanced or Thorough and a budget cap you set, from €0.05 to €3.00 (€0.50 by default). The agents' answers are real model output, checked by code; every figure is the engine's, worked out from them. A challenger's report from one challenger becomes issues with no request at all. Before a run the page estimates its cost and time and warns about what looks private; the run stops before any request that could pass the cap. The key and everything you enter stay in the browser tab's memory and go only to Anthropic's API; nothing is stored, and a result leaves the page only as a download you start. This version runs no web research, so the model knows the world up to June 2026. Public information only: never enter confidential, personal or otherwise protected data.
 
 ## The Ideator probe
 

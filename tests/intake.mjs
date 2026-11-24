@@ -4,8 +4,9 @@
 //          PowerPoint file is refused with "Save it as PDF first"; six files, more than 20 MB and more than
 //          100 PDF pages each give their own message; two companies and two reports of one challenger too;
 //   page   in Chromium, after Run it live: the brief's example handoff file dropped on the zone becomes one
-//          issue on screen with PI4's title and figures, with no request to any host; a Word file shows
-//          the PDF message on its row; a sixth file names the limit.
+//          issue on screen with PI4's title and figures, with no request to any host and no key asked for; a
+//          Word file shows the PDF message on its row; back at Start the files stay as read; Start a new run
+//          offers Undo, and in the new run a sixth file names the limit.
 // Prints INTAKE OK.
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import os from "node:os";
@@ -79,7 +80,7 @@ try {
     const rows = await page.evaluate(() => [...document.querySelectorAll(".vc-dropzone__file")].map((li) => ({ state: li.dataset.state || "", text: li.textContent })));
     const word = rows.find((x) => x.text.includes("notes.docx"));
     r.check(rows.length === 2 && word?.state === "refused" && word.text.includes(d["intake.refused.office"]), `${lang}: the Word file's row is refused with "${d["intake.refused.office"].slice(0, 30)}…"`);
-    r.check(!(await page.isDisabled("#btn-cta")), `${lang}: with the report in, Read the files is ready`);
+    r.check(!(await page.isDisabled("#btn-cta")) && (await page.textContent("#btn-cta")).trim() === d["intake.read"], `${lang}: with the report in, "${d["intake.read"]}" is ready, with no key asked for`);
     await page.click("#btn-cta");
     await page.waitForTimeout(400);
     const issues = await page.evaluate(() => [...document.querySelectorAll(".issue-row")].map((tr) => ({ title: tr.querySelector(".issue-title")?.textContent, stake: tr.querySelector(".stake-cell strong")?.textContent, sub: tr.querySelector(".stake-sub")?.textContent })));
@@ -88,10 +89,17 @@ try {
     const tile = await page.evaluate(() => document.querySelector("#kpi-stake .kpi-value").textContent);
     r.check(tile === want.shown[lang].expected, `${lang}: the at-stake tile shows ${tile}`);
     r.check(!outside.length && !errors.length, `${lang}: no request to any host and no page error${outside.length || errors.length ? `: ${[...outside, ...errors].join("; ")}` : ""}`);
-    // Back to the files: a sixth file names the limit.
+    // Back to the files: they stay as read, and Start a new run sets the run aside with Undo; in the new run
+    // a sixth file names the limit.
     await page.click("#steps .vc-step:first-child .vc-step__button");
     await page.waitForTimeout(300);
-    await page.setInputFiles("#intake-files", Array.from({ length: 5 }, (_, k) => file(`notes-${k}.md`, "# Notes\n\nPublic notes.\n")));
+    const locked = await page.evaluate(() => ({ input: !!document.getElementById("intake-files"), remove: document.querySelectorAll('[data-action="remove-file"]').length, next: document.getElementById("btn-cta")?.textContent.trim() }));
+    r.check(!locked.input && !locked.remove && locked.next === d["start.action.read"], `${lang}: back at Start the files stay as read, and the bar says "${locked.next}"`);
+    await page.click('[data-action="new-run"]');
+    await page.waitForTimeout(300);
+    const undo = await page.evaluate(() => document.querySelector(".switch-undo")?.textContent || "");
+    r.check(undo.includes(d["intake.new.undo"]) && undo.includes(d["start.undo"]), `${lang}: Start a new run says "${d["intake.new.undo"]}" with Undo`);
+    await page.setInputFiles("#intake-files", Array.from({ length: 6 }, (_, k) => file(`notes-${k}.md`, "# Notes\n\nPublic notes.\n")));
     await page.waitForTimeout(400);
     const problems = await page.evaluate(() => document.querySelector(".intake-problems")?.textContent || document.getElementById("cta-reason")?.textContent || "");
     const limit = d["intake.problem.files"].replace("{max}", String(LIMITS.files));

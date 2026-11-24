@@ -11,7 +11,10 @@
 //   layout     at 1920 x 1080 and 1280 x 720, light and dark, English and German: no sideways scroll, no
 //              page scroll, no text cut off, the Your turn bar covers nothing, and no page error; and every
 //              visible text reaches 4.5:1 and every icon 3:1 against the fill it sits on, as rendered (a
-//              callout keeps its pastel in the dark theme, so a page-theme token inside it can vanish);
+//              callout keeps its pastel in the dark theme, so a page-theme token inside it can vanish); the
+//              live screens too (the dialog, a step at work, an error, a stopped step, the live report, from
+//              S1's reports against the scripted stand-in), which print LIVE VIEWS LAID OUT; and every
+//              target at least 40 px, which prints TARGETS AT LEAST 40 PX;
 //   probe      the Ideator probe's console line (js/probe.js SNIPPET), run in the page as served under its
 //              security policy, against a stand-in for api.anthropic.com: it asks for the key in a dialog,
 //              sends three requests to the API host only, prints two tables, keeps nothing in storage
@@ -21,12 +24,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, KEYS, MOCK_KEY } from "./lib/harness.mjs";
+import { createFakeClaude } from "./lib/fake-claude.mjs";
+import { routeStandIn } from "./lib/live-route.mjs";
 
 const parts = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const want = (p) => !parts.length || parts.includes(p);
 const EN = (await import(path.join(APP_ROOT, "js", "i18n", "en.js"))).default;
 const DE = (await import(path.join(APP_ROOT, "js", "i18n", "de.js"))).default;
 const DICT = { en: EN, de: DE };
+const { scenarioById } = await import(path.join(APP_ROOT, "js", "scenarios.js"));
 const KPI = { "kpi-stake": "kpi.atStake", "kpi-covered": "kpi.covered", "kpi-top": "kpi.top", "kpi-cost": "kpi.cost" };
 
 const browser = await launchBrowser();
@@ -189,21 +195,82 @@ try {
     report("storage", res, "PAGE STORAGE OK");
   }
 
+  /**
+   * A live screen of S1's three reports against the stand-in: the dialog open, a step at work (the Ideator's
+   * answer held), an API error on the Ideator, the Ideator's answer failing twice (failed-open: with the list
+   * of what the checks found opened), or the live report.
+   * Returns { context, page, errors, ok }, ok when the screen asked for is on show.
+   */
+  async function liveView({ width, height, lang, theme, kind }) {
+    const sc = scenarioById("s1");
+    const a = sc.answers[lang];
+    const bad = structuredClone(a.ideas);
+    bad.ideas[0].issues = ["bmc-I99"];
+    const failing = [{ answer: a.merges }, { answer: bad }, { answer: bad }];
+    const script = { dialog: [], busy: [{ answer: a.merges }, { answer: a.ideas }], error: [{ answer: a.merges }, { error: { status: 401, type: "authentication_error", message: "invalid x-api-key" } }], failed: failing, "failed-open": failing, report: [{ answer: a.merges }, { answer: a.ideas }, { answer: a.recommendation }] }[kind];
+    const fake = createFakeClaude(script);
+    const context = await browser.newContext({ viewport: { width, height } });
+    if (theme) await context.addInitScript((t) => { try { localStorage.setItem("vc-theme", t); } catch {} }, theme);
+    await routeStandIn(context, fake, { hold: kind === "busy" ? (n) => (n === 2 ? 120000 : 0) : null });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(String(e.message || e)));
+    page.on("console", (m) => { if (m.type() === "error" && !NETWORK_NOISE.test(m.text())) errors.push(m.text()); });
+    await page.goto(`${server.base}?guide=0&lang=${lang}`);
+    await page.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+    await page.click("#btn-live");
+    const files = sc.documents.filter((d) => d.kind === "handoff").map((d) => ({ name: d.name[lang], mimeType: "application/json", buffer: Buffer.from(JSON.stringify(sc.files[d.id][lang], null, 2)) }));
+    await page.setInputFiles("#intake-files", files);
+    await page.waitForTimeout(200);
+    await page.selectOption("#intake-count", String(a.ideas.ideas.length));
+    await page.click("#btn-cta");
+    await page.waitForSelector("#live-dialog[open]");
+    if (kind === "dialog") { await page.waitForTimeout(250); return { context, page, errors, ok: true }; }
+    await page.fill("#live-key", MOCK_KEY);
+    await page.check("#live-ack");
+    await page.click("#live-start");
+    const settled = (step) => page.waitForFunction((n) => !!document.querySelector(`.step[data-step="${n}"]`) && !document.querySelector("#turn[aria-busy]"), step, { timeout: 30000 });
+    await settled("read");
+    await page.click("#btn-cta");
+    if (kind === "busy") { await page.waitForSelector("#turn.turn-bar--busy"); await page.waitForTimeout(1200); return { context, page, errors, ok: true }; }
+    if (kind === "error" || kind.startsWith("failed")) {
+      await page.waitForSelector("#turn.turn-bar--stopped", { timeout: 30000 });
+      // failed-open: the person opens What the checks found, and the bar grows.
+      if (kind === "failed-open") await page.click(".stop-problems summary");
+      await page.waitForTimeout(250);
+      return { context, page, errors, ok: kind !== "failed-open" || !!(await page.$(".stop-problems[open]")) };
+    }
+    await settled("ideate");
+    for (const step of ["score", "shortlist", "report"]) { await page.click("#btn-cta"); await settled(step); }
+    await page.waitForTimeout(250);
+    return { context, page, errors, ok: !!(await page.$(".live-measured")) };
+  }
+
   // ---- layout ------------------------------------------------------------------------------------------
   if (want("layout")) {
     const res = [];
     const MEASURE = () => {
       const out = { sideways: document.documentElement.scrollWidth > innerWidth + 1, scroll: document.documentElement.scrollHeight > innerHeight + 1, cut: [], covered: [], small: [] };
       const visible = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && !el.closest("[hidden], dialog:not([open]), .vc-visually-hidden"); };
-      for (const el of document.querySelectorAll("body *")) {
+      const scope = document.querySelector("dialog[open]") || document.body;
+      for (const el of scope.querySelectorAll("*")) {
         if (!visible(el) || el.closest("#boot")) continue;
         const cs = getComputedStyle(el);
         const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
         const clips = cs.overflowX !== "visible" || cs.textOverflow === "ellipsis" || cs.webkitLineClamp !== "none";
         if (hasText && clips && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 2) && !el.matches(".panel, .stage, .vc-table-wrap")) out.cut.push(`${el.tagName.toLowerCase()}.${el.className}: "${el.textContent.trim().slice(0, 30)}"`);
-        if (el.matches("button, a[href], input, select, [role=button]") && !el.closest(".vc-visually-hidden")) {
-          const r = el.getBoundingClientRect();
-          if (r.height < 40 || r.width < 40) out.small.push(`${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}.${String(el.className).split(" ")[0]} ${Math.round(r.width)}x${Math.round(r.height)}`);
+        if (el.matches("button, a[href], input, select, summary, [role=button]") && !el.closest(".vc-visually-hidden")) {
+          // A real input kept out of sight (the drop zone's) is reached through its label: the label is the target.
+          let target = el;
+          const box = el.getBoundingClientRect();
+          if (el.matches("input") && (box.width < 4 || box.height < 4 || cs.opacity === "0")) target = el.labels?.[0] || el.closest("label") || el;
+          // A box or a radio inside its label: the whole label takes the click, so the label is the target.
+          else if (el.matches("input[type=checkbox], input[type=radio]") && el.closest("label")) target = el.closest("label");
+          // A link inside running text follows the line it sits in (the inline exception of WCAG 2.5.8).
+          const para = el.matches("a") ? el.closest("p") : null;
+          if (para && para.textContent.trim().length > el.textContent.trim().length + 3) continue;
+          const r = target.getBoundingClientRect();
+          if (r.height < 39.5 || r.width < 39.5) out.small.push(`${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}.${String(el.className).split(" ")[0]} "${(el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 24)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
         }
       }
       const bar = document.getElementById("turn");
@@ -263,6 +330,7 @@ try {
         for (let step = 1; step <= 6; step++) states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=${step}`, name: `S1 step ${step}` });
         for (const extra of ["weights", "table", "stability"]) states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=4`, name: `S1 Score, ${extra}`, extra });
         states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=1`, name: "S1 playing", extra: "play" });
+        for (const to of ["s2", "s3"]) states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=4`, name: `Start after a switch to ${to.toUpperCase()}, with Undo`, extra: "undo", to });
         states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}`, name: "live intake", extra: "live" });
         states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}`, name: "live intake with files", extra: "files" });
       }
@@ -275,6 +343,16 @@ try {
       if (st.extra === "weights") await page.click("#btn-weights");
       if (st.extra === "table" || st.extra === "stability") await page.click(`label:has(#view-${st.extra})`);
       if (st.extra === "play") { await page.click("#btn-play"); await page.waitForTimeout(400); }
+      if (st.extra === "undo") {
+        await page.click("#btn-weights");
+        await page.focus("#w-value");
+        await page.keyboard.press("ArrowRight");
+        await page.waitForTimeout(150);
+        await page.click("#steps .vc-step:first-child .vc-step__button");
+        await page.waitForTimeout(150);
+        await page.click(`label:has(#scenario-${st.to})`);
+        await page.waitForSelector(".switch-undo");
+      }
       if (st.extra === "live" || st.extra === "files") await page.click("#btn-live");
       if (st.extra === "files") {
         const files = ["tidewell-bmc.json", "notes.docx", "q3-notes.md"].map((name) => ({ name, mimeType: "application/octet-stream", buffer: Buffer.from(name.endsWith(".json") ? example : "# Notes\n\nPublic notes.\n") }));
@@ -290,7 +368,7 @@ try {
       if (!ok) failures.push(`${st.name}, ${st.width} x ${st.height}, ${st.theme}, ${st.lang}: ${JSON.stringify({ sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 3), covered: m.covered, errors })}`);
       await context.close();
     }
-    res.push([!failures.length, `${states.length} views (every step of S1 to S3, Score's weights, table and stability, Play running, the live intake before and after files) at 1920 x 1080 and 1280 x 720: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${failures.length ? `:\n      ${failures.slice(0, 12).join("\n      ")}` : ""}`]);
+    res.push([!failures.length, `${states.length} views (every step of S1 to S3, Score's weights, table and stability, Play running, the Start step with Undo after a switch, the live intake before and after files) at 1920 x 1080 and 1280 x 720: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${failures.length ? `:\n      ${failures.slice(0, 12).join("\n      ")}` : ""}`]);
     // Control: a story made taller than its panel is caught as covered or as page scroll.
     {
       const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=2", { width: 1280, height: 720 });
@@ -299,6 +377,24 @@ try {
       res.push([m.covered.length > 0 || m.scroll, "control: a block pushed under the Your turn bar is caught"]);
       await context.close();
     }
+    // The live screens (G17): the live-run dialog, a step whose agent is at work, an API error, a step that
+    // failed its checks twice, and the live report, each from S1's three reports against the stand-in.
+    const liveFailures = [];
+    const liveStates = [];
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) for (const lang of ["en", "de"]) for (const theme of ["light", "dark"]) for (const kind of ["dialog", "busy", "error", "failed", "failed-open", "report"]) liveStates.push({ width, height, lang, theme, kind });
+    for (const st of liveStates) {
+      const view = await liveView(st);
+      const m = await view.page.evaluate(MEASURE);
+      for (const x of m.small) smallAll.add(`live ${st.kind}: ${x}`);
+      const k = await view.page.evaluate(CONTRAST);
+      measuredAll += k.measured;
+      for (const x of k.low) lowAll.push(`live ${st.kind}, ${st.theme}, ${st.lang}: ${x}`);
+      const ok = view.ok && !m.sideways && !m.scroll && !m.cut.length && !m.covered.length && !view.errors.length;
+      if (!ok) liveFailures.push(`live ${st.kind}, ${st.width} x ${st.height}, ${st.theme}, ${st.lang}: ${JSON.stringify({ shown: view.ok, sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 3), covered: m.covered, errors: view.errors })}`);
+      await view.context.close();
+    }
+    res.push([!liveFailures.length, `${liveStates.length} live views (the live-run dialog, a step at work, an API error, a step stopped after two failed checks, with its list of what the checks found closed and open, and the live report) at both sizes, in both themes and languages: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${liveFailures.length ? `:\n      ${liveFailures.slice(0, 12).join("\n      ")}` : ""}`]);
+    if (!liveFailures.length) console.log("LIVE VIEWS LAID OUT");
     // The idea drawer and the guide sit over the page, so only their contrast is measured here.
     for (const theme of ["light", "dark"]) for (const lang of ["en", "de"]) for (const which of ["drawer", "guide"]) {
       const { context, page } = await open(which === "guide" ? `?lang=${lang}` : `?guide=0&lang=${lang}&scenario=s1&step=3`, { theme });
@@ -307,21 +403,38 @@ try {
       const k = await page.evaluate(CONTRAST);
       measuredAll += k.measured;
       for (const x of k.low) lowAll.push(`${which}, ${theme}, ${lang}: ${x}`);
+      // Their targets count too: the measure reads the open dialog's.
+      const m = await page.evaluate(MEASURE);
+      for (const x of m.small) smallAll.add(`${which}: ${x}`);
       await context.close();
     }
     const lowSeen = [...new Set(lowAll)];
     res.push([!lowSeen.length, `${measuredAll} texts and icons in those views, the idea drawer and the guide, light and dark: every text at least 4.5:1 and every icon 3:1 against its own fill${lowSeen.length ? `:\n      ${lowSeen.slice(0, 12).join("\n      ")}` : ""}`]);
-    // Control: the turn bar's reason in a page-theme colour, as it was before 0.2.0's fix, vanishes in the dark.
+    // Control: a text in a pale grey on the Your turn bar's pastel is caught. (Before Vici's callout fix the
+    // page-theme --vc-on-accent-soft did this in the dark theme; a callout now gives it its own ink.)
     {
       const { context, page } = await open("?guide=0&lang=en", { width: 1280, height: 720, theme: "dark" });
       await page.click("#btn-live");
       await page.waitForTimeout(250);
-      await page.evaluate(() => { document.getElementById("cta-reason").style.color = "var(--vc-on-accent-soft)"; });
+      await page.evaluate(() => { document.getElementById("cta-reason").style.color = "var(--vc-neutral-300)"; });
       const k = await page.evaluate(CONTRAST);
-      res.push([k.low.some((x) => x.includes("turn-reason")), `control: the reason under the action in --vc-on-accent-soft is caught in the dark theme (${k.low.find((x) => x.includes("turn-reason")) || "not caught"})`]);
+      res.push([k.low.some((x) => x.includes("turn-reason")), `control: the reason under the action in a pale grey is caught on the bar's pastel (${k.low.find((x) => x.includes("turn-reason")) || "not caught"})`]);
       await context.close();
     }
-    console.log(`\nTargets under 40 px (AC-14 holds them to 40 px from version 1.0.0): ${[...smallAll].join("; ") || "none"}`);
+    // Every target at least 40 px wide and tall (AC-14, brought forward to 0.3.0), with a control: a planted
+    // 30 px button is caught.
+    const smallSeen = [...smallAll];
+    res.push([!smallSeen.length, `every visible target in those views at least 40 px wide and tall${smallSeen.length ? `:\n      ${smallSeen.slice(0, 16).join("\n      ")}` : ""}`]);
+    let plantedCaught = false;
+    {
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=2", { width: 1280, height: 720 });
+      await page.evaluate(() => { const b = document.createElement("button"); b.type = "button"; b.textContent = "x"; b.style.cssText = "min-height:0;height:30px;width:30px;padding:0"; document.querySelector(".story").prepend(b); });
+      const m = await page.evaluate(MEASURE);
+      plantedCaught = m.small.some((x) => / 30x30$/.test(x));
+      res.push([plantedCaught, "control: a planted 30 px button is caught"]);
+      await context.close();
+    }
+    if (!smallSeen.length && plantedCaught) console.log("TARGETS AT LEAST 40 PX");
     report("layout", res, "PAGE LAYOUT OK");
   }
 

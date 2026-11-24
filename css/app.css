@@ -36,9 +36,6 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .app-shell * { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
 .vc-skip-link { position: fixed; z-index: 4000; }
 .kpi-value, .vc-num { font-variant-numeric: tabular-nums; }
-/* Inter's tabular figures also widen the hyphen, so "person-days" would read "person - days". Vici's tables
-   turn them on for every cell; here only number cells keep them, so words with hyphens stay whole. */
-.vc-table th:not(.vc-num), .vc-table td:not(.vc-num) { font-variant-numeric: normal; }
 
 /* ---- header ------------------------------------------------------------------------------------------ */
 .app-header {
@@ -105,6 +102,7 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .step-lead { margin: 0; font-size: var(--vc-font-size-lg); line-height: 1.4; color: var(--vc-text); max-width: 46ch; text-wrap: pretty; }
 .step-note { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); max-width: 52ch; }
 .version-note.vc-alert { display: flex; align-items: flex-start; gap: 10px; margin: 0; max-width: 52ch; }
+.evidence > .version-note.vc-alert { max-width: none; flex: none; }
 .version-note .vc-icon { flex: none; margin-top: 2px; }
 .challengers { display: grid; gap: 6px; }
 .challenger-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
@@ -113,8 +111,8 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .challenger-links .vc-icon { --vc-icon-size: 15px; }
 
 /* What the page waits for, asked where the eye is: Vici's merlot callout with the one primary action, right
-   under what just happened, and in view however long the story grows. The callout stays pastel in
-   both themes, so the button inside it keeps the light theme's merlot. */
+   under what just happened, and in view however long the story grows. The callout stays pastel in both
+   themes, and Vici gives the button inside it the light theme's merlot. */
 .turn-bar.vc-callout {
   position: sticky;
   bottom: 0;
@@ -122,10 +120,6 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
   align-items: center;
   gap: 14px;
   padding: 10px 14px;
-  --vc-accent: var(--vc-merlot-950);
-  --vc-accent-hover: var(--vc-merlot-800);
-  --vc-accent-pressed: var(--vc-merlot-900);
-  --vc-on-accent: var(--vc-neutral-50);
 }
 .turn-bar .vc-callout__body > * + * { margin-top: 2px; }
 .turn-bar .vc-callout__title { font-size: var(--vc-font-size-lg); line-height: 1.2; }
@@ -173,10 +167,16 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 
 /* ---- Start: the companies and their documents ----------------------------------------------------------- */
 .scenario-picker { display: grid; gap: 6px; justify-items: start; }
-.scenario-switch.vc-segmented > label > span { min-height: 34px; font-size: var(--vc-font-size-md); }
+.scenario-switch.vc-segmented > label > span { font-size: var(--vc-font-size-md); }
+/* After a switch that set choices aside: what went, and Undo, in the pitch's place. */
+.switch-undo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 0 0 12px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-bg-subtle); }
+.switch-undo__text { margin: 0; font-size: var(--vc-font-size-sm); line-height: 1.35; }
+.switch-undo .vc-button { flex: none; }
 .scenario-pitch { margin: 0; font-size: var(--vc-font-size-md); line-height: 1.35; color: var(--vc-text); }
 .doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.doc-chip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "cell title meta tags"; align-items: center; column-gap: 10px; padding: 4px 10px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-surface); }
+.doc-chip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "cell title meta tags"; align-items: center; column-gap: 10px; min-height: var(--vc-control-md); padding: 0 10px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-surface); }
+/* A chip is as tall as a target, so the title of a document that opens (S3's annual report) is one. */
+.doc-chip__title > a.vc-link { display: inline-flex; align-items: center; min-height: var(--vc-control-md); }
 .doc-chip__cell { grid-area: cell; }
 .doc-chip__title { grid-area: title; min-width: 0; font-weight: var(--vc-weight-semibold); line-height: 1.3; }
 .doc-chip__tags { grid-area: tags; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
@@ -204,7 +204,7 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .stake-sub, .stake-stated { font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); white-space: normal; max-width: 12rem; margin-left: auto; }
 .decide-cell { min-width: 15.5rem; }
 .decide-group { display: flex; gap: 4px; }
-.decide-btn.vc-button { --_h: 36px; min-width: 0; padding-inline: 10px; }
+.decide-btn.vc-button { min-width: 0; padding-inline: 10px; }
 .decide-btn.is-on, .place-btn.is-on { background: var(--vc-accent); border-color: var(--vc-accent); color: var(--vc-on-accent); }
 .decide-detail { display: block; margin-top: 6px; }
 .decide-detail .vc-select { width: 100%; max-width: 15.5rem; }
@@ -213,8 +213,19 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .summary-chevron { flex: none; transition: transform var(--vc-duration-quick) var(--vc-ease-standard); }
 details[open] > summary > .summary-chevron { transform: rotate(90deg); }
 summary::-webkit-details-marker { display: none; }
-.source-list { margin: 4px 0 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: var(--vc-font-size-sm); }
+.source-list { margin: 4px 0 0; padding-left: 1.2em; display: grid; gap: 0; font-size: var(--vc-font-size-sm); }
+.source-list a.vc-link, .figure-source a.vc-link { display: inline-flex; align-items: center; min-height: var(--vc-control-md); }
 .source-date { margin-left: 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-xs); }
+
+/* ---- Targets --------------------------------------------------------------------------------------------------
+   Every target is at least 40 px wide and tall (AC-14, brought forward to 0.3.0). Vici's small controls are 32 px,
+   so this page gives its small buttons, selects and icon buttons, the segmented options and the sliders Vici's
+   medium control height and keeps their small type. tests/page.mjs measures every target in every view. */
+.vc-button--sm, .vc-select--sm, .vc-icon-button--sm { --_h: var(--vc-control-md); }
+.vc-segmented > label > span { min-height: var(--vc-control-md); }
+.vc-slider { height: var(--vc-control-md); }
+.vc-dialog__header > .vc-icon-button { --_h: var(--vc-control-md); }
+.vc-guide .vc-step__button { min-height: var(--vc-control-md); }
 
 /* ---- Ideate: the honeycomb and the idea's page ------------------------------------------------------------- */
 .ideas-comb { --vc-honeycomb-cell: clamp(7rem, 12vh, 10rem); --vc-honeycomb-gap: 8px; margin: 4px auto 0; }
@@ -266,7 +277,9 @@ button.vc-tile:hover, button.vc-tile:focus-visible { --_bg: var(--vc-accent); --
 .weight-label.vc-label { font-size: var(--vc-font-size-xs); }
 .weight-out { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; font-weight: var(--vc-weight-semibold); font-size: var(--vc-font-size-xs); }
 .weight-share { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-regular); color: var(--vc-text-muted); }
-.weight-field .vc-slider { width: 100%; }
+/* The slider's box is 40 px for the pointer, but it eats into the rows above and below, so the seven weights
+   still fit at 1280 x 720: only its thin track shows. */
+.weight-field .vc-slider { width: 100%; margin-block: -6px; }
 .weights-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
 .weights-sum { margin: 0; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
 .weights-sum.is-refused { color: var(--vc-danger-text); font-weight: var(--vc-weight-semibold); }
@@ -313,7 +326,7 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .score-table .link-button { white-space: normal; text-align: left; }
 .score-table tr.is-pick > * { background: color-mix(in oklab, var(--vc-accent-soft) 60%, transparent); }
 .score-value strong { font-size: var(--vc-font-size-md); }
-.link-button { padding: 0; border: 0; background: none; font: inherit; font-weight: var(--vc-weight-semibold); color: var(--vc-text-link); text-align: left; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; min-height: 32px; }
+.link-button { display: inline-flex; align-items: center; padding: 0; border: 0; background: none; font: inherit; font-weight: var(--vc-weight-semibold); color: var(--vc-text-link); text-align: left; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; min-height: var(--vc-control-md); }
 .link-button:focus-visible { outline: var(--vc-stroke-focus) solid var(--vc-focus); outline-offset: 2px; }
 .stability { display: grid; gap: 14px; }
 .stability-sentence { margin: 0; font-size: var(--vc-font-size-lg); }
@@ -327,12 +340,12 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .pick-points { font-size: var(--vc-font-size-xs); }
 .pick-table th, .pick-table td { vertical-align: middle; }
 .pick-idea { font-weight: var(--vc-weight-regular); }
-.pick-idea .link-button { display: block; min-height: 0; }
+.pick-idea .link-button { display: flex; }
 .pick-issue { display: block; margin-top: 2px; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); line-height: 1.3; }
 .pick-table tr.is-pick > * { background: color-mix(in oklab, var(--vc-accent-soft) 60%, transparent); }
 .place-cell { white-space: nowrap; }
 .place-group { display: flex; gap: 4px; }
-.place-btn.vc-button { --_h: 36px; min-width: 2.75rem; justify-content: center; }
+.place-btn.vc-button { min-width: 2.75rem; justify-content: center; }
 
 /* ---- Report: the short version ------------------------------------------------------------------------------- */
 .report-page { display: grid; gap: 14px; max-width: 46rem; padding: 18px 22px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-surface); box-shadow: var(--vc-shadow-sm); }
@@ -366,6 +379,43 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .count-field .vc-select { max-width: 7rem; }
 .intake-more summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; gap: 6px; list-style: none; font-weight: var(--vc-weight-semibold); }
 .intake-fields { display: grid; gap: 10px; padding-top: 6px; }
+/* Once read, the files stay as the agents read them; another set takes a new run. */
+.intake-zone--read { gap: 10px; }
+.intake-new { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding-top: 10px; border-top: 1px solid var(--vc-border-subtle); }
+.intake-new__text { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); max-width: 44ch; }
+
+/* ---- a live run: the dialog, the bar while an agent works and when it stops --------------------------------- */
+.live-framed.vc-alert, .vc-live__warning.vc-alert { display: flex; gap: 10px; align-items: flex-start; margin: 0; }
+.live-framed .vc-icon, .vc-live__warning > .vc-icon { flex: none; margin-top: 2px; }
+.live-msg { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
+.live-msg:empty { display: none; }
+.live-msg[data-tone="error"] { color: var(--vc-danger-text); font-weight: var(--vc-weight-medium); }
+.live-advanced { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.live-pdfs { margin: 0; }
+/* The bar while an agent works: lilac, as Vici marks what the AI does, with a light that runs round its cell. */
+.turn-bar--busy .vc-callout__cell { display: grid; place-items: center; }
+.turn-spinner { --vc-spinner-color: currentColor; }
+.busy-meta { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); font-variant-numeric: tabular-nums; }
+.busy-note { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text); }
+.busy-note:empty { display: none; }
+/* While an agent works, the rest of the step waits, and looks it. */
+.evidence[inert], .story > [inert] { opacity: 0.62; transition: opacity var(--vc-duration-base, 0.2s) ease; }
+/* When a step stops: what happened across the bar's whole width, then the one thing to do with the other
+   ways on beside it, then what the checks found, folded. */
+.turn-bar--stopped.vc-callout { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.turn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.turn-bar--stopped .cta.vc-button { --_h: var(--vc-control-md); --_fs: var(--vc-font-size-sm); }
+.stop-problems { margin-top: 2px; }
+.stop-problems summary { cursor: pointer; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; list-style: none; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); }
+.stop-problems summary::-webkit-details-marker { display: none; }
+.stop-problems ul { margin: 0 0 4px; padding-left: 1.2em; font-size: var(--vc-font-size-sm); line-height: 1.35; max-height: 7.5em; overflow: auto; }
+/* A text the fact audit refused twice: shown, with why. */
+.unchecked-tag { white-space: nowrap; vertical-align: 0.1em; margin-inline-start: 6px; }
+.unchecked-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.unchecked-note .unchecked-tag { margin-inline-start: 0; }
+.live-measured { max-width: 56ch; }
+/* The acknowledgement is the box's target too: the whole line takes the click. */
+.vc-live__ack { min-height: var(--vc-control-md); }
 
 /* ---- guides ------------------------------------------------------------------------------------------------ */
 .vc-guide .vc-guide__say { font-style: normal; }

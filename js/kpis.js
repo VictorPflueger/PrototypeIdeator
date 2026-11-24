@@ -9,7 +9,7 @@
 //   Session cost      estimated for a replay on the Balanced setting; measured in a live run
 
 import { t } from "./i18n/index.js";
-import { fmtScore, fmtShare, fmtEur, fmtEurCompact } from "./format.js";
+import { fmtScore, fmtShare, fmtEur, fmtEurCompact, fmtEurSpend } from "./format.js";
 
 /** The cost of a run in words: "under €0.01", "≈ €0.09" or a range "€0.11–€0.13". */
 export function costText(eur, lang) {
@@ -32,27 +32,8 @@ function stakeParts(s, lang) {
   };
 }
 
-/**
- * The tiles' contents. mode: simulation or live; run: the run now (js/simulation.js buildRun, or the live
- * reading); preview: the scenario's recorded run, for the value before a decision; reached: the furthest
- * step (0 nothing yet, 1 read, 4 ideas scored, 5 report). Returns { stake, covered, top, cost }, each
- * { value, was, note, state } with state waiting, idle, yours or moved.
- */
-export function tileModel({ mode, run, preview, reached, lang, live = {} }) {
-  const wait = (key) => ({ value: "…", was: "", note: t(key, null, lang), state: "waiting" });
-  if (mode === "live") {
-    const out = {
-      stake: wait("kpi.atStake.wait"),
-      covered: wait("kpi.covered.wait"),
-      top: wait("kpi.top.wait"),
-      cost: wait("kpi.cost.wait")
-    };
-    if (live.issues && live.issues.length) {
-      const now = stakeParts(live.atStake, lang);
-      out.stake = { value: now.value, was: "", note: now.note, state: "idle" };
-    }
-    return out;
-  }
+/** At stake, Issues covered and Top score from a run, with the value before a decision struck through. */
+function figuresOf(run, preview, reached, lang) {
   const f = run.figures;
   const p = preview.figures;
   const decided = run.shortlist.decided && reached >= 5;
@@ -65,6 +46,7 @@ export function tileModel({ mode, run, preview, reached, lang, live = {} }) {
     note: decided && f.share !== null ? t("kpi.atStake.share", { share: fmtShare(f.share, lang) }, lang) : stakeNow.note,
     state: stakeMoved || decided ? "moved" : "idle"
   };
+  if (!f.top || !p.top) return { stake, covered: null, top: null };
   const covNow = covered(f.covered, lang);
   const covWas = covered(p.covered, lang);
   const cov = { value: covNow, was: covNow !== covWas ? covWas : "", note: t("kpi.covered.note", null, lang), state: covNow !== covWas ? "moved" : "idle" };
@@ -78,8 +60,35 @@ export function tileModel({ mode, run, preview, reached, lang, live = {} }) {
     const was = fmtScore(p.top.value, lang);
     top = { value: now, was: now !== was ? was : "", note: t("kpi.top.note", { name: f.top.name }, lang), state: now !== was ? "moved" : "idle" };
   }
+  return { stake, covered: cov, top };
+}
+
+/**
+ * The tiles' contents. mode: simulation or live; run: the run now (js/simulation.js buildRun); preview: the
+ * run before the person's choices (the recording, or the live run as the agents left it), for the value
+ * before a decision; reached: the furthest step (0 nothing yet, 1 read, 4 ideas scored, 5 report);
+ * live.cost: the live meter's { eur, capEur } once a request has gone out. Returns { stake, covered, top,
+ * cost }, each { value, was, note, state } with state waiting, idle, yours or moved.
+ */
+export function tileModel({ mode, run, preview, reached, lang, live = {} }) {
+  const wait = (key) => ({ value: "…", was: "", note: t(key, null, lang), state: "waiting" });
+  if (mode === "live") {
+    const out = {
+      stake: wait("kpi.atStake.wait"),
+      covered: wait("kpi.covered.wait"),
+      top: wait("kpi.top.wait"),
+      cost: wait("kpi.cost.wait")
+    };
+    if (live.cost) out.cost = { value: fmtEurSpend(live.cost.eur, lang), was: "", note: t("kpi.cost.live", { cap: fmtEur(live.cost.capEur, lang) }, lang), state: "idle" };
+    if (!run || !preview || reached < 1) return out;
+    const fig = figuresOf(run, preview, reached, lang);
+    out.stake = fig.stake;
+    if (fig.covered && run.ideas.length) { out.covered = fig.covered; out.top = fig.top; }
+    return out;
+  }
+  const fig = figuresOf(run, preview, reached, lang);
   const cost = { value: costText(run.estimate.balanced.eur, lang), was: "", note: t("kpi.cost.note", null, lang), state: "idle" };
-  return { stake, covered: cov, top, cost };
+  return { stake: fig.stake, covered: fig.covered, top: fig.top, cost };
 }
 
 /** Draws the model into the four tiles of index.html. */

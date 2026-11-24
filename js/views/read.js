@@ -8,7 +8,7 @@ import { h } from "../dom.js";
 import { t, tn } from "../i18n/index.js";
 import { fmtDate } from "../format.js";
 import { fmtEurCompact, fmtEurRange } from "../format.js";
-import { heading, agentLine, turnBar, storyPanel, evidencePanel, tag, toolShort } from "./common.js";
+import { heading, agentLine, turnBar, storyPanel, evidencePanel, tag, toolShort, uncheckedTag } from "./common.js";
 
 export const PARK_REASONS = ["scope", "handled", "notIssue", "uncertain"];
 
@@ -84,7 +84,7 @@ function decisionCell(issue, { kept, onDecide, label }) {
  * The issue map as a table. issues: the run's issues with their status; proposals: the Reader's merges;
  * groupValueOf(id): a kept issue's value counting its merged members once (D15); onDecide(id, action, opts).
  */
-export function issueTable({ issues, proposals, groupValueOf, onDecide, lang }) {
+export function issueTable({ issues, proposals, groupValueOf, onDecide, lang, unchecked = null }) {
   const kept = issues.filter((i) => i.status === "kept");
   const why = new Map(proposals.flatMap((p) => p.merged.map((id) => [id, { keep: p.keep, why: p.why }])));
   const rows = [];
@@ -99,7 +99,7 @@ export function issueTable({ issues, proposals, groupValueOf, onDecide, lang }) 
     const kpis = (issue.kpis || []).map((k) => (k.today ? `${k.name}: ${k.today}` : k.name)).join(" · ");
     return h("tr", { class: ["issue-row", `issue-row--${issue.status}`, member ? "issue-row--member" : ""], dataset: { issue: issue.id } },
       h("th", { scope: "row", class: "issue-cell" },
-        h("span", { class: "issue-title" }, issue.title),
+        h("span", { class: "issue-title" }, issue.title, unchecked && unchecked.has(issue.id) ? uncheckedTag() : null),
         // One line of context under the title: where it was found, its area and the KPIs it names.
         h("span", { class: "issue-meta" }, foundCell(issue), issue.area ? h("span", { class: "issue-area" }, issue.area) : null,
           kpis ? h("span", { class: "issue-kpis" }, h("span", { class: "issue-kpis__label" }, t("read.kpis")), kpis) : null),
@@ -133,8 +133,9 @@ export function sourceList(issues, lang) {
 }
 
 /**
- * The Read step. ctx: { run (issues, proposals, documents, figures), lang, ideated, live, onDecide,
- * onIdeas, onNext, groupValueOf, agentText }.
+ * The Read step. ctx: { run (issues, proposals, documents, figures), lang, ideated, onDecide, onIdeas,
+ * onNext, groupValueOf, agentText, unchecked (a live run's issue ids whose texts the fact audit refused
+ * twice) }.
  */
 export function renderRead(ctx) {
   const { run, lang } = ctx;
@@ -144,9 +145,7 @@ export function renderRead(ctx) {
   const parked = run.issues.filter((i) => i.status === "parked").length;
   const title = ctx.ideated ? tn("read.title.done", kept, { merged, parked }) : tn("read.title", all);
   const lead = ctx.ideated ? t("read.lead.done") : run.proposals.length ? tn("read.lead", run.proposals.length) : t("read.lead.none");
-  const action = ctx.live
-    ? { label: t("read.action"), icon: "sparkle", disabled: true, reason: t("read.action.later"), onClick: () => {} }
-    : { label: t("read.action"), icon: "sparkle", onClick: ctx.onIdeas };
+  const action = { label: t("read.action"), icon: "sparkle", onClick: ctx.onIdeas };
   return h("div", { class: "step", dataset: { step: "read" } },
     storyPanel(
       ...heading(title, lead),
@@ -155,6 +154,6 @@ export function renderRead(ctx) {
         ? turnBar({ kind: "next", text: t("read.turn.after"), action: { label: t("read.next"), icon: "arrow-right", onClick: ctx.onNext } })
         : turnBar({ kind: "turn", text: t("read.turn"), action })),
     evidencePanel(t("read.panel"),
-      issueTable({ issues: run.issues, proposals: run.proposals, groupValueOf: ctx.groupValueOf, onDecide: ctx.onDecide, lang }),
+      issueTable({ issues: run.issues, proposals: run.proposals, groupValueOf: ctx.groupValueOf, onDecide: ctx.onDecide, lang, unchecked: ctx.unchecked }),
       sourceList(run.issues, lang)));
 }

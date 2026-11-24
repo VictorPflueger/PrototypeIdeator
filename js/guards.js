@@ -5,12 +5,15 @@
 //             refused twice shows with an "Unchecked" tag instead of stopping the run;
 //   notes     reported, never sent back: the writing rules a model sometimes slips on (a dash, a stock
 //             word) and the spread rule, until Victor's live runs show how often they happen.
-// 0.1.0 holds the Ideator's checks, which the probe uses; the Reader's and the Brief writer's follow in 0.3.0.
+// 0.1.0 holds the Ideator's checks, which the probe uses; 0.3.0 adds the Reader's and the Writer's, and the
+// Brief writer's follow in 0.4.0.
 
 import { CRITERIA } from "./engine.js";
 import { LIMITS } from "./config.js";
 import { auditText, normalise } from "./facts.js";
 import { STOCK_WORDS } from "./prompts.js";
+import { checkQuote } from "./issues.js";
+import { kpiById } from "../data/kpis.js";
 
 const words = (s) => normalise(s).split(" ").filter(Boolean).length;
 const filled = (s) => typeof s === "string" && normalise(s) !== "";
@@ -129,4 +132,101 @@ export function repairMessage({ refusals = [], audit = [] }) {
     if (a.unknownFacts.length) lines.push(`${a.where}: these placeholders are not in "facts": ${a.unknownFacts.join(", ")}`);
   }
   return `Your answer broke these rules. Send the whole answer again with them fixed and nothing else changed.\n- ${lines.join("\n- ")}`;
+}
+
+/**
+ * The Reader's answer, checked (brief §6.2 and §6.7). files: the run's documents as [{ name, kind, content }],
+ * content a text file's text (null for a PDF, whose text code doesn't read); evidence: what the fact audit
+ * may pass. Every issue cites a file of the run; a quote is at most 150 characters and, from a text file,
+ * stands in it word for word; euros a year come with their basis and in order; a KPI's library id exists.
+ * Titles and descriptions pass the fact audit. Returns { refusals, audit, notes, ok }.
+ */
+export function readerProblems(answer, { files = [], evidence = {} } = {}) {
+  const refusals = [];
+  const audit = [];
+  const notes = [];
+  const issues = Array.isArray(answer?.issues) ? answer.issues : [];
+  const byName = new Map(files.map((f) => [f.name, f]));
+  const kindOf = (name) => byName.get(name)?.kind || "text";
+  const contentOf = (name) => byName.get(name)?.content ?? null;
+  if (!issues.length) refusals.push("no issues: map at least one business issue the documents raise");
+  const ids = new Map();
+  issues.forEach((i, k) => {
+    const label = `issue ${filled(i.id) ? i.id : k + 1}`;
+    if (!filled(i.id)) refusals.push(`issue ${k + 1} has no id`);
+    else if (ids.has(i.id)) refusals.push(`${label}: the same id as issue ${ids.get(i.id)}`);
+    else ids.set(i.id, k + 1);
+    if (!filled(i.title)) refusals.push(`${label} has no title`);
+    if (!filled(i.description)) refusals.push(`${label} has no description`);
+    const nums = [i.eur_year_low, i.eur_year_expected, i.eur_year_high];
+    if (nums.some((v) => typeof v === "number" && (!Number.isFinite(v) || v < 0))) refusals.push(`${label}: euros a year must be positive numbers or null`);
+    if (typeof i.eur_year_expected === "number" && !filled(i.eur_basis)) refusals.push(`${label}: euros a year without their basis`);
+    if ([i.eur_year_low, i.eur_year_expected, i.eur_year_high].every((v) => typeof v === "number") && !(i.eur_year_low <= i.eur_year_expected && i.eur_year_expected <= i.eur_year_high)) refusals.push(`${label}: euros a year must run low, expected, high`);
+    for (const kpi of i.kpis || []) if (kpi.library_id && !kpiById(kpi.library_id)) refusals.push(`${label}: the KPI library has no id "${kpi.library_id}"; use one from "kpis" or null`);
+    const sources = Array.isArray(i.sources) ? i.sources : [];
+    if (!sources.length) refusals.push(`${label} cites no source`);
+    sources.forEach((src, n) => {
+      const sl = `${label}, source ${n + 1}`;
+      if (!byName.has(src.file)) { refusals.push(`${sl}: "${src.file}" is not one of the files`); return; }
+      if (!filled(src.quote)) refusals.push(`${sl}: no quote`);
+      else if (src.quote.length > LIMITS.quoteMaxChars) refusals.push(`${sl}: the quote has ${src.quote.length} characters, at most ${LIMITS.quoteMaxChars}`);
+      else if (checkQuote(src.quote, { file: src.file, kind: kindOf, content: contentOf }) === "failed") refusals.push(`${sl}: the quote does not stand in ${src.file} word for word; quote the file exactly`);
+    });
+    for (const [where, text] of [[`${label} title`, i.title], [`${label} description`, i.description]]) {
+      if (typeof text !== "string") continue;
+      const a = auditText(text, { facts: [], evidence });
+      if (!a.pass) audit.push({ where, tokens: a.tokens, unknownFacts: a.unknownFacts });
+      const dash = text.match(DASH);
+      if (dash) notes.push(`${where}: a dash as punctuation ("${dash[0]}")`);
+    }
+  });
+  return { refusals, audit, notes, ok: refusals.length === 0 && audit.length === 0 };
+}
+
+/**
+ * The Writer's answer, checked: four texts, none empty, each through the fact audit with the run's fact keys,
+ * so a figure stands only as a placeholder. Returns { refusals, audit, notes, ok }.
+ */
+export function writerProblems(answer, { facts = [], evidence = {} } = {}) {
+  const refusals = [];
+  const audit = [];
+  const notes = [];
+  for (const key of ["headline", "looked_at", "found", "needed"]) {
+    const text = answer?.[key];
+    if (!filled(text)) { refusals.push(`${key} is empty`); continue; }
+    const a = auditText(text, { facts, evidence });
+    if (!a.pass) audit.push({ where: key, tokens: a.tokens, unknownFacts: a.unknownFacts });
+    const dash = text.match(DASH);
+    if (dash) notes.push(`${key}: a dash as punctuation ("${dash[0]}")`);
+    const stock = text.match(STOCK);
+    if (stock) notes.push(`${key}: the stock word "${stock[1]}"`);
+  }
+  return { refusals, audit, notes, ok: refusals.length === 0 && audit.length === 0 };
+}
+
+/**
+ * The merges answer, checked: every id it names is one of the issues sent, an issue is merged into another
+ * and sits in one group at most, and each reason passes the fact audit. Returns { refusals, audit, notes, ok }.
+ */
+export function mergesProblems(answer, { issues = [], evidence = {} } = {}) {
+  const refusals = [];
+  const audit = [];
+  const notes = [];
+  const ids = new Set(issues.map((i) => i.id));
+  const seen = new Set();
+  (Array.isArray(answer?.merges) ? answer.merges : []).forEach((m, k) => {
+    const label = `merge ${k + 1}`;
+    for (const id of [m.keep, ...(m.merged || [])]) {
+      if (!ids.has(id)) refusals.push(`${label}: issue "${id}" is not one of the issues sent`);
+      else if (seen.has(id)) refusals.push(`${label}: issue "${id}" is in two groups`);
+      seen.add(id);
+    }
+    if (!(m.merged || []).length) refusals.push(`${label}: merges nothing into ${m.keep}`);
+    if ((m.merged || []).includes(m.keep)) refusals.push(`${label}: ${m.keep} is merged into itself`);
+    if (typeof m.why === "string") {
+      const a = auditText(m.why, { facts: [], evidence });
+      if (!a.pass) audit.push({ where: `${label} why`, tokens: a.tokens, unknownFacts: a.unknownFacts });
+    }
+  });
+  return { refusals, audit, notes, ok: refusals.length === 0 && audit.length === 0 };
 }
