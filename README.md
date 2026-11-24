@@ -6,9 +6,11 @@ Live site: <https://victorpflueger.github.io/PrototypeIdeator/>
 
 ## Status
 
-Version 0.3.0 (M3 Live), 24 November 2026. The three fictional companies play from Start to Report with no key: Tidewell Lines from three challenger reports, Arvento Drives from two, and Auental Energie from an annual-report excerpt and a SWOT. Each step is one screen: the Reader's issue map with keep, merge and park; the Ideator's ideas as a honeycomb, each opening its own page; the scores as a chart, a table and the stability check, with weights you can change; the shortlist; and the short version of the report. Play walks the steps and stops where you decide, and the guide ends with a five-minute script.
+Version 0.3.1 (M3 Live, with a fix), 24 November 2026. The three fictional companies play from Start to Report with no key: Tidewell Lines from three challenger reports, Arvento Drives from two, and Auental Energie from an annual-report excerpt and a SWOT. Each step is one screen: the Reader's issue map with keep, merge and park; the Ideator's ideas as a honeycomb, each opening its own page; the scores as a chart, a table and the stability check, with weights you can change; the shortlist; and the short version of the report. Play walks the steps and stops where you decide, and the guide ends with a five-minute script.
 
 Run it live takes your own documents and your own Claude API key. The Reader reads PDFs, Markdown, text and CSV, or compares the issues of several challengers' reports; the Ideator proposes the ideas; the Writer writes the summary. Each step is one request, checked and sent back once if it breaks a rule, under a budget cap you set; Stop ends a request and keeps what is done, and Save run as simulation downloads the run to replay. The whole report with its PDF, HTML and JSON downloads follows in version 0.4.0. PLAN.md holds the plan.
+
+0.3.1 fixes what the first live run found: after Start a new run, the Read step could show the figures of the run set aside, since both runs shared one cache key. Each live run now has its own. A problem the page meets says so on screen and stays until closed: an error, a choice that didn't take, a hidden modal dialog (closed by the next press) or a layer over the page that catches the click.
 
 ## What is real and what is simulated
 

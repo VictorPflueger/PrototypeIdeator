@@ -38,7 +38,7 @@
 // Prints LIVE DIALOG OK, LIVE PRIVACY OK, LIVE PRESETS OK, LIVE FLOW OK, LIVE HANDOFF OK, LIVE REPAIR OK, LIVE
 // GUARDS OK, LIVE IDEAS CAP OK, LIVE ABORT OK, LIVE CAP OK, LIVE COST OK, LIVE ERRORS OK, LIVE STORAGE OK and
 // LIVE SAVE RUN OK.
-// Usage: node tests/live.mjs [dialog|privacy|presets|flow|handoff-only|repair|guards|ideas-cap|abort|cap|cost|errors|storage|save-run]
+// Usage: node tests/live.mjs [dialog|privacy|presets|flow|handoff-only|decide|repair|guards|ideas-cap|abort|cap|cost|errors|storage|save-run]
 import { writeFileSync, mkdtempSync, copyFileSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -68,7 +68,7 @@ const server = await serveStatic(APP_ROOT, 8550 + Math.floor(Math.random() * 300
 const tmp = mkdtempSync(path.join(os.tmpdir(), "pi-live-"));
 let failed = 0;
 const tokens = [];
-const ORDER = ["dialog", "privacy", "presets", "flow", "handoff-only", "repair", "guards", "ideas-cap", "abort", "cap", "cost", "errors", "storage", "save-run"];
+const ORDER = ["dialog", "privacy", "presets", "flow", "handoff-only", "decide", "repair", "guards", "ideas-cap", "abort", "cap", "cost", "errors", "storage", "save-run"];
 
 function report(name, results, token) {
   console.log(`\n== ${name} ==`);
@@ -419,6 +419,104 @@ try {
       await context.close();
     }
     report("handoff-only", res, "LIVE HANDOFF OK");
+  }
+
+  // ---- decide -----------------------------------------------------------------------------------------------
+  // Victor's first real run (0.3.0): S3's PDF alone, the Reader's first answer refused once, nine issues, and
+  // then Keep, Merge and Park did nothing that he could see. The same run against the stand-in, with the
+  // clicks a person makes; a second run after Start a new run, which must show its own issues; Undo; and
+  // the page's answers when something goes wrong: an error, a hidden modal dialog, a layer over the page.
+  if (want("decide")) {
+    const res = [];
+    const good = clone(A(s3, "en").reader);
+    const refused = clone(good);
+    refused.issues[0].sources = [{ file: "notes.md", where: "section 1", quote: "Not one of the files." }];
+    const second = clone(good);
+    second.issues = second.issues.slice(0, 3).map((i, k) => ({ ...i, id: `I${k + 1}`, title: `Second run issue ${["one", "two", "three"][k]}`, kpis: [], sources: [{ file: "other-notes.md", where: "section 1", quote: "Nothing from the first run." }] }));
+    second.merges = [];
+    const { context, page, fake, errors } = await open({ width: 1876, height: 880, script: [{ answer: refused }, { answer: good }, { answer: second }] });
+    const status = () => page.$$eval("tr[data-issue]", (rows) => Object.fromEntries(rows.map((r) => [r.dataset.issue, r.className.match(/issue-row--(\w+)/)?.[1]])));
+    const toasts = () => page.$$eval(".vc-toast--danger", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+    /** A person's click: the mouse at the button's middle, as it stands on screen. */
+    const press = async (id, action) => {
+      const b = await page.$(`tr[data-issue="${id}"] [data-action="decide-${action}"]`);
+      if (!b) return false;
+      await b.scrollIntoViewIfNeeded();
+      const box = await b.boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(250);
+      return true;
+    };
+    await intake(page, [s3Pdf("en")]);
+    await startRun(page);
+    await stepIs(page, "read");
+    const first = await status();
+    const ids = Object.keys(first);
+    res.push([fake.agents().join() === "reader,reader" && ids.length === good.issues.length && Object.values(first).every((x) => x === "kept"), `the run reads S3's PDF alone, its first answer sent back once, and shows ${ids.length} issues, all kept`]);
+    const lead = await page.$eval(".story .step-lead", (e) => e.textContent);
+    res.push([lead === EN["read.lead.none"], "the lead says every issue starts as kept"]);
+    const stake0 = (await tiles(page)).stake.value;
+    // Park an issue with euros at stake, so the tile moves; merge another; Keep undoes the merge.
+    const withEur = ids.find((id) => good.issues.find((i) => `doc-${i.id}` === id)?.eur_year_expected);
+    await press(withEur, "park");
+    const parked = await status();
+    const stake1 = (await tiles(page)).stake.value;
+    res.push([parked[withEur] === "parked" && stake1 !== stake0, `Park, clicked with the mouse, parks "${withEur}" and at stake moves from ${stake0} to ${stake1}`]);
+    const other = ids.find((id) => id !== withEur && id !== ids.find((x) => x !== withEur));
+    await press(other, "merge");
+    const merged = await status();
+    res.push([merged[other] === "merged" && merged[withEur] === "parked", `Merge merges "${other}" into a kept issue`]);
+    await press(other, "keep");
+    const keptId = ids.find((id) => id !== withEur && id !== other);
+    await press(keptId, "keep");
+    const kept = await status();
+    res.push([kept[other] === "kept" && kept[keptId] === "kept" && !(await toasts()).length, "Keep undoes the merge, Keep on a kept issue changes nothing, and no problem shows"]);
+    // Start a new run sets this one aside; Undo brings it back with its choices.
+    const toStart = async () => { await page.click("#steps .vc-step:first-child .vc-step__button"); await page.waitForSelector('[data-action="new-run"]'); };
+    await toStart();
+    await page.click('[data-action="new-run"]');
+    await page.click('[data-action="undo-new"]');
+    await page.waitForTimeout(300);
+    await page.click("#steps .vc-step:nth-child(2) .vc-step__button");
+    await stepIs(page, "read");
+    const back = await status();
+    res.push([Object.keys(back).length === ids.length && back[withEur] === "parked", `Undo brings back the run set aside, with its own issues and choices${Object.keys(back).length === ids.length ? "" : `: step ${await page.evaluate(() => document.querySelector(".step")?.dataset.step)}, ${JSON.stringify(back)}`}`]);
+    // A new run on other files: its Read step shows its own issues, not the first run's, and its choices take.
+    await toStart();
+    await page.click('[data-action="new-run"]');
+    await page.setInputFiles("#intake-files", [textFile("other-notes.md", "# Other notes\n\nNothing from the first run.\n")]);
+    await page.waitForTimeout(300);
+    await startRun(page, { key: null });
+    await stepIs(page, "read");
+    const titles = await page.$$eval("tr[data-issue] .issue-title", (els) => els.map((e) => e.firstChild.textContent));
+    res.push([titles.length === 3 && titles.every((x) => x.startsWith("Second run issue")), `after Start a new run the Read step shows the new run's ${titles.length} issues, not the first run's (${titles.slice(0, 2).join(", ")})`]);
+    const secondIds = Object.keys(await status());
+    await press(secondIds[0], "park");
+    res.push([(await status())[secondIds[0]] === "parked", "and its choices take"]);
+    // An error the page didn't expect stays on screen, with anything shaped like a key taken out.
+    const planted = `sk-ant-api03-${"q".repeat(48)}`;
+    await page.evaluate((k) => setTimeout(() => { throw new Error(`planted failure with ${k}`); }, 0), planted);
+    await page.waitForTimeout(6500);
+    const t1 = await toasts();
+    res.push([t1.some((x) => x.includes("planted failure")) && !t1.some((x) => x.includes(planted)), `an error stays on screen after 6.5 s, without the key: "${(t1.find((x) => x.includes("planted")) || "").slice(0, 90)}"`]);
+    await page.evaluate(() => document.querySelectorAll(".vc-toast").forEach((x) => x.remove()));
+    // A modal dialog that is open but not drawn: the first press closes it and says so; the next click works.
+    await page.evaluate(() => { const d = document.createElement("dialog"); d.id = "planted-dialog"; document.body.append(d); d.showModal(); d.style.display = "none"; });
+    await press(secondIds[1], "park");
+    const healed = await page.evaluate(() => !document.getElementById("planted-dialog").open);
+    const t2 = await toasts();
+    await press(secondIds[1], "park");
+    res.push([healed && t2.some((x) => x.includes(EN["p.error.hiddenDialog"].slice(0, 30)) && x.includes("planted-dialog")) && (await status())[secondIds[1]] === "parked", "a hidden modal dialog is closed by the first press, which says so; the next click parks the issue"]);
+    await page.evaluate(() => document.querySelectorAll(".vc-toast").forEach((x) => x.remove()));
+    // A layer over the page that isn't the page's: the press names it.
+    await page.evaluate(() => { const o = document.createElement("div"); o.id = "planted-layer"; Object.assign(o.style, { position: "fixed", inset: "0", zIndex: "9999" }); document.body.append(o); });
+    await page.mouse.click(1400, 500);
+    await page.waitForTimeout(250);
+    const t3 = await toasts();
+    res.push([t3.some((x) => x.includes(EN["p.error.covered"].slice(0, 30)) && x.includes("div#planted-layer")), `a press on a layer over the page names it: "${(t3[0] || "").slice(0, 80)}"`]);
+    res.push([!errors.filter((x) => !/planted failure/.test(x)).length, `no page error besides the planted one${errors.length ? `: ${errors.slice(0, 2).join(" | ")}` : ""}`]);
+    await context.close();
+    report("decide", res, "LIVE DECIDE OK");
   }
 
   // ---- repair ---------------------------------------------------------------------------------------------
@@ -808,6 +906,6 @@ try {
 }
 
 // The tokens in the parts' fixed order, so a ledger can expect them in sequence.
-const ordered = ORDER.map((p) => ({ dialog: "LIVE DIALOG OK", privacy: "LIVE PRIVACY OK", presets: "LIVE PRESETS OK", flow: "LIVE FLOW OK", "handoff-only": "LIVE HANDOFF OK", repair: "LIVE REPAIR OK", guards: "LIVE GUARDS OK", "ideas-cap": "LIVE IDEAS CAP OK", abort: "LIVE ABORT OK", cap: "LIVE CAP OK", cost: "LIVE COST OK", errors: "LIVE ERRORS OK", storage: "LIVE STORAGE OK", "save-run": "LIVE SAVE RUN OK" })[p]).filter((t) => tokens.includes(t));
+const ordered = ORDER.map((p) => ({ dialog: "LIVE DIALOG OK", privacy: "LIVE PRIVACY OK", presets: "LIVE PRESETS OK", flow: "LIVE FLOW OK", "handoff-only": "LIVE HANDOFF OK", decide: "LIVE DECIDE OK", repair: "LIVE REPAIR OK", guards: "LIVE GUARDS OK", "ideas-cap": "LIVE IDEAS CAP OK", abort: "LIVE ABORT OK", cap: "LIVE CAP OK", cost: "LIVE COST OK", errors: "LIVE ERRORS OK", storage: "LIVE STORAGE OK", "save-run": "LIVE SAVE RUN OK" })[p]).filter((t) => tokens.includes(t));
 console.log(failed ? `\nlive: ${failed} checks failed.` : `\nlive: all parts passed.\n${ordered.join("\n")}`);
 process.exit(failed ? 1 : 0);

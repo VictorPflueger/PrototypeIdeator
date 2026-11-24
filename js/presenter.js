@@ -21,7 +21,7 @@
 import { setLang, getLang, onLang, t, tn } from "./i18n/index.js";
 import { scenarios, scenarioById } from "./scenarios.js";
 import { buildRun, recordedRun, referenceOf } from "./simulation.js";
-import { decide } from "./issues.js";
+import { decide, choiceTook } from "./issues.js";
 import { tileModel, renderTiles, costText } from "./kpis.js";
 import { DEFAULT_WEIGHTS, weightProblems } from "./engine.js";
 import { readFile, checkIntake } from "./documents.js";
@@ -45,6 +45,7 @@ import { messageOf } from "./api_messages.js";
 import { getKey, hasKey, redactSecrets } from "./keystore.js";
 import { privateFindings } from "./privacy.js";
 import { liveSizes, estimateLive, timeWords } from "./estimate.js";
+import { problem } from "./watch.js";
 
 const LANGS = ["en", "de"];
 export const STEPS = ["start", "read", "ideate", "score", "shortlist", "report"];
@@ -74,6 +75,9 @@ const S = {
 /** A live run before anything happened: no files, no answers, no spend. The key lives in js/keystore.js. */
 function blankLive() {
   return {
+    // This run's own number in the tab: the caches below are keyed by it, so a new run never meets the
+    // figures of one set aside, even when their versions agree.
+    id: (blankLive.count = (blankLive.count || 0) + 1),
     entries: [],
     form: { count: LIMITS.ideasDefault, company: "", sector: "", focus: "", constraints: "" },
     version: 0,                 // goes up whenever the files, the fields or the answers change
@@ -110,15 +114,15 @@ const runCache = new Map();
 const sc = () => scenarioById(S.scenarioId) || scenarios()[0];
 
 /** The live run as a scenario (js/live_run.js), rebuilt only when its files, fields or answers change. */
-let liveScCache = { version: -1, lang: null, sc: null };
+let liveScCache = { id: 0, version: -1, lang: null, sc: null };
 function liveSc() {
   const runLang = S.live.runLang || getLang();
-  if (liveScCache.version !== S.live.version || liveScCache.lang !== runLang) {
-    liveScCache = { version: S.live.version, lang: runLang, sc: liveScenario({ entries: S.live.entries, form: S.live.form, answers: S.live.answers, runLang, asOf: today() }) };
+  if (liveScCache.id !== S.live.id || liveScCache.version !== S.live.version || liveScCache.lang !== runLang) {
+    liveScCache = { id: S.live.id, version: S.live.version, lang: runLang, sc: liveScenario({ entries: S.live.entries, form: S.live.form, answers: S.live.answers, runLang, asOf: today() }) };
   }
   return liveScCache.sc;
 }
-const runKey = () => (S.mode === "live" ? `live${S.live.version}` : S.scenarioId);
+const runKey = () => (S.mode === "live" ? `live${S.live.id}.${S.live.version}` : S.scenarioId);
 
 /** The run now in a language, built from the person's choices (cached per state): the scenario's or the live one. */
 function currentRun(lang = getLang()) {
@@ -928,7 +932,14 @@ function stepView(lang) {
         agentText: live ? liveReadText(run) : s.answers[lang].reader ? tn("read.agent.document", run.proposals.length) : run.proposals.length ? tn("read.agent.handoff", run.proposals.length) : t("read.agent.handoffNone"),
         groupValueOf,
         unchecked: marks?.issues || null,
-        onDecide: (id, action, opts) => { S.decisions = decide(S.decisions || run.decisions || [], id, action, opts); log("decision", "read", { issue: id, action }); render(); },
+        onDecide: (id, action, opts) => {
+          S.decisions = decide(S.decisions || run.decisions || [], id, action, opts);
+          log("decision", "read", { issue: id, action });
+          render();
+          // A choice that didn't take says so, rather than leaving the click without an answer.
+          const now = currentRun(getLang()).issues.find((i) => i.id === id);
+          if (!choiceTook(now, action)) problem(t("read.notTaken", { title: now?.title || id }), `${id} ${action}: ${now ? now.status : "missing"}`);
+        },
         onIdeas: live ? () => askLive("ideas") : findIdeas,
         onNext: () => go(2, { keep: true })
       });

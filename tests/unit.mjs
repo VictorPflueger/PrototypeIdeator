@@ -154,6 +154,18 @@ function answer(text) {
   r.check(chk.ok && chk.missing.length === 0, "the free key check lists the models the key may use");
 }
 
+// ---- a choice on the issue map ----------------------------------------------------------------------------
+{
+  const ISSUES = await import(path.join(ROOT, "js", "issues.js"));
+  const issues = ["doc-I1", "doc-I2", "doc-I3"].map((id) => ({ id, title: id, status: "kept" }));
+  let d = ISSUES.decide(null, "doc-I2", "park", { reason: "Out of scope" });
+  d = ISSUES.decide(d, "doc-I3", "merge", { into: "doc-I1" });
+  const run = ISSUES.applyDecisions(issues, d);
+  const at = (id) => run.find((i) => i.id === id);
+  r.check(ISSUES.choiceTook(at("doc-I2"), "park") && ISSUES.choiceTook(at("doc-I3"), "merge") && ISSUES.choiceTook(at("doc-I1"), "keep"), "each choice shows on its issue: parked, merged and kept");
+  r.check(!ISSUES.choiceTook(at("doc-I1"), "park") && !ISSUES.choiceTook(undefined, "keep") && !ISSUES.choiceTook(at("doc-I1"), "drop"), "a choice that didn't take, a missing issue and an unknown action are told apart");
+}
+
 // ---- money and dates in both languages --------------------------------------------------------------------
 // Money at stake in the format of the shared js/risk.js: millions with one decimal, thousands whole.
 const CASES = [

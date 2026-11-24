@@ -106,6 +106,12 @@ export function applyDecisions(issues, decisions = []) {
   });
 }
 
+/** True when an issue shows the action just chosen for it: kept, merged or parked. */
+export function choiceTook(issue, action) {
+  const want = { keep: "kept", merge: "merged", park: "parked" }[action];
+  return !!issue && !!want && issue.status === want;
+}
+
 /** The decisions after one change: id's action set, and any issue merged into it freed when it leaves. */
 export function decide(decisions, id, action, { into = null, reason = null } = {}) {
   let out = (decisions || []).filter((d) => d.id !== id);
