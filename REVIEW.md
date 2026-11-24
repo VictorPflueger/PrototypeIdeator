@@ -19,7 +19,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 |---|---|---|---|
 | `js/anthropic.js` | Sovereignty Assessment | Adapted | Two lines: it imports `APP` and its stream-hook log names the app from `config.js`, so the file can be the same in all four tools |
 | `js/sse.js` | Sovereignty Assessment | Copied | The SSE reader |
-| `js/cost.js` | SWOT Challenger (from the Sovereignty Assessment) | Copied | Usage times price, Haiku's tier above 100,000 tokens, $0.01 a search, 0.894 euros a dollar; a model with no price is refused |
+| `js/cost.js` | Sovereignty Assessment | Copied | Usage times price, Haiku's tier above 100,000 tokens, $0.01 a search, 0.894 euros a dollar |
 | `js/schema.js` | Sovereignty Assessment | Copied | The JSON Schema validator the brief names |
 | `js/keystore.js` | Sovereignty Assessment (the same file in the Data Quality Agent) | Adapted | One module variable instead of session storage: the brief keeps the key in memory only. `looksLikeKey`, `maskKey` and `redactSecrets` stay |
 | `js/session.js` | none | New | Everything a person enters and a run makes, held in memory, with Clear everything and the leave-page warning |

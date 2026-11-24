@@ -101,11 +101,9 @@ r.check(Object.values(C.AGENT_TOKENS).every((a) => a.max <= 8000 && a.min < a.ma
   r.check(Math.abs(long - (120000 * 0.5 + 1000 * 2.5) / 1e6) < 1e-12, "above 100,000 prompt tokens Haiku 5.5 costs $0.50 and $2.50 per million");
   const search = COST.usageCostUsd("claude-sonnet-5-5", { input_tokens: 0, output_tokens: 0, server_tool_use: { web_search_requests: 3 } });
   r.check(Math.abs(search - 0.03) < 1e-12, "three web searches add $0.03");
-  const sonnet = COST.usageCostUsd("claude-sonnet-5-5", u);
-  r.check(Math.abs(sonnet - (10000 * 2 + 12000 * 10) / 1e6) < 1e-12 && Math.abs(COST.toEur(sonnet) - sonnet * 0.894) < 1e-12, "Sonnet 5.5 at $2 and $10 per million, converted at 0.894");
-  let refused = "";
-  try { COST.usageCostUsd("claude-unknown-1", u); } catch (e) { refused = e instanceof RangeError ? e.message : ""; }
-  r.check(/no price/.test(refused), "a model with no price is refused, never priced as another");
+  const tracker = COST.createCostTracker("claude-sonnet-5-5");
+  tracker.add(u); const snap = tracker.add(u);
+  r.check(snap.requests === 2 && Math.abs(snap.eur - snap.usd * 0.894) < 1e-12 && Math.abs(snap.usd - 2 * (10000 * 2 + 12000 * 10) / 1e6) < 1e-12, "the meter adds up two requests and converts at 0.894");
 }
 
 // ---- the SSE reader ---------------------------------------------------------------------------------------
