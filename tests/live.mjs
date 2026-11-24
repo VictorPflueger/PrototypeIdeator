@@ -20,7 +20,7 @@
 //   guards        (G13, AC-19) each refusal of the brief's 6.7 gets one repair; a text file's quote is checked word
 //                 for word and a PDF's says not checked by code; texts the fact audit refuses twice show Unchecked
 //   ideas-cap     (G12, AC-17) the control offers 1 to 10; the request carries the number in its schema and prompt;
-//                 more ideas than asked for go back once
+//                 more ideas than asked for go back once; a repair that still has too many keeps the first ones
 //   abort         (G7, AC-08) Stop ends the running request, nothing more is sent and what is done stays; Try again
 //                 goes on from there
 //   cap           (G8, AC-09) under the cap a request drops to its step's minimum output; when even that can't fit,
@@ -646,6 +646,21 @@ try {
     const shown = await page.$$eval("[data-idea]", (els) => new Set(els.map((e) => e.dataset.idea)).size);
     res.push([/4 ideas, but at most 3 were asked for/.test(note) && shown === 3 && !errors.length, `four ideas for three asked go back once; the repair's three reach the screen (${shown})`]);
     await context.close();
+    // Victor's run of 24 November 2026: six ideas twice for five. The repaired answer's first ideas are kept,
+    // the rest refused, and the Ideate step says so; the run goes on instead of stopping.
+    {
+      const again = await open({ script: [{ answer: A(s1, "en").merges }, { answer: four }, { answer: four }] });
+      await intake(again.page, handoffFiles(s1, "en"));
+      await again.page.selectOption("#intake-count", "3");
+      await startRun(again.page);
+      await stepIs(again.page, "read");
+      await findIdeas(again.page);
+      const kept = await again.page.$$eval("[data-idea]", (els) => [...new Set(els.map((e) => e.dataset.idea))].length);
+      const line = await again.page.$eval(".agent-line", (el) => el.textContent);
+      const stopped = await again.page.$$eval(".turn-bar--stopped", (els) => els.length);
+      res.push([kept === 3 && /kept the first 3 and refused the rest/.test(line) && !stopped && again.fake.requests.length === 3 && !again.errors.length, `four ideas twice for three: the first three are kept, the Ideate step says so and the run goes on (${kept} ideas, ${stopped ? "stopped" : "not stopped"}: "${line.trim().slice(0, 160)}")`]);
+      await again.context.close();
+    }
     report("ideas-cap", res, "LIVE IDEAS CAP OK");
   }
 
