@@ -1,7 +1,7 @@
 # Vici, copied into this prototype
 
 These files come unchanged from Vici, Victor Pflüger's design system
-(<https://victorpflueger.github.io/ViciDesign/index.html>), as it stands on main at commit **`39f1082`**
+(<https://victorpflueger.github.io/ViciDesign/index.html>), as it stands on main at commit **`818718c`**
 (24 November 2026). That main carries what the prototype brief asks for: the How it works guide in two
 languages, the byline, the key-figure rules (answer first, a figure on part of the data says so), Presenting
 step by step with Play, Your turn and `vc-attention`, the AI notice, names, not record ids, the session-only

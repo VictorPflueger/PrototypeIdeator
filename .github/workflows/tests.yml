@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: VictorPflueger/ViciDesign
-          ref: 39f1082636b724a7e919cb33171f95a4aa63be5d
+          ref: 818718cd160b7b302fb4a2414da2c69768ff4bfb
           path: ViciDesign
           fetch-depth: 0
       # The three challengers, public, next to the app for the parity suite.
