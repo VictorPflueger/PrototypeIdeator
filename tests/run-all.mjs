@@ -17,6 +17,8 @@ const SUITES = [
   { id: "handoff", what: "golden case PI4: a challenger's file read without a request, and every refusal", file: "tests/handoff.mjs", browser: false },
   { id: "facts", what: "the placeholders and the fact audit: what passes, what is refused, Unchecked after two refusals", file: "tests/facts.mjs", browser: false },
   { id: "schemas", what: "every contract, both JSON files equal their modules, the output schemas inside the API's limits", file: "tests/schemas.mjs", browser: false },
+  { id: "scenarios", what: "the three scenarios: the checker on S1 to S3, planted defects caught, stand-ins marked, the S3 PDF's quotes on their pages", file: "tests/scenarios.mjs", browser: false },
+  { id: "simulation", what: "the simulation model: frozen figures in both languages, and another path that agrees with the engine", file: "tests/simulation.mjs", browser: false },
   { id: "kpis", what: "the shared KPI library: sectors, ids, names in both languages, no benchmark value", file: "tests/kpis.mjs", browser: false },
   { id: "guards", what: "the Ideator's guards: every refusal, the fact audit and the notes on a broken copy of a good answer", file: "tests/guards.mjs", browser: false },
   { id: "prompts", what: "the Ideator's prompt and input: rules, rubric, criteria, the cap, about 700 tokens", file: "tests/prompts.mjs", browser: false },
@@ -26,6 +28,8 @@ const SUITES = [
   { id: "docs", what: "the documents: sections, version, every path they name, the probe line, the prices", file: "tests/docs.mjs", browser: false },
   { id: "vici", what: "Vici's own checks on the page served and rendered in both languages, the texts, the docs; vici/ byte for byte", file: "tests/vici.mjs", browser: true },
   { id: "hexagon", what: "nothing round: the app's files, and the rendered page in both themes", file: "tests/hexagon.mjs", browser: true },
+  { id: "presenter", what: "the simulation played in Chromium: scenarios, key figures, choices, weights, Play, ideas and the guide", file: "tests/presenter.mjs", browser: true },
+  { id: "intake", what: "the live run's intake: what the drop zone reads, refuses and limits, with no request", file: "tests/intake.mjs", browser: true },
   { id: "page", what: "the page in Chromium: languages, key figures, storage, layout at both projector sizes, the probe line", file: "tests/page.mjs", browser: true }
 ];
 

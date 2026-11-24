@@ -5,7 +5,7 @@
 export const APP = {
   id: "pi",
   name: "Prototype Ideator",
-  version: "0.1.0",
+  version: "0.2.0",
   url: "https://victorpflueger.github.io/PrototypeIdeator/"
 };
 

@@ -53,7 +53,7 @@
       <div class="kpi vc-stat" id="kpi-stake" data-vc-kpi="At stake a year" data-vc-kpi-de="Pro Jahr auf dem Spiel" data-state="waiting">
         <p class="vc-stat__label" data-i18n="kpi.atStake.label">At stake a year</p>
         <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
-        <p class="vc-stat__note kpi-note" data-i18n="kpi.atStake.wait">after reading</p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.atStake.wait">after reading the files</p>
       </div>
       <div class="kpi vc-stat" id="kpi-covered" data-vc-kpi="Issues covered" data-vc-kpi-de="Abgedeckte Themen" data-state="waiting">
         <p class="vc-stat__label" data-i18n="kpi.covered.label">Issues covered</p>
@@ -68,7 +68,7 @@
       <div class="kpi vc-stat" id="kpi-cost" data-vc-kpi="Session cost" data-vc-kpi-de="Sitzungskosten" data-state="waiting">
         <p class="vc-stat__label" data-i18n="kpi.cost.label">Session cost</p>
         <p class="vc-stat__value"><s class="vc-stat__was kpi-was" hidden></s><span class="kpi-value">…</span></p>
-        <p class="vc-stat__note kpi-note" data-i18n="kpi.cost.wait">after a run</p>
+        <p class="vc-stat__note kpi-note" data-i18n="kpi.cost.wait">measured once the agents run</p>
       </div>
     </div>
   </header>
@@ -93,15 +93,15 @@
 
   <!-- The step bar: Play, Back, the six steps, Next, then Run it live with the AI notice beside it. -->
   <nav class="stepbar" aria-label="Steps" data-i18n-attr="aria-label:p.steps">
-    <button type="button" class="vc-button vc-button--secondary play" id="btn-play" data-state="play" disabled><span class="vc-icon vc-icon--play" aria-hidden="true"></span><span id="play-text" data-i18n="p.play">Play</span></button>
+    <button type="button" class="vc-button vc-button--secondary play" id="btn-play" data-state="play"><span class="vc-icon vc-icon--play" aria-hidden="true"></span><span id="play-text" data-i18n="p.play">Play</span></button>
     <button type="button" class="vc-button vc-button--ghost stepbar-back" id="btn-back" disabled><span class="vc-icon vc-icon--chevron-left" aria-hidden="true"></span><span data-i18n="p.back">Back</span></button>
     <ol class="vc-stepper steps" id="steps">
-      <li class="vc-step vc-step--current" data-step="start"><button type="button" class="vc-step__button" aria-current="step"><span class="vc-step__marker" aria-hidden="true">1</span><span class="vc-step__label" data-i18n="p.step.start">Start</span></button></li>
-      <li class="vc-step" data-step="read"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">2</span><span class="vc-step__label" data-i18n="p.step.read">Read</span></button></li>
-      <li class="vc-step" data-step="ideate"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">3</span><span class="vc-step__label" data-i18n="p.step.ideate">Ideate</span></button></li>
-      <li class="vc-step" data-step="score"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">4</span><span class="vc-step__label" data-i18n="p.step.score">Score</span></button></li>
-      <li class="vc-step" data-step="shortlist"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">5</span><span class="vc-step__label" data-i18n="p.step.shortlist">Shortlist</span></button></li>
-      <li class="vc-step" data-step="report"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">6</span><span class="vc-step__label" data-i18n="p.step.report">Report</span></button></li>
+      <li class="vc-step vc-step--current" data-step="start"><button type="button" class="vc-step__button" aria-current="step"><span class="vc-step__marker" aria-hidden="true">1</span><span class="vc-step__label"><span data-i18n="p.step.start">Start</span><span class="vc-step__hint"></span></span></button></li>
+      <li class="vc-step" data-step="read"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">2</span><span class="vc-step__label"><span data-i18n="p.step.read">Read</span><span class="vc-step__hint"></span></span></button></li>
+      <li class="vc-step" data-step="ideate"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">3</span><span class="vc-step__label"><span data-i18n="p.step.ideate">Ideate</span><span class="vc-step__hint"></span></span></button></li>
+      <li class="vc-step" data-step="score"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">4</span><span class="vc-step__label"><span data-i18n="p.step.score">Score</span><span class="vc-step__hint"></span></span></button></li>
+      <li class="vc-step" data-step="shortlist"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">5</span><span class="vc-step__label"><span data-i18n="p.step.shortlist">Shortlist</span><span class="vc-step__hint"></span></span></button></li>
+      <li class="vc-step" data-step="report"><button type="button" class="vc-step__button" disabled><span class="vc-step__marker" aria-hidden="true">6</span><span class="vc-step__label"><span data-i18n="p.step.report">Report</span><span class="vc-step__hint"></span></span></button></li>
     </ol>
     <button type="button" class="vc-button vc-button--secondary stepbar-next" id="btn-next" disabled><span data-i18n="p.next">Next</span><span class="vc-icon vc-icon--chevron-right" aria-hidden="true"></span></button>
     <div class="live-group">
@@ -112,49 +112,27 @@
 
   <p class="vc-visually-hidden" id="announce" aria-live="polite"></p>
 
-  <!-- The stage: one step at a time, the story on the left and its evidence on the right. Version 0.1.0
-       shows the first step as the frame around what the scenarios will play from version 0.2.0. -->
-  <main id="stage" class="stage" tabindex="-1">
-    <div class="step" data-step="start">
-      <section class="panel story" aria-labelledby="start-title">
-        <h1 class="step-title" id="start-title" data-i18n="p.start.title">From the documents you have to a ranked shortlist</h1>
-        <p class="step-lead" data-i18n="p.start.lead">The Reader maps the business issues and KPIs in your documents. The Ideator proposes prototypes for them. Code scores and ranks them; you rank your top three and choose the one to build.</p>
-        <p class="vc-alert vc-alert--neutral version-note" role="note"><span class="vc-icon vc-icon--info" aria-hidden="true"></span><span data-i18n="p.start.version">Version 0.1.0 holds the frame, the scoring engine and the guide. The three fictional companies play from version 0.2.0, live runs from version 0.3.0.</span></p>
-        <!-- What the page waits for, asked where the eye is: one sentence and the one primary action. -->
-        <div class="vc-callout turn-bar" id="turn">
-          <span class="vc-callout__cell" aria-hidden="true"><span class="vc-icon vc-icon--hand"></span></span>
-          <div class="vc-callout__body">
-            <p class="vc-callout__title" data-i18n="p.turn.lead">Your turn</p>
-            <p data-i18n="p.start.turn">Read how the tool works. From version 0.2.0, the replay starts here.</p>
-          </div>
-          <button type="button" class="vc-button vc-attention cta" id="turn-primary"><span class="vc-icon vc-icon--info" aria-hidden="true"></span><span data-i18n="p.start.turnAction">How it works</span></button>
-        </div>
-      </section>
-      <section class="panel evidence" aria-labelledby="figures-title">
-        <h2 class="panel-title" id="figures-title" data-i18n="p.figures.title">The four figures at the top</h2>
-        <dl class="figure-list">
-          <div><dt data-i18n="kpi.atStake.label">At stake a year</dt><dd data-i18n="p.figures.atStake">The money the kept issues put at stake a year, as the documents or the challengers state it.</dd></div>
-          <div><dt data-i18n="kpi.covered.label">Issues covered</dt><dd data-i18n="p.figures.covered">Kept issues that at least one idea answers, of all kept issues.</dd></div>
-          <div><dt data-i18n="kpi.top.label">Top score</dt><dd data-i18n="p.figures.top">The highest weighted score out of 5; after your decision, your first pick.</dd></div>
-          <div><dt data-i18n="kpi.cost.label">Session cost</dt><dd data-i18n="p.figures.cost">What the model calls cost: measured in a live run, estimated in a replay.</dd></div>
-        </dl>
-        <div class="challengers">
-          <p class="step-note" data-i18n="p.start.challengers">No documents yet? Challenge a business model, a SWOT or a PESTEL first.</p>
-          <ul class="challenger-links">
-            <li><a class="vc-link" href="https://victorpflueger.github.io/BMC-challenger/" rel="noopener" target="_blank"><span>Business Model Canvas Challenger</span><span class="vc-icon vc-icon--external" aria-hidden="true"></span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></li>
-            <li><a class="vc-link" href="https://victorpflueger.github.io/SWOT-challenger/" rel="noopener" target="_blank"><span>SWOT Challenger</span><span class="vc-icon vc-icon--external" aria-hidden="true"></span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></li>
-            <li><a class="vc-link" href="https://victorpflueger.github.io/PESTEL-challenger/" rel="noopener" target="_blank"><span>PESTEL Challenger</span><span class="vc-icon vc-icon--external" aria-hidden="true"></span><span class="vc-visually-hidden" data-i18n="p.newTab"> (opens in a new tab)</span></a></li>
-          </ul>
-        </div>
-        <p class="step-note public-note" data-i18n="p.public">Public information only: never enter confidential, personal or otherwise protected data.</p>
-      </section>
-    </div>
-  </main>
+  <!-- The stage: one step at a time, the story on the left and its evidence on the right. js/presenter.js
+       draws each step from the run; until the page has started, the boot screen covers it. -->
+  <main id="stage" class="stage" tabindex="-1"></main>
+
+  <!-- An idea's own page, opened from a cell of the honeycomb or a row of the score table. -->
+  <dialog class="vc-dialog vc-dialog--drawer idea-drawer" id="idea-drawer" aria-labelledby="idea-title">
+    <header class="vc-dialog__header">
+      <div class="idea-drawer__head">
+        <span class="vc-tag vc-tag--feature vc-tag--sm ai-tag"><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span><span data-i18n="drawer.tag">Proposed by the Ideator</span></span>
+        <h2 class="vc-dialog__title" id="idea-title">Idea</h2>
+      </div>
+      <button type="button" class="vc-icon-button" data-vc-close aria-label="Close" data-i18n-attr="aria-label:p.close"><span class="vc-icon vc-icon--close" aria-hidden="true"></span></button>
+    </header>
+    <div class="vc-dialog__body" id="idea-body"></div>
+  </dialog>
+
 
   <!-- How it works, once in English and once in German: Vici's guide. vici.js builds each chapter rail and
        opens the guide of the page's language once per browser tab (js/lang.js keeps the other one closed);
-       ?guide=0 keeps it closed, ?guide=present opens the talk track. The figures in the data-fig spans
-       come from the scenario's run from version 0.2.0, so the guide cannot drift from the page. -->
+       ?guide=0 keeps it closed, ?guide=present opens the talk track. js/presenter.js fills the data-fig
+       spans from Tidewell Lines' recorded run in each language, so the guide cannot drift from the page. -->
   <dialog class="vc-dialog vc-guide" id="guide-en" lang="en-GB" aria-labelledby="guide-en-title" data-vc-guide data-vc-guide-auto data-vc-guide-count="{n} of {total}" data-vc-guide-rail="Chapters">
     <header class="vc-dialog__header">
       <h2 class="vc-dialog__title" id="guide-en-title">How the prototype works</h2>
@@ -163,47 +141,48 @@
     <div class="vc-guide__chapters">
       <section class="vc-guide__chapter" data-vc-chapter="what" data-vc-nav="What it does">
         <h3>From a company's documents to prototypes worth building</h3>
-        <p class="vc-guide__lead">Give it a company's documents, such as a challenger's report or an annual report. AI agents map the business issues and KPIs and propose prototypes, each tied to a KPI. Code ranks them, and you choose.</p>
+        <p class="vc-guide__lead">Give it a company's documents: a challenger's report, an annual report or notes on what hurts. AI agents map the issues and the KPIs behind them and propose prototypes. Code scores them, and you choose one to build.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-steps">
           <caption>Six steps</caption>
           <tbody>
-            <tr><th scope="row">Start</th><td>The documents go in: up to five files, or a scenario's three reports.</td></tr>
-            <tr><th scope="row">Read</th><td>The Reader maps the issues and KPIs; you keep, merge or park each.</td></tr>
+            <tr><th scope="row">Start</th><td>The documents go in: a scenario's reports, or up to five files of your own.</td></tr>
+            <tr><th scope="row">Read</th><td>The Reader maps the issues and KPIs, with where each was found. You keep, merge or park each one.</td></tr>
             <tr><th scope="row">Ideate</th><td>The Ideator proposes up to ten prototypes, each on its own page.</td></tr>
             <tr><th scope="row">Score</th><td>Code scores every idea on seven criteria and checks how stable the ranking is.</td></tr>
             <tr><th scope="row">Shortlist</th><td>You rank your top three.</td></tr>
-            <tr><th scope="row">Report</th><td>The Writer writes the recommendation, and the report downloads.</td></tr>
+            <tr><th scope="row">Report</th><td>The Writer writes the summary, and code fills in every figure.</td></tr>
           </tbody>
         </table></div>
+        <p>It opens on Tidewell Lines, a fictional container carrier in Bremen: three challenger reports, <span data-fig="talk.issues">…</span> issues and <span data-fig="talk.ideas">…</span> ideas. Two more companies are one click away on the first screen.</p>
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="how" data-vc-nav="How it works">
         <h3>Four figures follow the run from documents to decision</h3>
-        <p class="vc-guide__lead">Each tile answers first: a scenario shows what is at stake before it plays, and a live run shows the ellipsis and what it waits for. Code computes every figure; the agents only rate and describe.</p>
+        <p class="vc-guide__lead">Each tile answers first: a scenario shows its figures before it plays; a live run shows what each waits for. Code computes every figure, and a decision strikes the old value through beside the new one.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-figures">
-          <caption>Key figures</caption>
+          <caption>Key figures, for Tidewell Lines</caption>
           <thead><tr><th scope="col">Figure</th><th scope="col">What it measures</th><th scope="col" class="vc-num">Value</th></tr></thead>
           <tbody>
-            <tr><th scope="row">At stake a year</th><td>The money the kept issues put at stake a year, as the documents or the challengers state it, on the issues that state it</td><td class="vc-num"><span data-fig="kpi.atStake">…</span></td></tr>
+            <tr><th scope="row">At stake a year</th><td>The money the kept issues put at stake a year, as the documents or the challengers state it, on the issues that state it. A merged issue counts once, at its largest value.</td><td class="vc-num"><span data-fig="kpi.atStake">…</span></td></tr>
             <tr><th scope="row">Issues covered</th><td>Kept issues that at least one idea answers, of all kept issues</td><td class="vc-num"><span data-fig="kpi.covered">…</span></td></tr>
             <tr><th scope="row">Top score</th><td>The highest weighted score out of 5; after your decision, your first pick and its score</td><td class="vc-num"><span data-fig="kpi.top">…</span></td></tr>
-            <tr><th scope="row">Session cost</th><td>The model calls: measured in a live run against your budget cap, estimated in a replay</td><td class="vc-num"><span data-fig="kpi.cost">…</span></td></tr>
+            <tr><th scope="row">Session cost</th><td>What the run's model calls cost: estimated for a replay on the Balanced setting, measured in a live run against your budget cap</td><td class="vc-num"><span data-fig="kpi.cost">…</span></td></tr>
           </tbody>
         </table></div>
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="real" data-vc-nav="What is real">
         <h3>Fictional companies, real rules, nothing kept</h3>
-        <p class="vc-guide__lead">The simulation plays three fictional companies with recorded agent answers through the real scoring rules. A live run sends your documents to Anthropic's API under your own key. Nothing is stored, and a reload ends the session.</p>
+        <p class="vc-guide__lead">The simulation plays three fictional companies with recorded agent answers through the real scoring rules. Nothing is stored, and a reload ends the session.</p>
         <ul>
-          <li>The three companies and their figures are invented; what they say about the world is real and dated.</li>
-          <li>A replay calls no model and costs nothing.</li>
-          <li>Code computes every score, rank and figure, the same way in a replay and in a live run.</li>
+          <li>The three companies and their own figures are invented, and some challenger reports are stand-ins that say so. What they say about the world, such as a law, a price or a deadline, is real and dated; the repository's DATA_SOURCES.md lists each source.</li>
+          <li>A replay calls no model and costs nothing. Code computes every score, rank and figure, the same way in a replay and in a live run.</li>
+          <li>From version 0.3.0, a live run sends your documents to Anthropic's API under your own key. A challenger's report already reads without any request.</li>
+          <li>The cost estimate assumes about four characters a token, 1,500 thinking tokens a step on Balanced and Thorough, and 1,500 to 3,000 text tokens plus 1,568 image tokens a PDF page. Thorough would cost <span data-fig="talk.thorough">…</span> for Tidewell Lines. Costs convert at a fixed 0.894 euros a dollar.</li>
           <li>Public information only: never enter confidential, personal or otherwise protected data.</li>
-          <li>Costs convert at a fixed 0.894 euros a dollar.</li>
         </ul>
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="scored" data-vc-nav="How ideas are scored">
         <h3>Seven criteria, with weights you can change</h3>
-        <p class="vc-guide__lead">Each idea gets a rating from 1 to 5 on seven criteria, each with its reason. Code weighs them, ranks the ideas and checks how stable the ranking stays when the weights change.</p>
+        <p class="vc-guide__lead">The Ideator rates each idea from 1 to 5 on seven criteria, each with its reason. Code weighs the ratings, ranks the ideas and checks how stable the ranking stays when the weights change.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-criteria">
           <caption>Criteria and default weights</caption>
           <thead><tr><th scope="col">Criterion</th><th scope="col" class="vc-num">Weight</th><th scope="col">The question</th></tr></thead>
@@ -218,15 +197,25 @@
           </tbody>
         </table></div>
       </section>
+      <section class="vc-guide__chapter" data-vc-chapter="meaning" data-vc-nav="What the scores mean">
+        <h3>A weighted average, checked nine times</h3>
+        <p class="vc-guide__lead">The score is a weighted average of the seven ratings. Fixed rules break ties, and the stability check shows how much the order depends on the weights.</p>
+        <ul>
+          <li>The score is the sum of rating times weight, divided by the sum of the weights. Ties go to business value, then relevance, buildable, agentic fit, demo impact, evidence and low risk.</li>
+          <li>The stability check ranks the ideas nine times: with your weights, with equal weights and seven times with one criterion left out.</li>
+          <li>One live run of a prototype is estimated at its model calls times 2,000 new, 15,000 cached and 600 output tokens at the model's prices, plus $0.01 a web search.</li>
+          <li>The scores rank ideas for a five-minute demo. They don't forecast returns.</li>
+        </ul>
+      </section>
       <section class="vc-guide__chapter" data-vc-chapter="present" data-vc-nav="How to present">
         <h3>Show it in five minutes</h3>
-        <p class="vc-guide__lead">Five steps, five minutes. It plays by itself and stops where you act; Space pauses while you talk.</p>
+        <p class="vc-guide__lead">Five steps, five minutes. Play walks the steps by itself and stops where you act; Space pauses while you talk, and a clicker's keys move.</p>
         <ol class="vc-guide__path">
-          <li><strong>Point at the four figures.</strong> <span class="vc-guide__say">“Before anything runs, the figures say what is at stake: <span data-fig="talk.atStake">…</span>.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Read: three reports on one carrier.</strong> <span class="vc-guide__say">“Three challengers looked at Tidewell Lines, and the Reader merged the emissions issue all three raise.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Ideate: open one idea.</strong> <span class="vc-guide__say">“Each cell is a prototype tied to a KPI; this one answers <span data-fig="talk.issue">…</span>.”</span> <span class="vc-guide__time">1.5 min</span></li>
-          <li><strong>Score: change a weight.</strong> <span class="vc-guide__say">“Weigh business value differently, and the ranking holds: <span data-fig="talk.stable">…</span>.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Shortlist, report and build brief.</strong> <span class="vc-guide__say">“You pick three, and the report and the build brief download for your team.”</span> <span class="vc-guide__time">0.5 min</span></li>
+          <li><strong>Point at the four figures.</strong> <span class="vc-guide__say">“Before anything runs, the figures say what is at stake for Tidewell Lines: <span data-fig="talk.atStake">…</span> a year.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Read: three reports on one carrier.</strong> <span class="vc-guide__say">“Three challengers looked at the same company. The Reader merged the emission costs all three raise, and you keep, merge or park each issue.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Ideate: open one idea.</strong> <span class="vc-guide__say">“Each cell is a prototype tied to an issue and its KPIs. Here is <span data-fig="talk.top">…</span>: what the room would see, and how its agent works while a person decides.”</span> <span class="vc-guide__time">1.5 min</span></li>
+          <li><strong>Score: change a weight.</strong> <span class="vc-guide__say">“Weigh business value higher and watch the order. <span data-fig="talk.top">…</span> stays first in <span data-fig="talk.firsts">…</span> rankings.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Shortlist and report.</strong> <span class="vc-guide__say">“You rank your top three. The Writer writes the summary, and code fills in every figure.”</span> <span class="vc-guide__time">0.5 min</span></li>
         </ol>
       </section>
     </div>
@@ -244,48 +233,49 @@
     </header>
     <div class="vc-guide__chapters">
       <section class="vc-guide__chapter" data-vc-chapter="what" data-vc-nav="Was er tut">
-        <h3>Von Dokumenten zu Prototypen, die sich lohnen</h3>
-        <p class="vc-guide__lead">Geben Sie ihm die Dokumente eines Unternehmens, etwa den Bericht eines Challengers oder einen Geschäftsbericht. KI-Agenten ordnen die Geschäftsthemen und Kennzahlen und schlagen Prototypen vor, jeden an eine Kennzahl gebunden. Code reiht sie, Sie wählen.</p>
+        <h3>Von den Dokumenten zu Prototypen, die sich lohnen</h3>
+        <p class="vc-guide__lead">Geben Sie ihm die Dokumente eines Unternehmens: den Bericht eines Challengers, einen Geschäftsbericht oder Notizen dazu, wo es hakt. KI-Agenten ordnen die Themen und Kennzahlen und schlagen Prototypen vor. Code bewertet sie, und Sie wählen einen zum Bauen.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-steps">
           <caption>Sechs Schritte</caption>
           <tbody>
-            <tr><th scope="row">Start</th><td>Die Dokumente kommen hinein: bis zu fünf Dateien oder die drei Berichte eines Szenarios.</td></tr>
-            <tr><th scope="row">Lesen</th><td>Der Leser ordnet Themen und Kennzahlen; Sie behalten, führen zusammen oder stellen zurück.</td></tr>
+            <tr><th scope="row">Start</th><td>Die Dokumente kommen hinein: die Berichte eines Szenarios oder bis zu fünf eigene Dateien.</td></tr>
+            <tr><th scope="row">Lesen</th><td>Der Leser ordnet Themen und Kennzahlen, mit der Stelle, an der er sie fand. Sie behalten, bündeln oder parken jedes.</td></tr>
             <tr><th scope="row">Ideen</th><td>Der Ideenfinder schlägt bis zu zehn Prototypen vor, jeden auf einer eigenen Seite.</td></tr>
             <tr><th scope="row">Bewerten</th><td>Code bewertet jede Idee nach sieben Kriterien und prüft, wie stabil die Rangfolge ist.</td></tr>
             <tr><th scope="row">Auswahl</th><td>Sie reihen Ihre drei Favoriten.</td></tr>
-            <tr><th scope="row">Bericht</th><td>Der Autor schreibt die Empfehlung, und der Bericht lässt sich herunterladen.</td></tr>
+            <tr><th scope="row">Bericht</th><td>Der Autor schreibt die Zusammenfassung, und Code setzt jede Zahl ein.</td></tr>
           </tbody>
         </table></div>
+        <p>Er beginnt mit Tidewell Lines, einer fiktiven Containerreederei in Bremen: drei Challenger-Berichte, <span data-fig="talk.issues">…</span> Themen und <span data-fig="talk.ideas">…</span> Ideen. Zwei weitere Unternehmen sind auf dem ersten Bildschirm einen Klick entfernt.</p>
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="how" data-vc-nav="So funktioniert's">
         <h3>Vier Kennzahlen begleiten den Lauf bis zur Entscheidung</h3>
-        <p class="vc-guide__lead">Jede Kachel antwortet zuerst: Ein Szenario zeigt vor dem Abspielen, was auf dem Spiel steht, und ein Live-Lauf zeigt die drei Punkte und worauf er wartet. Code berechnet jede Zahl; die Agenten bewerten und beschreiben nur.</p>
+        <p class="vc-guide__lead">Jede Kachel antwortet zuerst: Ein Szenario zeigt seine Zahlen, bevor es abspielt; ein Live-Lauf zeigt, worauf jede wartet. Code berechnet jede Zahl, und eine Entscheidung streicht den alten Wert neben dem neuen durch.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-figures">
-          <caption>Kennzahlen</caption>
+          <caption>Kennzahlen, für Tidewell Lines</caption>
           <thead><tr><th scope="col">Kennzahl</th><th scope="col">Was sie misst</th><th scope="col" class="vc-num">Wert</th></tr></thead>
           <tbody>
-            <tr><th scope="row">Pro Jahr auf dem Spiel</th><td>Das Geld, das die behaltenen Themen pro Jahr aufs Spiel setzen, wie die Dokumente oder die Challenger es angeben, bei den Themen, die es angeben</td><td class="vc-num"><span data-fig="kpi.atStake">…</span></td></tr>
+            <tr><th scope="row">Pro Jahr auf dem Spiel</th><td>Das Geld, das die behaltenen Themen pro Jahr aufs Spiel setzen, wie die Dokumente oder die Challenger es angeben, bei den Themen, die es angeben. Ein gebündeltes Thema zählt einmal, mit seinem größten Wert.</td><td class="vc-num"><span data-fig="kpi.atStake">…</span></td></tr>
             <tr><th scope="row">Abgedeckte Themen</th><td>Behaltene Themen, auf die mindestens eine Idee antwortet, von allen behaltenen Themen</td><td class="vc-num"><span data-fig="kpi.covered">…</span></td></tr>
             <tr><th scope="row">Bester Wert</th><td>Der höchste gewichtete Wert von 5; nach Ihrer Entscheidung Ihre erste Wahl und ihr Wert</td><td class="vc-num"><span data-fig="kpi.top">…</span></td></tr>
-            <tr><th scope="row">Sitzungskosten</th><td>Die Modellaufrufe: im Live-Lauf gegen Ihr Kostenlimit gemessen, in der Wiedergabe geschätzt</td><td class="vc-num"><span data-fig="kpi.cost">…</span></td></tr>
+            <tr><th scope="row">Sitzungskosten</th><td>Was die Modellaufrufe des Laufs kosten: für eine Wiedergabe mit der Einstellung Ausgewogen geschätzt, im Live-Lauf gegen Ihr Kostenlimit gemessen</td><td class="vc-num"><span data-fig="kpi.cost">…</span></td></tr>
           </tbody>
         </table></div>
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="real" data-vc-nav="Was echt ist">
         <h3>Fiktive Unternehmen, echte Regeln, nichts wird gespeichert</h3>
-        <p class="vc-guide__lead">Die Simulation spielt drei fiktive Unternehmen mit aufgezeichneten Agentenantworten und den echten Bewertungsregeln ab. Ein Live-Lauf schickt Ihre Dokumente unter Ihrem eigenen Schlüssel an Anthropics API. Nichts wird gespeichert, ein Neuladen beendet die Sitzung.</p>
+        <p class="vc-guide__lead">Die Simulation spielt drei fiktive Unternehmen mit aufgezeichneten Agentenantworten und den echten Bewertungsregeln ab. Nichts wird gespeichert, ein Neuladen beendet die Sitzung.</p>
         <ul>
-          <li>Die drei Unternehmen und ihre Zahlen sind erfunden; was sie über die Welt sagen, ist echt und datiert.</li>
-          <li>Eine Wiedergabe ruft kein Modell auf und kostet nichts.</li>
-          <li>Code berechnet jeden Wert, jeden Rang und jede Zahl, in der Wiedergabe wie im Live-Lauf.</li>
+          <li>Die drei Unternehmen und ihre eigenen Zahlen sind erfunden, und einige Challenger-Berichte sind Platzhalter, die das sagen. Was sie über die Welt sagen, etwa ein Gesetz, ein Preis oder eine Frist, ist echt und datiert; DATA_SOURCES.md im Repository nennt jede Quelle.</li>
+          <li>Eine Wiedergabe ruft kein Modell auf und kostet nichts. Code berechnet jeden Wert, jeden Rang und jede Zahl, in der Wiedergabe wie im Live-Lauf.</li>
+          <li>Ab Version 0.3.0 schickt ein Live-Lauf Ihre Dokumente unter Ihrem eigenen Schlüssel an Anthropics API. Den Bericht eines Challengers liest er schon jetzt ohne Anfrage.</li>
+          <li>Die Kostenschätzung nimmt rund vier Zeichen je Token an, 1.500 Denk-Tokens je Schritt bei Ausgewogen und Gründlich und je PDF-Seite 1.500 bis 3.000 Text-Tokens plus 1.568 Bild-Tokens. Gründlich kostete für Tidewell Lines <span data-fig="talk.thorough">…</span>. Kosten werden zum festen Kurs von 0,894 Euro je Dollar umgerechnet.</li>
           <li>Nur öffentliche Informationen: Geben Sie nie vertrauliche, personenbezogene oder anderweitig geschützte Daten ein.</li>
-          <li>Kosten werden zum festen Kurs von 0,894 Euro je Dollar umgerechnet.</li>
         </ul>
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="scored" data-vc-nav="So wird bewertet">
         <h3>Sieben Kriterien, deren Gewichte Sie ändern können</h3>
-        <p class="vc-guide__lead">Jede Idee erhält zu sieben Kriterien eine Bewertung von 1 bis 5, jede mit ihrem Grund. Code gewichtet sie, reiht die Ideen und prüft, wie stabil die Rangfolge bleibt, wenn sich die Gewichte ändern.</p>
+        <p class="vc-guide__lead">Der Ideenfinder bewertet jede Idee zu sieben Kriterien von 1 bis 5, jede mit ihrem Grund. Code gewichtet die Bewertungen, reiht die Ideen und prüft, wie stabil die Rangfolge bleibt, wenn sich die Gewichte ändern.</p>
         <div class="vc-table-wrap"><table class="vc-table vc-table--compact guide-criteria">
           <caption>Kriterien und Standardgewichte</caption>
           <thead><tr><th scope="col">Kriterium</th><th scope="col" class="vc-num">Gewicht</th><th scope="col">Die Frage</th></tr></thead>
@@ -300,15 +290,25 @@
           </tbody>
         </table></div>
       </section>
+      <section class="vc-guide__chapter" data-vc-chapter="meaning" data-vc-nav="Was die Werte heißen">
+        <h3>Ein gewichteter Durchschnitt, neunmal geprüft</h3>
+        <p class="vc-guide__lead">Der Wert ist ein gewichteter Durchschnitt der sieben Bewertungen. Feste Regeln lösen Gleichstände, und die Stabilitätsprüfung zeigt, wie sehr die Reihenfolge an den Gewichten hängt.</p>
+        <ul>
+          <li>Der Wert ist die Summe aus Bewertung mal Gewicht, geteilt durch die Summe der Gewichte. Bei Gleichstand entscheidet der Nutzen, dann Relevanz, Baubarkeit, Eignung für einen Agenten, Wirkung in der Demo, Belege und geringes Risiko.</li>
+          <li>Die Stabilitätsprüfung reiht die Ideen neunmal: mit Ihren Gewichten, mit gleichen Gewichten und siebenmal ohne je ein Kriterium.</li>
+          <li>Ein Live-Lauf eines Prototyps wird geschätzt als seine Modellaufrufe mal 2.000 neue, 15.000 zwischengespeicherte und 600 ausgegebene Tokens zu den Preisen des Modells, plus 0,01 $ je Websuche.</li>
+          <li>Die Werte reihen Ideen für eine Demo von fünf Minuten. Sie sagen keine Renditen voraus.</li>
+        </ul>
+      </section>
       <section class="vc-guide__chapter" data-vc-chapter="present" data-vc-nav="Präsentieren">
         <h3>In fünf Minuten vorführen</h3>
-        <p class="vc-guide__lead">Fünf Schritte, fünf Minuten. Es spielt von selbst und hält, wo Sie handeln; die Leertaste pausiert, während Sie sprechen.</p>
+        <p class="vc-guide__lead">Fünf Schritte, fünf Minuten. Abspielen geht die Schritte von selbst durch und hält, wo Sie handeln; die Leertaste pausiert, während Sie sprechen, und die Tasten eines Presenters blättern.</p>
         <ol class="vc-guide__path">
-          <li><strong>Auf die vier Kennzahlen zeigen.</strong> <span class="vc-guide__say">„Bevor etwas läuft, sagen die Kennzahlen, was auf dem Spiel steht: <span data-fig="talk.atStake">…</span>.“</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Lesen: drei Berichte zu einer Reederei.</strong> <span class="vc-guide__say">„Drei Challenger haben Tidewell Lines geprüft, und der Leser hat das Emissionsthema zusammengeführt, das alle drei nennen.“</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Ideen: eine Idee öffnen.</strong> <span class="vc-guide__say">„Jede Zelle ist ein Prototyp mit einer Kennzahl; dieser antwortet auf <span data-fig="talk.issue">…</span>.“</span> <span class="vc-guide__time">1,5 min</span></li>
-          <li><strong>Bewerten: ein Gewicht ändern.</strong> <span class="vc-guide__say">„Gewichten Sie den Nutzen anders, und die Rangfolge hält: <span data-fig="talk.stable">…</span>.“</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Auswahl, Bericht und Bau-Briefing.</strong> <span class="vc-guide__say">„Sie wählen drei, und Bericht und Bau-Briefing lassen sich für Ihr Team herunterladen.“</span> <span class="vc-guide__time">0,5 min</span></li>
+          <li><strong>Auf die vier Kennzahlen zeigen.</strong> <span class="vc-guide__say">„Bevor etwas läuft, sagen die Kennzahlen, was für Tidewell Lines auf dem Spiel steht: <span data-fig="talk.atStake">…</span> im Jahr.“</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Lesen: drei Berichte zu einer Reederei.</strong> <span class="vc-guide__say">„Drei Challenger haben dasselbe Unternehmen geprüft. Der Leser hat die Emissionskosten gebündelt, die alle drei nennen, und Sie behalten, bündeln oder parken jedes Thema.“</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Ideen: eine Idee öffnen.</strong> <span class="vc-guide__say">„Jede Zelle ist ein Prototyp, gebunden an ein Thema und seine Kennzahlen. Hier ist <span data-fig="talk.top">…</span>: was der Raum sähe und wie sein Agent arbeitet, während ein Mensch entscheidet.“</span> <span class="vc-guide__time">1,5 min</span></li>
+          <li><strong>Bewerten: ein Gewicht ändern.</strong> <span class="vc-guide__say">„Gewichten Sie den Nutzen höher und sehen Sie auf die Reihenfolge. <span data-fig="talk.top">…</span> bleibt in <span data-fig="talk.firsts">…</span> Rangfolgen vorn.“</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Auswahl und Bericht.</strong> <span class="vc-guide__say">„Sie reihen Ihre drei Favoriten. Der Autor schreibt die Zusammenfassung, und Code setzt jede Zahl ein.“</span> <span class="vc-guide__time">0,5 min</span></li>
         </ol>
       </section>
     </div>

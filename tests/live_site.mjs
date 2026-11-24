@@ -1,12 +1,13 @@
 // The published site: GitHub Pages serves exactly the files of this checkout, and the page starts there
 // with no error and no request to any other host. Run after a Pages build (the "live site" workflow does
 // this on every Pages build) or by hand.
-//   files   the page, its policy and settings, the engine, the fact audit, the prompts and the probe, both
-//           string files, the stylesheet and the KPI library as served equal this checkout (Pages caches
-//           for up to ten minutes, so it retries for up to twelve)
-//   start   the page boots in English and in German, named in each, with its four key figures waiting and
-//           SIMULATION in the header; api.anthropic.com is refused, so this check never calls the real API
-//           (up to three tries a minute apart, for a deployment the CDN is still taking up)
+//   files   the page, its policy and settings, the engine, the fact audit, the prompts and the probe, the
+//           simulation, the scenarios and the views, both string files, the stylesheet and the KPI library
+//           as served equal this checkout (Pages caches for up to ten minutes, so it retries for up to twelve)
+//   start   the page boots in English and in German, named in each, on Tidewell Lines' Start step with its
+//           four key figures showing their values and SIMULATION in the header; api.anthropic.com is
+//           refused, so this check never calls the real API (up to three tries a minute apart, for a
+//           deployment the CDN is still taking up)
 // In GitHub Actions every problem is also printed as an annotation (::error / ::warning).
 // Adapted from the Sovereignty Assessment 2.0.0's tests/live_site.mjs: this page's files and first screen.
 // Usage: node tests/live_site.mjs [url]   (default: the repository's GitHub Pages address; LIVE_URL)
@@ -16,7 +17,11 @@ import crypto from "node:crypto";
 import { APP_ROOT, launchBrowser } from "./lib/harness.mjs";
 
 const URL_BASE = (process.argv[2] || process.env.LIVE_URL || "https://victorpflueger.github.io/PrototypeIdeator/").replace(/\/?$/, "/");
-const FILES = ["index.html", "js/config.js", "js/main.js", "js/presenter.js", "js/engine.js", "js/facts.js", "js/prompts.js", "js/probe.js", "js/i18n/en.js", "js/i18n/de.js", "css/app.css", "data/kpis.js"];
+const FILES = ["index.html", "js/config.js", "js/main.js", "js/presenter.js", "js/engine.js", "js/facts.js", "js/prompts.js", "js/probe.js", "js/simulation.js", "js/scenarios.js", "js/charts.js", "js/views/start.js", "js/i18n/en.js", "js/i18n/de.js", "css/app.css", "data/kpis.js", "data/scenarios/s1.js"];
+const DICT = {
+  en: (await import(path.join(APP_ROOT, "js", "i18n", "en.js"))).default,
+  de: (await import(path.join(APP_ROOT, "js", "i18n", "de.js"))).default
+};
 const WAIT_MS = Number(process.env.LIVE_WAIT_MS || 12 * 60 * 1000);
 const sha = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
 const problems = [];
@@ -63,8 +68,11 @@ async function startCheck() {
       if (shown !== title) found.push(`the ${lang} page is named "${shown}"`);
       const htmlLang = await page.evaluate(() => document.documentElement.lang);
       if (htmlLang !== (lang === "de" ? "de" : "en-GB")) found.push(`the ${lang} page says its language is "${htmlLang}"`);
-      const waiting = await page.locator('.kpis [data-state="waiting"]').count();
-      if (waiting !== 4) found.push(`the ${lang} page shows ${waiting} of four key figures waiting`);
+      const values = await page.locator(".kpis .kpi-value").allInnerTexts();
+      const shownValues = values.filter((v) => v.trim() && v.trim() !== "…").length;
+      if (shownValues !== 4) found.push(`the ${lang} page shows ${shownValues} of four key figures with a value`);
+      const step = (await page.locator("#step-title").innerText()).trim();
+      if (step !== DICT[lang]["scenario.s1.title"]) found.push(`the ${lang} page opens on "${step}"`);
       const tape = (await page.locator(".app-header .vc-tag").first().innerText()).trim();
       if (tape !== "SIMULATION") found.push(`the ${lang} header says "${tape}"`);
     }
@@ -85,7 +93,7 @@ const annotate = (level, text) => { if (process.env.GITHUB_ACTIONS === "true") c
 if (!stale.length) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const found = await startCheck();
-    if (!found.length) { console.log(`PASS  start: the page boots in English and German on the published site, named, with SIMULATION and its four key figures waiting${attempt > 1 ? ` (try ${attempt})` : ""}`); break; }
+    if (!found.length) { console.log(`PASS  start: the page boots in English and German on the published site, named, on Tidewell Lines' Start step with SIMULATION and its four key figures showing values${attempt > 1 ? ` (try ${attempt})` : ""}`); break; }
     if (attempt === 3) { problems.push(...found); break; }
     for (const f of found) { console.log(`WARN  try ${attempt}: ${f}`); annotate("warning", `try ${attempt}: ${f}`); }
     await new Promise((r) => setTimeout(r, 60000));

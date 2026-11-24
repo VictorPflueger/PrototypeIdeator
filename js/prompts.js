@@ -4,8 +4,9 @@
 // Everything a prompt asks for is also held in code: the output schemas in js/schemas.js, the guards in
 // js/guards.js and the fact audit in js/facts.js. The prompt only makes their refusals rare.
 //
-// 0.1.0 holds the shared rules and the Ideator, which the probe (js/probe.js) sends before the screens
-// are built on it. The Reader, the Writer and the Brief writer follow in 0.3.0.
+// 0.1.0 held the shared rules and the Ideator, which the probe (js/probe.js) sends. 0.2.0 adds the
+// Reader, its merges-only form and the Writer, so that the session-cost estimate (js/estimate.js) prices
+// the real prompts; live runs send them from 0.3.0. The Brief writer follows in 0.4.0.
 
 import { CRITERIA } from "./engine.js";
 
@@ -92,7 +93,10 @@ const compact = (v) => JSON.stringify(v);
  */
 export function ideatorInput({ company = {}, issues = [], focus = "", constraints = null, count = 5, kpis = [], facts = {}, lang = "en" } = {}) {
   const kept = issues.filter((i) => i.status === "kept");
-  const citable = Object.keys(facts).filter((k) => k === "at_stake" || k === "issues.kept" || /^issue\..+\.eur$/.test(k));
+  // The Ideator may cite at stake, the number of kept issues and the euros of the kept issues it is given;
+  // the engine also holds the euros of merged and parked issues, which the Ideator never sees.
+  const keptIds = new Set(kept.map((i) => i.id));
+  const citable = Object.keys(facts).filter((k) => k === "at_stake" || k === "issues.kept" || (/^issue\..+\.eur$/.test(k) && keptIds.has(k.slice(6, -4))));
   return compact({
     company: { name: company.name || "", sector: company.sector || "", description: company.description || "", fictional: company.fictional === true },
     focus: focus || "",
@@ -111,5 +115,71 @@ export function ideatorInput({ company = {}, issues = [], focus = "", constraint
     })),
     sector_kpis: kpis.map((k) => ({ name: k.name[lang] || k.name.en, unit: k.unit })),
     facts: citable
+  });
+}
+
+/** The Reader's system prompt, for PDF, Markdown, text and CSV files. */
+export function readerPrompt({ lang = "en" } = {}) {
+  return `You are the Reader of Prototype Ideator. You map a company's business issues and the KPIs behind them from its documents, with where you found each.
+
+${sharedRules(lang)}
+
+RETURN
+- company: the name as the documents write it, the sector id from "sectors" or "other", its goals and its published targets as stated.
+- issues: each business issue once, ids I1, I2 and on. title: a short sentence. area: the unit or function it sits in. description: two sentences at most, without numbers.
+- money_as_stated: the money at stake as the document states it, in its words; empty when it states none.
+- eur_year_low, eur_year_high, eur_year_expected: euros a year only when the document gives enough to work them out, with eur_basis saying how; otherwise null and an empty basis.
+- kpis: the KPIs the issue moves. library_id: the id from "kpis" when one matches, else null. today: the value as the document states it, else empty.
+- sources: at least one per issue. file: its name. where: the page for a PDF, else the section. quote: word for word from the file, at most 150 characters.
+- merges: where two issues, yours or those in "handoff_issues", name the same thing: keep one id, list the others and say why in one sentence.`;
+}
+
+/** The Reader's user turn: the company fields, the sectors and KPIs it may name, and handoff issues' titles. */
+export function readerInput({ company = {}, sectors = [], kpis = [], handoffIssues = [], files = [] } = {}) {
+  return compact({
+    company: { name: company.name || "", sector: company.sector || "", focus: company.focus || "" },
+    files: files.map((f) => ({ name: f.name, kind: f.kind })),
+    sectors: sectors.map((s) => s.id),
+    kpis: kpis.map((k) => ({ id: k.id, name: k.name.en, unit: k.unit })),
+    handoff_issues: handoffIssues.map((i) => ({ id: i.id, title: i.title }))
+  });
+}
+
+/** The Reader's short request when only handoff files from several challengers came in: merges only. */
+export function mergesPrompt({ lang = "en" } = {}) {
+  return `You are the Reader of Prototype Ideator. Several strategy challengers raised issues about one company. Find the issues that name the same thing.
+
+${sharedRules(lang)}
+
+RETURN merges: for each group of issues that name the same thing, the id to keep (the one with the clearest title), the ids merged into it and why, in one sentence. An issue is in one group at most. Return no merge when no two issues name the same thing.`;
+}
+
+/** The merges request's user turn: the issues' ids, titles and tools. */
+export function mergesInput({ issues = [] } = {}) {
+  return compact({ issues: issues.map((i) => ({ id: i.id, title: i.title, tool: i.source?.tool?.name || "" })) });
+}
+
+/** The Writer's system prompt: four short texts for the report's summary, every figure a placeholder. */
+export function writerPrompt({ lang = "en" } = {}) {
+  return `You are the Writer of Prototype Ideator. You write the summary on the report's second page.
+
+${sharedRules(lang)}
+
+RETURN four texts, one to three short sentences each.
+- headline: what the run found, in one line.
+- looked_at: the documents the run read, by kind and company.
+- found: what is at stake and how far the ideas cover it.
+- needed: what the reader must do next, such as rank a top three or name who should be in the room.
+Code writes what is recommended from the shortlist, so don't name the shortlist's ideas. Cite figures only as placeholders from "facts".`;
+}
+
+/** The Writer's user turn: the company, the issue titles, the ranking and the fact keys it may cite. */
+export function writerInput({ company = {}, documents = [], issues = [], ranked = [], facts = {} } = {}) {
+  return compact({
+    company: { name: company.name || "", sector: company.sector || "" },
+    documents: documents.map((d) => ({ name: d.name, kind: d.kind })),
+    issues: issues.filter((i) => i.status === "kept").map((i) => ({ id: i.id, title: i.title })),
+    ranking: ranked.map((r) => ({ id: r.id, name: r.name })),
+    facts: Object.keys(facts)
   });
 }

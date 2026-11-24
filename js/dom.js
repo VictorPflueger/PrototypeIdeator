@@ -11,7 +11,7 @@ export function h(tag, attrs = {}, ...children) {
     if (v === undefined || v === null || v === false) continue;
     if (k === "class") el.className = Array.isArray(v) ? v.filter(Boolean).join(" ") : v;
     else if (k === "text") el.textContent = keepTogether(v);
-    else if (k === "dataset") Object.assign(el.dataset, v);
+    else if (k === "dataset") { for (const [dk, dv] of Object.entries(v)) if (dv !== undefined && dv !== null && dv !== false) el.dataset[dk] = dv; }
     else if (k === "style") for (const [prop, val] of Object.entries(v)) { if (prop.startsWith("--")) el.style.setProperty(prop, val); else el.style[prop] = val; }
     else if (k === "on") for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
     else if (k === "svg") el.innerHTML = v; // only for static icon markup from icons.js

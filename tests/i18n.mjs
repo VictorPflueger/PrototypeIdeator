@@ -47,7 +47,11 @@ const asked = new Set([
 ]);
 const missing = [...asked].filter((k) => !Object.hasOwn(EN, k) || !Object.hasOwn(DE, k));
 r.check(asked.size > 40 && !missing.length, `the ${asked.size} keys the page and the code ask for exist in both languages${missing.length ? `: ${missing.join(", ")} missing` : ""}`);
-const used = (k) => asked.has(k) || code.includes(`"${k}"`) || html.includes(`"${k}"`);
+// Keys the code builds from a prefix and a value, such as t(`crit.${c}`): every key of that shape counts as used.
+const dynamic = [...code.matchAll(/\btn?\(\s*`([a-zA-Z0-9_.]*)\$\{[^}]+\}([a-zA-Z0-9_.]*)`/g)]
+  .filter((m) => m[1].length > 2)
+  .map((m) => new RegExp(`^${m[1].replace(/\./g, "\\.")}[a-zA-Z0-9_]+${m[2].replace(/\./g, "\\.")}(\\.(one|other))?$`));
+const used = (k) => asked.has(k) || code.includes(`"${k}"`) || html.includes(`"${k}"`) || dynamic.some((re) => re.test(k));
 const unused = Object.keys(EN).filter((k) => !used(k));
 r.check(!unused.length, `every key is used${unused.length ? `: ${unused.join(", ")} unused` : ""}`);
 
@@ -61,7 +65,7 @@ for (const f of ["js/presenter.js", "js/main.js"]) {
 r.control(SENTENCE.test('const x = "Run it live now";'), "the sentence scan finds a typed sentence");
 
 // ---- the German page says it in German ----------------------------------------------------------------------
-const differ = ["p.strip", "p.start.title", "p.start.lead", "p.ai", "p.live", "kpi.atStake.label", "p.public"].filter((k) => EN[k] === DE[k]);
+const differ = ["p.strip", "start.turn", "read.action", "p.ai", "p.live", "kpi.atStake.label", "p.public"].filter((k) => EN[k] === DE[k]);
 r.check(!differ.length, `the page's main words differ between the languages${differ.length ? `: ${differ.join(", ")} are the same` : ""}`);
 r.check(DE["p.ai"] === "Sie interagieren mit einem KI-System" && EN["p.ai"] === "You are interacting with an AI system", "the AI notice in Vici's fixed words, in both languages");
 r.check(EN["p.public"] === "Public information only: never enter confidential, personal or otherwise protected data.", "the public-information notice in the brief's exact words");

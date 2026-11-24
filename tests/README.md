@@ -4,7 +4,7 @@ The app needs none of this: it is static files. The suites run on Node.js 22 wit
 
 ## What runs
 
-`node tests/run-all.mjs` runs every suite in order and, when all nineteen pass, ends with `ALL SUITES PASSED (19 of 19)`. `node tests/run-all.mjs engine probe` runs only the named ones, and `--require-vici` fails the suites that read ViciDesign without a checkout instead of skipping them, as GitHub Actions does. Each suite can also run on its own and prints its success line, such as `ENGINE OK`.
+`node tests/run-all.mjs` runs every suite in order and, when all twenty-three pass, ends with `ALL SUITES PASSED (23 of 23)`. `node tests/run-all.mjs engine probe` runs only the named ones, and `--require-vici` fails the suites that read ViciDesign without a checkout instead of skipping them, as GitHub Actions does. Each suite can also run on its own and prints its success line, such as `ENGINE OK`.
 
 | Suite | Kind | What it checks |
 |---|---|---|
@@ -17,6 +17,8 @@ The app needs none of this: it is static files. The suites run on Node.js 22 wit
 | `handoff` | Node | The golden case PI4: a challenger's file read without a request, and the refusals of a wrong file |
 | `facts` | Node | The placeholders and the fact audit: what passes, what is refused, and Unchecked after two refusals |
 | `schemas` | Node | Every contract, both JSON schemas equal their module twins, and the output schemas inside the API's limits |
+| `scenarios` | Node | The three scenarios through `tools/check-scenarios.mjs` with an empty sibling folder, and each kind of planted defect caught: a broken schema, a missing id, a missing language, placeholders that differ between languages, prose the fact audit refuses, a figure off its frozen reference, a fact missing from DATA_SOURCES.md, a key-shaped string and a thinking block; the stand-in handoff files valid and marked, and caught once a challenger's own export sits beside the repository; the S3 PDF built one page per section with every quote on its page (AC-06) |
+| `simulation` | Node | The recorded run of S1, S2 and S3 in both languages against the frozen reference, at stake worked out apart from the engine; another path through each scenario whose tiles, ranking, stability sentence and summary agree with the engine (AC-05) |
 | `kpis` | Node | The shared KPI library: thirteen sectors, the ids, names in both languages, no benchmark value (taken from the SWOT Challenger) |
 | `guards` | Node | The Ideator's guards on a good answer for Tidewell Lines and on copies with one rule broken each |
 | `prompts` | Node | The Ideator's prompt and input: the shared rules, the rubric, the criteria, the cap, about 700 tokens; the stock words equal Vici's list |
@@ -26,7 +28,9 @@ The app needs none of this: it is static files. The suites run on Node.js 22 wit
 | `docs` | Node | The documents' sections and version, every path they name, the probe's console line and the prices in TECH_NOTES.md |
 | `vici` | Chromium | Vici's own checks (`guideProblems`, `bylineProblems`, `writingProblems`, `aiNoticeProblems`, `recordIdProblems`, `policyProblems`, `storageProblems`, `storedKeyProblems`) on the page as served and as rendered in English and German, each first failing on a planted control; ViciDesign's `check-guide-render.mjs` over http; the writing rules on both string files, the KPI library and the docs; `vici/` equal to ViciDesign at the commit its README and the workflow name (AC-01) |
 | `hexagon` | Chromium | Nothing round: the app's files, and the rendered page in both themes |
-| `page` | Chromium | The page as a visitor meets it: English first under a German browser and the switch without a reload (`languages`), the four key figures waiting (`tiles`), the storage rule (`storage`), the layout at 1920 × 1080 and 1280 × 720 in both themes and languages (`layout`), and the probe's console line under the page's policy (`probe`) |
+| `presenter` | Chromium | The simulation as a presenter plays it: S1 to S3 from Start to Report in both languages with no key and every other host refused (`scenarios`), the four tiles before anything runs and after a decision (`figures`), a parked issue, an undone merge, a weight and a shortlist against the engine (`choices`), weights moved with the keyboard (`weights`), Play, Space, the arrow keys and a deep link (`play`), the honeycomb and the idea's page (`ideas`), and the guide's figures and script (`guide`) (AC-04, AC-05, AC-07, AC-20) |
+| `intake` | Chromium | The live run's intake: a challenger's report read into issues with no request (PI4 on screen), Word and PowerPoint refused with "Save it as PDF first", and the limits on files, bytes, pages, companies and challengers each in its own words (AC-18) |
+| `page` | Chromium | The page as a visitor meets it: English first under a German browser and the switch without a reload (`languages`), the four key figures waiting (`tiles`), the storage rule (`storage`), the layout of every step of S1 to S3, Score's three views, Play running and the live intake at 1920 × 1080 and 1280 × 720 in both themes and languages, with the rendered contrast of every text and icon there and in the drawer and the guide (`layout`), and the probe's console line under the page's policy (`probe`) |
 
 `tests/live_site.mjs` checks the published site after a Pages build (the "live site" workflow): the files it serves equal this checkout, and the page boots in both languages.
 

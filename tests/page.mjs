@@ -4,11 +4,14 @@
 //              language opens its own guide by itself, and only its own guide's button shows;
 //   tiles      the four key figures answer first: before anything runs each shows a value or the
 //              ellipsis with what it waits for, is named in both languages and has its row in both guides;
-//   storage    (brief §5.9) after boot, a language switch, a theme switch and both guides, storage holds
+//   storage    (brief §5.9) after boot, a language switch, a theme switch, both guides and a challenger's
+//              report read in a live run, storage holds
 //              only vc-theme, pi.lang and Vici's vc-guide note, with no database, cache or cookie, and the
 //              page asked no other host for anything;
 //   layout     at 1920 x 1080 and 1280 x 720, light and dark, English and German: no sideways scroll, no
-//              page scroll, no text cut off, the Your turn bar covers nothing, and no page error;
+//              page scroll, no text cut off, the Your turn bar covers nothing, and no page error; and every
+//              visible text reaches 4.5:1 and every icon 3:1 against the fill it sits on, as rendered (a
+//              callout keeps its pastel in the dark theme, so a page-theme token inside it can vanish);
 //   probe      the Ideator probe's console line (js/probe.js SNIPPET), run in the page as served under its
 //              security policy, against a stand-in for api.anthropic.com: it asks for the key in a dialog,
 //              sends three requests to the API host only, prints two tables, keeps nothing in storage
@@ -79,8 +82,8 @@ try {
   if (want("languages")) {
     const res = [];
     const { context, page, errors } = await open("");
-    const first = await page.evaluate(() => ({ lang: document.documentElement.lang, title: document.getElementById("start-title").textContent, en: !!document.querySelector("#guide-en[open]"), de: !!document.querySelector("#guide-de[open]") }));
-    res.push([first.lang === "en-GB" && first.title === EN["p.start.title"], `a German browser's first visit opens in English (${first.lang}, "${first.title}")`]);
+    const first = await page.evaluate(() => ({ lang: document.documentElement.lang, title: document.getElementById("step-title").textContent, en: !!document.querySelector("#guide-en[open]"), de: !!document.querySelector("#guide-de[open]") }));
+    res.push([first.lang === "en-GB" && first.title === EN["scenario.s1.title"], `a German browser's first visit opens in English (${first.lang}, "${first.title}")`]);
     res.push([first.en && !first.de, "the English guide opens by itself, the German one doesn't"]);
     await page.keyboard.press("Escape");
     await page.waitForFunction(() => !document.querySelector("dialog[open]"));
@@ -90,6 +93,8 @@ try {
     await page.waitForSelector('html[lang="de"]', { timeout: 5000 });
     const de = await page.evaluate(MISMATCHES, DE);
     res.push([!de.length, `after the switch every text, attribute and the title is German${de.length ? `: ${de.slice(0, 6).join(", ")}` : ""}`]);
+    const stepDe = await page.evaluate(() => document.getElementById("step-title").textContent);
+    res.push([stepDe === DE["scenario.s1.title"], `the step on screen is drawn again in German: "${stepDe}"`]);
     res.push([await page.evaluate(() => window.__noReload === true), "without a reload"]);
     const buttons = await page.evaluate(() => ({ en: document.querySelector('[data-vc-guide-open="guide-en"]').hidden, de: document.querySelector('[data-vc-guide-open="guide-de"]').hidden, pressed: document.querySelector('.lang-option[data-lang="de"]').getAttribute("aria-pressed") }));
     res.push([buttons.en && !buttons.de && buttons.pressed === "true", "only the German guide's button shows, and DE is pressed"]);
@@ -97,10 +102,6 @@ try {
     await page.waitForSelector("#guide-de[open]", { timeout: 5000 });
     const guide = await page.evaluate(() => ({ lang: document.getElementById("guide-de").getAttribute("lang"), title: document.getElementById("guide-de-title").textContent }));
     res.push([guide.lang === "de" && guide.title === "So funktioniert der Prototyp", "the German guide opens from its button, in German"]);
-    await page.keyboard.press("Escape");
-    await page.click("#turn-primary");
-    await page.waitForSelector("#guide-de[open]", { timeout: 5000 });
-    res.push([true, "the Your turn bar opens the guide in the page's language"]);
     await page.keyboard.press("Escape");
     await page.click('.lang-option[data-lang="en"]');
     await page.waitForSelector('html[lang="en-GB"]', { timeout: 5000 });
@@ -160,6 +161,13 @@ try {
     await page.keyboard.press("Escape");
     await page.click("#btn-live");
     await page.waitForTimeout(300);
+    // A challenger's report dropped in and read: the files and the issues stay in memory.
+    await page.setInputFiles("#intake-files", [{ name: "tidewell-bmc.json", mimeType: "application/json", buffer: Buffer.from(readFileSync(path.join(APP_ROOT, "tests", "fixtures", "strategy-challenge-example.json"), "utf8")) }]);
+    await page.waitForTimeout(300);
+    await page.click("#btn-cta");
+    await page.waitForTimeout(300);
+    const read = await page.evaluate(() => document.querySelectorAll(".issue-row").length);
+    res.push([read === 1, "a challenger's report dropped on the live Start step is read into one issue"]);
     const look = () => page.evaluate(async () => ({
       local: Object.keys(localStorage).sort(),
       session: Object.keys(sessionStorage).sort(),
@@ -204,19 +212,113 @@ try {
         for (const sib of bar.parentElement.children) {
           if (sib === bar || !visible(sib)) continue;
           const r = sib.getBoundingClientRect();
-          if (r.bottom > b.top + 1 && r.top < b.bottom - 1) out.covered.push(sib.className || sib.tagName);
+          if (r.bottom > b.top + 1 && r.top < b.bottom - 1) out.covered.push(`${sib.className || sib.tagName} by ${Math.round(r.bottom - b.top)} px`);
         }
       }
       return out;
     };
+    // Rendered contrast: each visible text node's colour against the fill it sits on (a tag's or a step
+    // marker's hexagon is painted on ::before, so a covering ::before fill counts first; a ring cut out with
+    // evenodd and a bullet do not). Disabled controls are exempt (WCAG 1.4.3), and so is text made
+    // transparent on purpose, such as a done step's number under its tick.
+    const CONTRAST = () => {
+      const cv = document.createElement("canvas"); cv.width = cv.height = 1;
+      const g = cv.getContext("2d", { willReadFrequently: true });
+      const rgba = (c) => { g.clearRect(0, 0, 1, 1); g.fillStyle = "#000"; g.fillStyle = c; g.fillRect(0, 0, 1, 1); return [...g.getImageData(0, 0, 1, 1).data]; };
+      const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+      const lum = ([r, gr, b]) => 0.2126 * lin(r) + 0.7152 * lin(gr) + 0.0722 * lin(b);
+      const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+      const pseudo = (e) => {
+        const ps = getComputedStyle(e, "::before");
+        if (ps.content === "none" || ps.position !== "absolute" || /evenodd/.test(ps.clipPath)) return null;
+        const r = e.getBoundingClientRect();
+        if (parseFloat(ps.width) < r.width * 0.9 || parseFloat(ps.height) < r.height * 0.9) return null;
+        const c = rgba(ps.backgroundColor); return c[3] > 200 ? c : null;
+      };
+      const fill = (el) => { for (let e = el; e; e = e.parentElement) { const p = pseudo(e); if (p) return p; const c = rgba(getComputedStyle(e).backgroundColor); if (c[3] > 200) return c; } return rgba(getComputedStyle(document.body).backgroundColor); };
+      const visible = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && !el.closest("[hidden], dialog:not([open]), .vc-visually-hidden, [inert]"); };
+      const low = [];
+      let measured = 0;
+      for (const el of (document.querySelector("dialog[open]") || document.body).querySelectorAll("*")) {
+        if (el.closest("svg:not(.vc-icon), #boot, :disabled, [aria-disabled='true']")) continue;
+        const icon = el.matches(".vc-icon");
+        if (!icon && ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+        if (!visible(el)) continue;
+        const fg = rgba(getComputedStyle(el).color);
+        if (fg[3] < 20) continue;
+        measured += 1;
+        const c = ratio(fg, fill(icon ? el.parentElement : el));
+        if (c < (icon ? 3 : 4.5)) low.push(`${icon ? "icon" : `"${el.textContent.trim().slice(0, 30)}"`} (${el.tagName.toLowerCase()}.${String(el.className?.baseVal ?? el.className).split(" ")[0]}) at ${c.toFixed(2)}:1`);
+      }
+      return { measured, low };
+    };
+    const lowAll = [];
+    let measuredAll = 0;
     const smallAll = new Set();
-    for (const [width, height] of [[1920, 1080], [1280, 720]]) for (const theme of ["light", "dark"]) for (const lang of ["en", "de"]) {
-      const { context, page, errors } = await open(`?guide=0&lang=${lang}`, { width, height, theme });
+    // Every step of every scenario, the Score step's other views, and the live intake before and after
+    // files: S1 in every size, theme and language; S2 and S3 in both sizes and languages, light.
+    const states = [];
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) for (const lang of ["en", "de"]) {
+      for (const theme of ["light", "dark"]) {
+        for (let step = 1; step <= 6; step++) states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=${step}`, name: `S1 step ${step}` });
+        for (const extra of ["weights", "table", "stability"]) states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=4`, name: `S1 Score, ${extra}`, extra });
+        states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=1`, name: "S1 playing", extra: "play" });
+        states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}`, name: "live intake", extra: "live" });
+        states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}`, name: "live intake with files", extra: "files" });
+      }
+      for (const sc of ["s2", "s3"]) for (let step = 1; step <= 6; step++) states.push({ width, height, lang, theme: "light", query: `?guide=0&lang=${lang}&scenario=${sc}&step=${step}`, name: `${sc.toUpperCase()} step ${step}` });
+    }
+    const example = readFileSync(path.join(APP_ROOT, "tests", "fixtures", "strategy-challenge-example.json"), "utf8");
+    const failures = [];
+    for (const st of states) {
+      const { context, page, errors } = await open(st.query, { width: st.width, height: st.height, theme: st.theme });
+      if (st.extra === "weights") await page.click("#btn-weights");
+      if (st.extra === "table" || st.extra === "stability") await page.click(`label:has(#view-${st.extra})`);
+      if (st.extra === "play") { await page.click("#btn-play"); await page.waitForTimeout(400); }
+      if (st.extra === "live" || st.extra === "files") await page.click("#btn-live");
+      if (st.extra === "files") {
+        const files = ["tidewell-bmc.json", "notes.docx", "q3-notes.md"].map((name) => ({ name, mimeType: "application/octet-stream", buffer: Buffer.from(name.endsWith(".json") ? example : "# Notes\n\nPublic notes.\n") }));
+        await page.setInputFiles("#intake-files", files);
+      }
+      await page.waitForTimeout(250);
       const m = await page.evaluate(MEASURE);
-      m.small.forEach((s) => smallAll.add(s));
-      const where = `${width} x ${height}, ${theme}, ${lang === "en" ? "English" : "German"}`;
+      m.small.forEach((x) => smallAll.add(x));
+      const k = await page.evaluate(CONTRAST);
+      measuredAll += k.measured;
+      for (const x of k.low) lowAll.push(`${st.name}, ${st.theme}, ${st.lang}: ${x}`);
       const ok = !m.sideways && !m.scroll && !m.cut.length && !m.covered.length && !errors.length;
-      res.push([ok, `${where}: no sideways or page scroll, nothing cut, nothing covered, no error${ok ? "" : `: ${JSON.stringify({ sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 4), covered: m.covered, errors })}`}`]);
+      if (!ok) failures.push(`${st.name}, ${st.width} x ${st.height}, ${st.theme}, ${st.lang}: ${JSON.stringify({ sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 3), covered: m.covered, errors })}`);
+      await context.close();
+    }
+    res.push([!failures.length, `${states.length} views (every step of S1 to S3, Score's weights, table and stability, Play running, the live intake before and after files) at 1920 x 1080 and 1280 x 720: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${failures.length ? `:\n      ${failures.slice(0, 12).join("\n      ")}` : ""}`]);
+    // Control: a story made taller than its panel is caught as covered or as page scroll.
+    {
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=2", { width: 1280, height: 720 });
+      await page.evaluate(() => { const p = document.createElement("p"); p.textContent = "x"; p.className = "control-block"; p.style.minHeight = "600px"; document.querySelector(".story").insertBefore(p, document.getElementById("turn")); });
+      const m = await page.evaluate(MEASURE);
+      res.push([m.covered.length > 0 || m.scroll, "control: a block pushed under the Your turn bar is caught"]);
+      await context.close();
+    }
+    // The idea drawer and the guide sit over the page, so only their contrast is measured here.
+    for (const theme of ["light", "dark"]) for (const lang of ["en", "de"]) for (const which of ["drawer", "guide"]) {
+      const { context, page } = await open(which === "guide" ? `?lang=${lang}` : `?guide=0&lang=${lang}&scenario=s1&step=3`, { theme });
+      if (which === "drawer") { await page.click('[data-action="open-idea"]'); await page.waitForTimeout(350); }
+      await page.waitForSelector("dialog[open]");
+      const k = await page.evaluate(CONTRAST);
+      measuredAll += k.measured;
+      for (const x of k.low) lowAll.push(`${which}, ${theme}, ${lang}: ${x}`);
+      await context.close();
+    }
+    const lowSeen = [...new Set(lowAll)];
+    res.push([!lowSeen.length, `${measuredAll} texts and icons in those views, the idea drawer and the guide, light and dark: every text at least 4.5:1 and every icon 3:1 against its own fill${lowSeen.length ? `:\n      ${lowSeen.slice(0, 12).join("\n      ")}` : ""}`]);
+    // Control: the turn bar's reason in a page-theme colour, as it was before 0.2.0's fix, vanishes in the dark.
+    {
+      const { context, page } = await open("?guide=0&lang=en", { width: 1280, height: 720, theme: "dark" });
+      await page.click("#btn-live");
+      await page.waitForTimeout(250);
+      await page.evaluate(() => { document.getElementById("cta-reason").style.color = "var(--vc-on-accent-soft)"; });
+      const k = await page.evaluate(CONTRAST);
+      res.push([k.low.some((x) => x.includes("turn-reason")), `control: the reason under the action in --vc-on-accent-soft is caught in the dark theme (${k.low.find((x) => x.includes("turn-reason")) || "not caught"})`]);
       await context.close();
     }
     console.log(`\nTargets under 40 px (AC-14 holds them to 40 px from version 1.0.0): ${[...smallAll].join("; ") || "none"}`);

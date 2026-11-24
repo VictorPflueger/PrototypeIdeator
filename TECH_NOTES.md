@@ -1,6 +1,6 @@
 # Technical notes
 
-Version 0.1.0 (M1 Foundations), 23 November 2026. These notes record what was checked at source, with the date, and the decisions the code rests on. PLAN.md is the plan Victor approved on 23 November 2026. Where the code says "brief §6.4", it means section 6.4 of Victor's build brief, which is not part of this repository.
+Version 0.2.0 (M2 Simulation), 24 November 2026; first written for 0.1.0 (M1 Foundations) on 23 November 2026. These notes record what was checked at source, with the date, and the decisions the code rests on. PLAN.md is the plan Victor approved on 23 November 2026. Where the code says "brief §6.4", it means section 6.4 of Victor's build brief, which is not part of this repository.
 
 ## 1. Models and prices
 
@@ -24,7 +24,7 @@ Probed on 23 November 2026; PLAN.md, section 4, holds the full table with its so
 - Effort goes in `output_config.effort`. Haiku 5.5 takes `thinking: { "type": "disabled" }` up to high effort; Sonnet 5.5 refuses it; Opus 5.5 always thinks. Thinking counts towards `max_tokens`.
 - Every request sends `anthropic-version: 2023-06-01`, as every sister prototype does.
 
-Version 0.1.0 sends no request from the page. The only code that calls the API is the Ideator probe (section 8), which Victor runs by hand.
+Versions 0.1.0 and 0.2.0 send no request from the page: the simulation plays recorded answers, and a challenger's report dropped on the live Start step is read without one. The only code that calls the API is the Ideator probe (section 8), which Victor runs by hand.
 
 ## 3. The policy and what the browser keeps
 
@@ -48,6 +48,10 @@ The browser keeps `vc-theme` (Vici's theme) and `pi.lang` (the language) in loca
 
 `tests/engine.mjs` reproduces the golden cases PI1 to PI3 exactly, in both languages; `tests/handoff.mjs` reproduces PI4 with no request.
 
+The simulation (`js/simulation.js`) builds every screen from the scenario's recorded answers and the person's choices through these functions: an issue parked or merged, a weight and a shortlist change the run, never a stored figure. Each scenario freezes its figures in `reference` (at stake, kept and covered issues, the ranking, the top score, how often each idea comes first, the shortlist's share and the cost of one run on each setting, to the cent); `tools/check-scenarios.mjs` and `tests/simulation.mjs` hold the run to them, the latter with at stake worked out apart from the engine.
+
+The cost of a replay is the estimate of what the same run would cost live (`js/estimate.js`): the Reader, the merge proposals, the Ideator and the Writer on the setting's model, with about four characters a token, 1,500 thinking tokens a step on Balanced and Thorough, and 1,500 to 3,000 text tokens plus 1,568 image tokens a PDF page. The tile shows the Balanced setting; the guide names Thorough's figure.
+
 ## 5. Contracts and output schemas
 
 `js/schemas.js` holds the contracts of brief §10 and each agent's output schema. The contracts use every keyword `js/schema.js` knows; the output schemas stay within the API's limits: every property required, so no optional parameter; union types only in the Reader's schema (four, where a value may be missing); no `minimum`, `maximum`, `minLength`, `maxLength` or `maxItems`; `minItems` only 0 or 1. The cap on ideas stands in the array's description, "At most N ideas ({maxItems: N})", as Anthropic's SDK writes it, in the prompt, and in code (`js/guards.js`). `tests/schemas.mjs` counts the optional and union-typed parameters and fails on any keyword the API refuses.
@@ -59,6 +63,8 @@ The browser keeps `vc-theme` (Vici's theme) and `pi.lang` (the language) in loca
 The SWOT Challenger merged its M1 first, on 23 November 2026 at 21:35 (commit a52fd6f, merged as 617b122). By the brief's rule the first tool to merge a shared file is its source, so these come from it unchanged: `data/kpis.js` (115 KPIs in thirteen sectors) with its test, `tests/kpis.mjs`; `schemas/strategy-challenge-1.json` with its module twin and `tools/schema-module.mjs`, which writes the twin; and `js/risk.js`. The Ideator's money at stake takes the format of `js/risk.js`: millions with one decimal ("€2.8m", "2,8 Mio. €"), so PI4's range shows as €2.0m–€6.0m where the brief writes "€2m–€6m" (section 9).
 
 No sibling had the live client or the key store yet, so this tool sets them for the others to copy: `js/anthropic.js`, `js/sse.js` and `js/cost.js` from the Sovereignty Assessment 2.0.0 (35c0dea), with the app's name read from `config.js` so the file can be byte-identical in all four tools, and `js/keystore.js`, held in memory only.
+
+The drop zone is this tool's pattern in Vici (ViciDesign PR 32, merged on 24 November 2026 as 2759b7a, "From Prototype Ideator 0.2.0"): a real file input behind a label, the public-information notice, one cancelable `vc:files` event, and file rows with a refused or warning state in words, with its docs on the Forms page and `dropzoneProblems` as its check. `vici/` holds main at 5b8fea3, which adds the PESTEL Challenger's fix to the risk matrix and horizon strip on top of it.
 
 `tests/parity.mjs` compares every shared part with every sibling checkout that has it, and CI clones the three challengers for it. The Business Model Canvas Challenger merged its M1 later the same day (849e6ee) with the same bytes, so on 23 November 2026 three of the four tools hold one KPI library, one handoff schema and one `js/risk.js`; the PESTEL Challenger had not merged its M1 yet.
 
@@ -82,7 +88,7 @@ It asks for the key in a dialog, so the key is never typed into the console, and
 
 ## 9. Decisions and deviations
 
-Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, section 2) as approved with the plan; D15, a merged issue counts once at its largest member's expected euros. D14, S3's story line, waits for 0.2.0.
+Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, section 2) as approved with the plan; D15, a merged issue counts once at its largest member's expected euros; D14, S3's story line, follows the municipal heat plan due by the end of 2026, which runs through most of Auental Energie's issues.
 
 | Deviation | From | Why |
 |---|---|---|
@@ -94,6 +100,16 @@ Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, secti
 | The start step says what 0.1.0 holds, and Run it live shows a note | PLAN.md, section 10.1 | The scenarios arrive in 0.2.0 and the live run in 0.3.0; the step bar's controls stay disabled until then |
 | The Data Quality Agent's vici-files suite is not taken | PLAN.md, section 7.3 | `tests/vici.mjs` compares `vici/` with ViciDesign byte for byte |
 | GATES.md stays outside the repository | The /unlazy skill | The milestone's gates are a working file, and their checks name local paths |
+| The stability check is the third view of the Score step's evidence, beside the chart and the table, rather than a dialog | PLAN.md, section 10.3 | Still one click away, Vici's segmented control switches the view, and the weights get the room they need at 1280 × 720 |
+| The live Start step shows the run's settings on the right, not the four figures | PLAN.md, section 10.3 | The drop zone and its files take the left; the guide's How it works chapter explains the figures, and each tile says what it waits for |
+| The at-stake tile shows the amount alone; its note says on how many kept issues | PLAN.md, section 10.4 ("€6.1m on 7 of 9 issues" as the value) | The whole line does not fit a tile at 1280 px; the report and the guide keep it in one line |
+| Every step past Start names the company and "Fictional company, illustrative figures" above its title | PLAN.md, section 10.1 (the words in the intro strip only) | A room that joins late still knows which company it sees, and that it is invented |
+| German uses Behalten, Bündeln and Parken for keep, merge and park | The first German strings | "Zusammenführen" and "Zurückstellen" did not fit the decision buttons or a step title at 1280 px |
+| The guide has six chapters: "What the scores mean" stands apart from "How ideas are scored" | PLAN.md, section 10.5 (five chapters) | Vici's guide rule allows one table or list a chapter |
+| Tabular figures only in number cells | Vici's tables, which set them on every cell | Inter's tabular figures also widen the hyphen, so "person-days" read "person - days"; `css/app.css` turns them off in text cells. A candidate fix for Vici, not yet proposed there |
+| In the dark theme the chart tells the shortlist from the other ideas by fill as well as colour | The dataviz palette's checks | Light uses merlot-700 and lilac-600, which pass every check. Dark uses merlot-600 and lilac-500: they pass contrast and colour-blind separation on the dark surface but, like all of Vici's dark steps, fall below the validator's chroma floor, so filled and outlined hexagons, the place numbers and the labels carry the difference |
+| Inside the Your turn bar the app uses only the tokens Vici's callout sets for itself | Vici's callout, which keeps its pastel in the dark theme but leaves `--vc-bg-subtle` and `--vc-on-accent-soft` to the page | Play's note, the reason under a disabled action and the Next bar's hexagon vanished in the dark theme; they now take `--vc-text-muted` and `--vc-bg-sunken`, and the layout check measures rendered contrast. A candidate fix for Vici, not yet proposed there |
+| S3's annual-report excerpt comes as two PDFs, one a language | PLAN.md, section 5 | A German audience reads the German excerpt; both are built from `tools/s3-annual-report.html` and every quote is checked on its page in each |
 
 ## 10. Tests
 
