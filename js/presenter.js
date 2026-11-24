@@ -92,6 +92,7 @@ function blankLive() {
     ctrl: null,                 // the AbortController of the running step
     unchecked: { reader: [], merges: [], ideator: [], writer: [] },
     repaired: { reader: false, merges: false, ideator: false, writer: false },
+    trimmed: null,              // { from, to } when code kept the first ideas of an answer with too many
     ms: { reader: 0, merges: 0, ideator: 0, writer: 0 },
     requests: 0,
     last: null,                 // the last finished run in this tab: { eur, seconds }, for the dialog
@@ -667,6 +668,7 @@ async function runLive(phase) {
       S.live.answers = { ...S.live.answers, ideas: out.ideas, recommendation: null };
       S.live.unchecked.ideator = out.unchecked;
       S.live.repaired.ideator = out.repaired;
+      S.live.trimmed = out.trimmed || null;
       S.live.ms.ideator = out.ms;
       liveChanged();
       Object.assign(S, { picks: null, decided: false, ideated: true });
@@ -946,7 +948,7 @@ function stepView(lang) {
     case "ideate":
       return renderIdeate({
         run, lang, picks: S.decided ? picks : [], onOpen: openIdea, onNext: () => go(3, { keep: true }),
-        agentExtra: live && S.live.repaired.ideator ? t("live.repaired") : "",
+        agentExtra: live ? [S.live.repaired.ideator ? t("live.repaired") : "", S.live.trimmed ? t("live.trimmed", S.live.trimmed) : ""].filter(Boolean).join(" ") : "",
         unchecked: live && marks.ideas.size > 0
       });
     case "score":

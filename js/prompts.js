@@ -70,8 +70,8 @@ ${sharedRules(lang)}
 A GOOD IDEA
 A browser prototype that a consultant shows a customer in five minutes. Its agent spots, checks, calculates, proposes and prepares; a person decides. It runs on public or synthetic data, never on the company's own systems. It improves a named KPI or answers a named issue, and two or three key figures show it: money gained, lost or saved; lead time; detection to decision; session cost; people affected; against a benchmark; a score; or a KPI from "sector_kpis".
 
-RETURN exactly ${count} ${count === 1 ? "idea" : "ideas"}, never more.
-- Give every issue one idea before any issue gets a second. Never give two ideas the same mechanism. Follow "focus" and "constraints".
+RETURN exactly ${count} ${count === 1 ? "idea, never more." : "ideas, never more, the strongest first."}
+- The number comes first: with more issues than ideas, pick those with the most at stake. Otherwise give every issue one idea before any gets a second. Never give two ideas the same mechanism. Follow "focus" and "constraints".
 - name: one to three words. what_it_does: one sentence of at most 25 words.
 - issues: ids from "issues" only, the one it answers best first.
 - room: three to five steps the room sees on screen.

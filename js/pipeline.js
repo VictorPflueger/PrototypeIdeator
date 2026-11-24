@@ -169,7 +169,7 @@ async function defaultSend({ key, body, signal, onText, onRetry }) {
 
 /**
  * One agent's step. agent: reader, merges, ideator, writer or brief (AGENT_TOKENS names its max_tokens);
- * content: the user turn's blocks; check(answer): { refusals: [text], audit: [{ where, tokens, unknownFacts }] } from the
+ * content: the user turn's blocks; check(answer, { attempt }): { refusals: [text], audit: [{ where, tokens, unknownFacts }] } from the
  * step's guards; pdfTokens: the PDFs' input tokens (counted, or the rule's high end). onEvent gets
  * { type: request | text | retry | answer | repair, … }. Returns { answer, unchecked (paths the fact audit
  * refused twice), repaired, ms, maxTokens }. Throws BudgetStop, StepFailed, an ApiError or an AbortError.
@@ -199,7 +199,7 @@ export async function runStep({ agent, key, settings, system, content, schema, c
     onEvent({ type: "answer", agent, attempt, usage: message.usage, ms, stop: message.stop_reason, cost: meter.snapshot() });
     const read = answerOf(message);
     const schemaErrors = read.answer ? validate(read.answer, schema).errors : [];
-    const found = read.answer && !schemaErrors.length ? check(read.answer) : { refusals: [], audit: [] };
+    const found = read.answer && !schemaErrors.length ? check(read.answer, { attempt }) : { refusals: [], audit: [] };
     const refusals = found.refusals || [];
     const audit = found.audit || [];
     const structural = read.error || schemaErrors.length || refusals.length;

@@ -1,6 +1,6 @@
 # Technical notes
 
-Version 0.3.1 (M3 Live, with a fix), 24 November 2026; first written for 0.1.0 (M1 Foundations) on 23 November 2026 and extended for 0.2.0 (M2 Simulation) on 24 November 2026. These notes record what was checked at source, with the date, and the decisions the code rests on. PLAN.md is the plan Victor approved on 23 November 2026. Where the code says "brief §6.4", it means section 6.4 of Victor's build brief, which is not part of this repository.
+Version 0.3.2 (M3 Live, with two fixes), 24 November 2026; first written for 0.1.0 (M1 Foundations) on 23 November 2026 and extended for 0.2.0 (M2 Simulation) on 24 November 2026. These notes record what was checked at source, with the date, and the decisions the code rests on. PLAN.md is the plan Victor approved on 23 November 2026. Where the code says "brief §6.4", it means section 6.4 of Victor's build brief, which is not part of this repository.
 
 ## 1. Models and prices
 
@@ -144,6 +144,7 @@ Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, secti
 | S3's annual-report excerpt comes as two PDFs, one a language | PLAN.md, section 5 | A German audience reads the German excerpt; both are built from `tools/s3-annual-report.html` and every quote is checked on its page in each |
 | Every problem the page meets stays on screen until closed, and a press the page can't answer says why | 0.3.0, whose error toast left after five seconds | Victor's first live run (24 November 2026, Chrome) ended on a Read step where Keep, Merge and Park did nothing, with no message. The stand-in, a streaming HTTPS stand-in under the Pages path and a reconstruction of his nine issues all worked, so the cause stays unknown; `js/watch.js` now keeps errors on screen with where they happened, says when a choice didn't take, closes a modal dialog that is open but not drawn, and names a layer the page didn't draw when it catches a press |
 | Each live run has its own id, and the caches are keyed by it | 0.3.0, which keyed them by a version that Start a new run set back to 0 | A second run could meet the first run's cached figures at the same version and show its issues; `tests/live.mjs decide` fails on the old keys and passes on the new |
+| A repaired answer with more ideas than asked for keeps its first ones, and code refuses the rest, instead of stopping the run | The brief's 6.7 (sent back once) and 0.3.0, which stopped the step after a second refusal | Victor's second live run (24 November 2026, Fast, the S3 PDF) stopped twice on six ideas for five: the prompt asked for one idea per issue and for exactly five, and the PDF gave more kept issues than that. The prompt now puts the number first and asks for the strongest first; the first answer with too many still goes back once (AC-17), and the brief's 6.1 says code refuses any idea beyond the number, so the second keeps the first ones. `tests/pipeline.mjs` and `tests/live.mjs ideas-cap` hold both |
 
 ## 10. Tests
 

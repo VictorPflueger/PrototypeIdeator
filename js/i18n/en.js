@@ -259,6 +259,7 @@ export default {
   "live.unchecked": "Unchecked",
   "live.unchecked.why": "Code couldn't trace a figure in this text to the documents or the engine, even after one repair. Check it before you rely on it.",
   "live.repaired": "Its first answer failed a check and went back once.",
+  "live.trimmed": "Its second answer still held {from} ideas for {to} asked, so code kept the first {to} and refused the rest.",
   "api.unauthorized": "Anthropic rejected the key. Check that it is active and copied completely, then enter it again.",
   "api.cors": "This key's organisation doesn't allow requests from a browser. Use a key from an organisation that allows them, or the simulation.",
   "api.forbidden": "This key may not use {model}. Choose another model under Advanced, or check the workspace in the Claude Console.",
