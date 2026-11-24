@@ -11,7 +11,7 @@
 //              languages, on screen at 1920 x 1080 and 1280 x 720 and on paper
 //   format     the printed report in the SWOT and PESTEL Challengers' format: text at 9.5 pt, an idea's
 //              fact sheet at 9 pt, table heads in sentence case that wrap, each idea on a sheet of its own
-//              and the glance's chart beside its table; the cover names the model and setting in a
+//              and the glance's chart beside its table, each with 9 mm in hand; the cover names the model and setting in a
 //              simulation too; Save as PDF and Ctrl+P offer prototype-ideator-<company>-<date>-<lang> as the
 //              PDF's name and give the page its title back
 //   stopped    a live run stopped at its budget cap offers what is done, and every page of its report
@@ -352,8 +352,12 @@ try {
       const w = T[lang];
       const { context, page, errors } = await openReport(id, lang, { width: 794, height: 1123 });
       const rep = await reportOf(page);
-      await page.evaluate(() => window.Vici.report.prepare(document.getElementById("report-doc")));
+      await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
       await page.emulateMedia({ media: "print" });
+      // A4 holds 261 mm between its margins. Each idea's sheet and the glance with its chart keep 9 mm in
+      // hand, so a browser that breaks a line or two otherwise (CI's Chromium did) still prints them whole.
+      const tall = await page.evaluate(() => [...document.querySelectorAll("body > [data-vc-print] :is(.rep-page--idea, .rep-page--glance)")].map((p) => ({ head: p.querySelector("h2, h3, h4, h5")?.textContent || "", mm: Math.round(p.getBoundingClientRect().height * 25.4 / 96) })).filter((p) => p.mm > 252));
+      res.push([!tall.length, `${where}: every idea's page and the glance keep 9 mm in hand on A4${tall.length ? `: ${tall.map((p) => `${p.head} ${p.mm} mm`).join("; ")}` : ""}`]);
       const type = await page.evaluate(() => {
         const box = document.querySelector("body > [data-vc-print]");
         const cs = (sel) => { const el = box.querySelector(sel); return el ? getComputedStyle(el) : null; };

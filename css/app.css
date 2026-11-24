@@ -464,7 +464,7 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
   .pi-report .vc-report__page :is(h3, h4, h5, h6):not(.vc-report__title) { margin: 7px 0 2px; font-size: 10pt; }
   .pi-report .vc-report__title { font-size: 26pt; }
   .pi-report .ideas-comb--still { --pi-cell: 30mm; }
-  .pi-report .vc-table { font-size: 9pt; }
+  .pi-report .vc-table { font-size: 9pt; line-height: 1.32; }
   .pi-report .vc-table :is(th, td) { padding-block: 2px; }
   .pi-report .vc-table :is(th, td) { padding: 1mm 1.6mm; }
   .pi-report .rating-cells .vc-rating__cell { width: 11px; height: 9.5px; }
