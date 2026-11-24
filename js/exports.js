@@ -36,10 +36,24 @@ export function saveText(name, text, mime, { result = true } = {}) {
 }
 
 /**
- * Save as PDF: the browser's print dialog on the report alone, with the footer on every page. The person
- * chooses Save as PDF as the printer; the page can't choose it for them.
+ * While the report prints, the page's title is the report's file name, which Save as PDF offers as the PDF's
+ * name, as the challengers do; afterwards the title comes back. Returns the function that puts it back.
  */
-export function printReport(report) {
+function titled(name) {
+  const was = document.title;
+  if (name) document.title = name;
+  return () => { document.title = was; };
+}
+
+/**
+ * Save as PDF: the browser's print dialog on the report alone, with the footer on every page, offering the
+ * file name `name` (prototype-ideator-<company>-<date>-<lang>). The person chooses Save as PDF as the printer;
+ * the page can't choose it for them.
+ */
+export function printReport(report, name = "") {
+  const untitle = titled(name);
+  const after = () => { window.removeEventListener("afterprint", after); untitle(); };
+  window.addEventListener("afterprint", after);
   if (window.Vici?.report?.print) window.Vici.report.print(report);
   else window.print();
   markDownloaded();
@@ -47,15 +61,19 @@ export function printReport(report) {
 
 /**
  * Ctrl+P prints the report alone too, wherever the page is: before the browser prints, the report the
- * step shows (or would show) is put in place; afterwards it goes. reportFor() returns the report to print,
- * or null to print the page as it is.
+ * step shows (or would show) is put in place under its file name; afterwards both go. reportFor() returns
+ * { report, name }, or null to print the page as it is.
  */
 export function printWithKeys(reportFor) {
   let undo = null;
   window.addEventListener("beforeprint", () => {
     if (document.querySelector("[data-vc-print]")) return;
-    const report = reportFor();
-    if (report && window.Vici?.report?.prepare) undo = window.Vici.report.prepare(report);
+    const found = reportFor();
+    if (found?.report && window.Vici?.report?.prepare) {
+      const unprint = window.Vici.report.prepare(found.report);
+      const untitle = titled(found.name);
+      undo = () => { unprint(); untitle(); };
+    }
   });
   window.addEventListener("afterprint", () => { if (undo) { undo(); undo = null; } });
 }

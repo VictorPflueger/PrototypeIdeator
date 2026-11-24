@@ -1,4 +1,4 @@
-// The page in Chromium, as a visitor meets it. Four parts, each with its own success token:
+// The page in Chromium, as a visitor meets it. Six parts, each with its own success token:
 //   languages  (AC-03) a first visit opens in English under a German browser; the EN and DE switch
 //              changes every text, attribute and the title without a reload, and is remembered; each
 //              language opens its own guide by itself, and only its own guide's button shows;
@@ -14,13 +14,18 @@
 //              callout keeps its pastel in the dark theme, so a page-theme token inside it can vanish); the
 //              live screens too (the dialog, a step at work, an error, a stopped step, the live report, from
 //              S1's reports against the scripted stand-in), which print LIVE VIEWS LAID OUT; and every
-//              target at least 40 px, which prints TARGETS AT LEAST 40 PX;
+//              target at least 40 px, which prints TARGETS AT LEAST 40 PX; and, from 0.4.0, the report's
+//              views (the Report step of S1 to S3, the live report, the build brief's drawers), which print
+//              REPORT VIEWS LAID OUT;
+//   comb       the comb of ideas for every count from 1 to 10, drawn by the app's honeycomb() where the page
+//              draws it (the Ideate step at 1920 x 1080 and 1280 x 720, the report's cover on screen and on
+//              paper): no two cells overlap, every cell keeps inside its box and every label inside its cell;
 //   probe      the Ideator probe's console line (js/probe.js SNIPPET), run in the page as served under its
 //              security policy, against a stand-in for api.anthropic.com: it asks for the key in a dialog,
 //              sends three requests to the API host only, prints two tables, keeps nothing in storage
 //              and never writes the key to the console.
-// Prints PAGE LANGUAGES OK, PAGE TILES OK, PAGE STORAGE OK, PAGE LAYOUT OK and PAGE PROBE OK.
-// Usage: node tests/page.mjs [languages|tiles|storage|layout|probe]
+// Prints PAGE LANGUAGES OK, PAGE TILES OK, PAGE STORAGE OK, COMB LAID OUT, PAGE LAYOUT OK and PAGE PROBE OK.
+// Usage: node tests/page.mjs [languages|tiles|storage|comb|layout|probe]
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, KEYS, MOCK_KEY } from "./lib/harness.mjs";
@@ -207,7 +212,7 @@ try {
     const bad = structuredClone(a.ideas);
     bad.ideas[0].issues = ["bmc-I99"];
     const failing = [{ answer: a.merges }, { answer: bad }, { answer: bad }];
-    const script = { dialog: [], busy: [{ answer: a.merges }, { answer: a.ideas }], error: [{ answer: a.merges }, { error: { status: 401, type: "authentication_error", message: "invalid x-api-key" } }], failed: failing, "failed-open": failing, report: [{ answer: a.merges }, { answer: a.ideas }, { answer: a.recommendation }] }[kind];
+    const script = { dialog: [], busy: [{ answer: a.merges }, { answer: a.ideas }], error: [{ answer: a.merges }, { error: { status: 401, type: "authentication_error", message: "invalid x-api-key" } }], failed: failing, "failed-open": failing, report: [{ answer: a.merges }, { answer: a.ideas }, { answer: a.recommendation }], brief: [{ answer: a.merges }, { answer: a.ideas }, { answer: a.recommendation }] }[kind];
     const fake = createFakeClaude(script);
     const context = await browser.newContext({ viewport: { width, height } });
     if (theme) await context.addInitScript((t) => { try { localStorage.setItem("vc-theme", t); } catch {} }, theme);
@@ -243,7 +248,78 @@ try {
     await settled("ideate");
     for (const step of ["score", "shortlist", "report"]) { await page.click("#btn-cta"); await settled(step); }
     await page.waitForTimeout(250);
+    if (kind === "brief") {
+      // The live brief's drawer before the Brief writer runs: its cost, the AI notice and Write the idea's part.
+      await page.click("#btn-brief");
+      await page.waitForSelector("#brief-drawer[open] #brief-write");
+      await page.waitForTimeout(250);
+      return { context, page, errors, ok: true };
+    }
     return { context, page, errors, ok: !!(await page.$(".live-measured")) };
+  }
+
+  // ---- comb --------------------------------------------------------------------------------------------
+  // The comb of ideas for every count a run can have, 1 to 10, drawn by the app's own honeycomb() where the
+  // page draws it: in the Ideate step at both sizes, on the report's cover on screen, and on the cover as
+  // A4 prints it (its 178 mm of width). In a honeycomb two cells' centres lie at least a cell's height apart;
+  // closer, they overlap. Every cell keeps inside its box, and every label inside its cell.
+  if (want("comb")) {
+    const res = [];
+    const NAMES = ["Allowance Gap Agent", "Route Switch Desk", "Zertifikatslücken-Agent", "Instant Spot Quote", "Emissions per Box", "FuelEU Pool Planner", "Surcharge Explainer", "Spot-Sofortangebot", "Empty Moves Planner", "Leercontainer-Planer"];
+    const LAY = async ({ n, names, where, print }) => {
+      const { honeycomb } = await import("/js/charts.js");
+      const root = print ? document.querySelector("body > [data-vc-print]") : document;
+      const old = root.querySelector(where);
+      const ideas = names.slice(0, n).map((name, i) => ({ id: `P${i + 1}`, name }));
+      const scores = Object.fromEntries(ideas.map((x, i) => [x.id, (4.7 - i * 0.15).toFixed(2)]));
+      const still = !!old.closest(".vc-report");
+      const comb = honeycomb(ideas, { picks: ideas.slice(0, 3).map((x) => x.id), still, scores: still ? scores : null });
+      const keep = old.closest(".ideas-comb-wrap") || old;
+      keep.replaceWith(comb);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const ul = comb.matches(".ideas-comb") ? comb : comb.querySelector(".ideas-comb");
+      const cells = [...ul.children].map((li) => li.getBoundingClientRect());
+      const h = cells[0].height;
+      let min = Infinity;
+      for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) {
+        const a = cells[i], b = cells[j];
+        min = Math.min(min, Math.hypot(a.x + a.width / 2 - b.x - b.width / 2, a.y + a.height / 2 - b.y - b.height / 2));
+      }
+      const box = ul.closest(print ? ".vc-report__page" : ".evidence, .vc-report__page");
+      const cs = getComputedStyle(box);
+      const r = box.getBoundingClientRect();
+      const inner = { left: r.left + parseFloat(cs.paddingLeft) - 1, right: r.right - parseFloat(cs.paddingRight) + 1, top: r.top - 1, bottom: r.bottom + 1 };
+      const outside = cells.filter((c) => c.left < inner.left || c.right > inner.right || c.top < inner.top || c.bottom > inner.bottom).length;
+      const spill = [...ul.querySelectorAll(".comb-tile")].filter((tile) => tile.scrollHeight > tile.clientHeight + 1 || tile.scrollWidth > tile.clientWidth + 1).map((tile) => tile.textContent.trim().slice(0, 24));
+      return { overlap: n > 1 && min < h * 0.99, min: Math.round(min), h: Math.round(h), outside, spill };
+    };
+    const verdict = (label, all) => {
+      const bad = all.filter(([, m]) => m.overlap || m.outside || m.spill.length);
+      return [!bad.length, `${label}: 1 to 10 ideas lay out with no two cells overlapping, every cell inside its box and every label inside its cell${bad.length ? `: ${bad.map(([n, m]) => `${n} ideas (centres ${m.min} px apart for cells ${m.h} px high${m.outside ? `, ${m.outside} outside` : ""}${m.spill.length ? `, labels spill: ${m.spill.join(", ")}` : ""})`).join("; ")}` : ""}`];
+    };
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) {
+      for (const [step, where, label] of [[3, ".evidence .ideas-comb", "the Ideate step"], [6, "#report-doc .vc-report__cover .ideas-comb", "the report's cover"]]) {
+        const { context, page, errors } = await open(`?guide=0&lang=en&scenario=s1&step=${step}`, { width, height, locale: "en-GB" });
+        const all = [];
+        for (let n = 1; n <= 10; n++) all.push([n, await page.evaluate(LAY, { n, names: NAMES, where, print: false })]);
+        res.push(verdict(`${label} at ${width} x ${height}`, all));
+        res.push([!errors.length, `${label} at ${width} x ${height}: no page error${errors.length ? `: ${errors.slice(0, 2).join("; ")}` : ""}`]);
+        await context.close();
+      }
+    }
+    // On paper: the print copy at A4's 178 mm between its margins, under the print styles. The window is A4's
+    // 210 mm wide, as a printed page is to its media queries, and the copy keeps to the 178 mm inside them.
+    {
+      const { context, page, errors } = await open("?guide=0&lang=en&scenario=s1&step=6", { width: 794, height: 1123, locale: "en-GB" });
+      await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
+      await page.emulateMedia({ media: "print" });
+      const all = [];
+      for (let n = 1; n <= 10; n++) all.push([n, await page.evaluate(LAY, { n, names: NAMES, where: ".vc-report__cover .ideas-comb", print: true })]);
+      res.push(verdict("the report's cover on paper", all));
+      res.push([!errors.length, `the cover on paper: no page error${errors.length ? `: ${errors.slice(0, 2).join("; ")}` : ""}`]);
+      await context.close();
+    }
+    report("comb", res, "COMB LAID OUT");
   }
 
   // ---- layout ------------------------------------------------------------------------------------------
@@ -338,6 +414,9 @@ try {
     }
     const example = readFileSync(path.join(APP_ROOT, "tests", "fixtures", "strategy-challenge-example.json"), "utf8");
     const failures = [];
+    // The report's views (the Report step of S1 to S3, the live report and the brief's drawers): whatever fails
+    // in them, for the token REPORT VIEWS LAID OUT.
+    const reportIssues = [];
     for (const st of states) {
       const { context, page, errors } = await open(st.query, { width: st.width, height: st.height, theme: st.theme });
       if (st.extra === "weights") await page.click("#btn-weights");
@@ -366,6 +445,7 @@ try {
       for (const x of k.low) lowAll.push(`${st.name}, ${st.theme}, ${st.lang}: ${x}`);
       const ok = !m.sideways && !m.scroll && !m.cut.length && !m.covered.length && !errors.length;
       if (!ok) failures.push(`${st.name}, ${st.width} x ${st.height}, ${st.theme}, ${st.lang}: ${JSON.stringify({ sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 3), covered: m.covered, errors })}`);
+      if (/step 6$/.test(st.name)) reportIssues.push(...(ok ? [] : [failures.at(-1)]), ...m.small, ...k.low);
       await context.close();
     }
     res.push([!failures.length, `${states.length} views (every step of S1 to S3, Score's weights, table and stability, Play running, the Start step with Undo after a switch, the live intake before and after files) at 1920 x 1080 and 1280 x 720: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${failures.length ? `:\n      ${failures.slice(0, 12).join("\n      ")}` : ""}`]);
@@ -381,7 +461,7 @@ try {
     // failed its checks twice, and the live report, each from S1's three reports against the stand-in.
     const liveFailures = [];
     const liveStates = [];
-    for (const [width, height] of [[1920, 1080], [1280, 720]]) for (const lang of ["en", "de"]) for (const theme of ["light", "dark"]) for (const kind of ["dialog", "busy", "error", "failed", "failed-open", "report"]) liveStates.push({ width, height, lang, theme, kind });
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) for (const lang of ["en", "de"]) for (const theme of ["light", "dark"]) for (const kind of ["dialog", "busy", "error", "failed", "failed-open", "report", "brief"]) liveStates.push({ width, height, lang, theme, kind });
     for (const st of liveStates) {
       const view = await liveView(st);
       const m = await view.page.evaluate(MEASURE);
@@ -390,26 +470,39 @@ try {
       measuredAll += k.measured;
       for (const x of k.low) lowAll.push(`live ${st.kind}, ${st.theme}, ${st.lang}: ${x}`);
       const ok = view.ok && !m.sideways && !m.scroll && !m.cut.length && !m.covered.length && !view.errors.length;
+      if (["report", "brief"].includes(st.kind)) reportIssues.push(...(ok ? [] : [`live ${st.kind}`]), ...m.small, ...k.low);
       if (!ok) liveFailures.push(`live ${st.kind}, ${st.width} x ${st.height}, ${st.theme}, ${st.lang}: ${JSON.stringify({ shown: view.ok, sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 3), covered: m.covered, errors: view.errors })}`);
       await view.context.close();
     }
-    res.push([!liveFailures.length, `${liveStates.length} live views (the live-run dialog, a step at work, an API error, a step stopped after two failed checks, with its list of what the checks found closed and open, and the live report) at both sizes, in both themes and languages: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${liveFailures.length ? `:\n      ${liveFailures.slice(0, 12).join("\n      ")}` : ""}`]);
+    res.push([!liveFailures.length, `${liveStates.length} live views (the live-run dialog, a step at work, an API error, a step stopped after two failed checks, with its list of what the checks found closed and open, the live report and the live brief's drawer) at both sizes, in both themes and languages: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${liveFailures.length ? `:\n      ${liveFailures.slice(0, 12).join("\n      ")}` : ""}`]);
     if (!liveFailures.length) console.log("LIVE VIEWS LAID OUT");
-    // The idea drawer and the guide sit over the page, so only their contrast is measured here.
-    for (const theme of ["light", "dark"]) for (const lang of ["en", "de"]) for (const which of ["drawer", "guide"]) {
-      const { context, page } = await open(which === "guide" ? `?lang=${lang}` : `?guide=0&lang=${lang}&scenario=s1&step=3`, { theme });
+    // The idea drawer, the build brief's drawer and the guide sit over the page: their contrast and targets
+    // are measured here, and the brief's drawer at both sizes for sideways scroll and cut text too.
+    const briefFailures = [];
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) for (const theme of ["light", "dark"]) for (const lang of ["en", "de"]) for (const which of ["drawer", "guide", "brief"]) {
+      if (which !== "brief" && width === 1280) continue;
+      const { context, page, errors } = await open(which === "guide" ? `?lang=${lang}` : `?guide=0&lang=${lang}&scenario=s1&step=${which === "brief" ? 6 : 3}`, { theme, width, height });
       if (which === "drawer") { await page.click('[data-action="open-idea"]'); await page.waitForTimeout(350); }
+      if (which === "brief") { await page.click("#btn-brief"); await page.waitForTimeout(350); }
       await page.waitForSelector("dialog[open]");
+      if (which === "brief") {
+        const b = await page.evaluate(MEASURE);
+        reportIssues.push(...b.small);
+        const inside = await page.evaluate(() => { const d = document.getElementById("brief-drawer"); return d.scrollWidth <= d.clientWidth + 1 && [...d.querySelectorAll(".brief-block")].every((x) => x.scrollWidth <= x.clientWidth + 1); });
+        if (!inside || b.cut.length || errors.length) briefFailures.push(`brief, ${width} x ${height}, ${theme}, ${lang}: ${JSON.stringify({ inside, cut: b.cut.slice(0, 3), errors })}`);
+      }
       const k = await page.evaluate(CONTRAST);
       measuredAll += k.measured;
       for (const x of k.low) lowAll.push(`${which}, ${theme}, ${lang}: ${x}`);
+      if (which === "brief") reportIssues.push(...k.low);
       // Their targets count too: the measure reads the open dialog's.
       const m = await page.evaluate(MEASURE);
       for (const x of m.small) smallAll.add(`${which}: ${x}`);
       await context.close();
     }
     const lowSeen = [...new Set(lowAll)];
-    res.push([!lowSeen.length, `${measuredAll} texts and icons in those views, the idea drawer and the guide, light and dark: every text at least 4.5:1 and every icon 3:1 against its own fill${lowSeen.length ? `:\n      ${lowSeen.slice(0, 12).join("\n      ")}` : ""}`]);
+    res.push([!lowSeen.length, `${measuredAll} texts and icons in those views, the idea drawer, the brief's drawer and the guide, light and dark: every text at least 4.5:1 and every icon 3:1 against its own fill${lowSeen.length ? `:\n      ${lowSeen.slice(0, 12).join("\n      ")}` : ""}`]);
+    res.push([!briefFailures.length, `the build brief's drawer at both sizes, in both themes and languages: nothing wider than the drawer, no text cut, no page error${briefFailures.length ? `:\n      ${briefFailures.slice(0, 6).join("\n      ")}` : ""}`]);
     // Control: a text in a pale grey on the Your turn bar's pastel is caught. (Before Vici's callout fix the
     // page-theme --vc-on-accent-soft did this in the dark theme; a callout now gives it its own ink.)
     {
@@ -435,6 +528,8 @@ try {
       await context.close();
     }
     if (!smallSeen.length && plantedCaught) console.log("TARGETS AT LEAST 40 PX");
+    if (!reportIssues.length && !briefFailures.length) console.log("REPORT VIEWS LAID OUT");
+    else console.log(`Report views: ${[...reportIssues, ...briefFailures].slice(0, 8).join("; ")}`);
     report("layout", res, "PAGE LAYOUT OK");
   }
 

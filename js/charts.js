@@ -37,9 +37,12 @@ export function hexPoints(x, y, r) {
  */
 export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = null, label = null, lang = getLang() } = {}) {
   const n = ideas.length;
-  // Up to four ideas sit in one zigzag row; more fill two rows: 5 or 6 in three columns, 7 or 8 in four, 9 or 10 in five.
-  const cols = n <= 4 ? Math.max(1, n) : Math.ceil(n / 2);
-  return h("ul", { class: ["vc-honeycomb", "ideas-comb", `ideas-comb--${cols}`, still ? "ideas-comb--still" : ""], "aria-label": label || t("ideate.comb", null, lang) },
+  // Up to six ideas sit in one zigzag row; seven or eight fill two rows of four, nine or ten two rows of six.
+  // Vici's honeycomb drops every second cell, which is every second column only in a single row or in rows of
+  // an even length: two rows of three or five would lay one cell over another.
+  const cols = n <= 6 ? Math.max(1, n) : n <= 8 ? 4 : 6;
+  // The comb sits in a box that sizes its cells (css/app.css: .ideas-comb-wrap), so a wide comb fits its room.
+  return h("div", { class: "ideas-comb-wrap" }, h("ul", { class: ["vc-honeycomb", "ideas-comb", `ideas-comb--${cols}`, still ? "ideas-comb--still" : ""], "aria-label": label || t("ideate.comb", null, lang) },
     ideas.map((idea) => {
       const place = picks.indexOf(idea.id);
       const inner = [
@@ -57,7 +60,7 @@ export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = n
           "aria-haspopup": "dialog",
           on: { click: () => onOpen?.(idea.id) }
         }, inner));
-    }));
+    })));
 }
 
 /** Round numbers for an axis from lo to hi: about `count` ticks on a step of 1, 2 or 5 times a power of ten. */
@@ -73,12 +76,13 @@ function ticks(lo, hi, count = 5) {
 
 /**
  * Score against build effort. rows: [{ id, name, value (score), low, high (person-days) }], in rank
- * order; picks: the shortlist's ids in order. Returns the figure with its legend and tooltip.
+ * order; picks: the shortlist's ids in order; height: the chart's height in its own units, 640 wide (the
+ * report's is lower, so its page holds the table and the chart). Returns the figure with its legend and tooltip.
  */
-export function scoreChart(rows, { picks = [], lang = getLang(), still = false, idPrefix = "score-chart" } = {}) {
+export function scoreChart(rows, { picks = [], lang = getLang(), still = false, idPrefix = "score-chart", height = 320 } = {}) {
   const tr = (key, vars = null) => t(key, vars, lang);
   const W = 640;
-  const H = 320;
+  const H = height;
   const m = { top: 16, right: 24, bottom: 44, left: 52 };
   const days = rows.flatMap((r) => [r.low, r.high]);
   const scores = rows.map((r) => r.value);

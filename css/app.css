@@ -225,16 +225,28 @@ summary::-webkit-details-marker { display: none; }
 .vc-guide .vc-step__button { min-height: var(--vc-control-md); }
 
 /* ---- Ideate: the honeycomb and the idea's page ------------------------------------------------------------- */
-.ideas-comb { --vc-honeycomb-cell: clamp(7rem, 12vh, 10rem); --vc-honeycomb-gap: 8px; margin: 4px auto 0; }
-.ideas-comb--1 { --vc-honeycomb-cols: 1; }
-.ideas-comb--2 { --vc-honeycomb-cols: 2; }
-.ideas-comb--3 { --vc-honeycomb-cols: 3; }
-.ideas-comb--4 { --vc-honeycomb-cols: 4; }
-.ideas-comb--5 { --vc-honeycomb-cols: 5; }
+/* The comb: up to six ideas in one zigzag row, then two rows of four or of six (js/charts.js). A cell is as
+   high as --pi-cell asks, or less where its columns would run past the box: the box is a size container, and
+   a comb of c columns is c × (0.75 w + 0.866 gap) + 0.25 w wide, with w = 1.1547 h. */
+.ideas-comb-wrap { container-type: inline-size; }
+.ideas-comb {
+  --pi-cell: clamp(7rem, 12vh, 10rem);
+  --pi-gap: 8px;
+  --vc-honeycomb-gap: var(--pi-gap);
+  --vc-honeycomb-cell: min(var(--pi-cell), calc((100cqi - 0.866 * var(--pi-gap) * var(--pi-cols)) / (1.1547 * (0.75 * var(--pi-cols) + 0.25))));
+  width: fit-content;
+  margin: 4px auto 0;
+}
+.ideas-comb--1 { --vc-honeycomb-cols: 1; --pi-cols: 1; }
+.ideas-comb--2 { --vc-honeycomb-cols: 2; --pi-cols: 2; }
+.ideas-comb--3 { --vc-honeycomb-cols: 3; --pi-cols: 3; }
+.ideas-comb--4 { --vc-honeycomb-cols: 4; --pi-cols: 4; }
+.ideas-comb--5 { --vc-honeycomb-cols: 5; --pi-cols: 5; }
+.ideas-comb--6 { --vc-honeycomb-cols: 6; --pi-cols: 6; }
 .comb-cell { display: grid; }
 button.vc-tile { border: 0; font: inherit; font-weight: var(--vc-weight-semibold); cursor: pointer; padding: 0 14%; }
 button.vc-tile:hover, button.vc-tile:focus-visible { --_bg: var(--vc-accent); --_fg: var(--vc-on-accent); outline: none; }
-.comb-name { font-size: var(--vc-font-size-sm); line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
+.comb-name { line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
 .comb-place { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); }
 .comb-tile--pick { --_bg: var(--vc-merlot-700); --_fg: var(--vc-neutral-50); }
 .comb-note { margin-top: 8px; }
@@ -355,7 +367,7 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .pi-report .vc-report__title { font-size: clamp(1.6rem, 1rem + 1.6vw, 2.35rem); }
 .pi-report .vc-report__brand .vc-cell { flex: none; }
 .rep-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0 !important; }
-.pi-report .ideas-comb--still { --vc-honeycomb-cell: clamp(5.5rem, 9vw, 7.5rem); margin: 22px 0 0; }
+.pi-report .ideas-comb--still { --pi-cell: clamp(5.5rem, 9vw, 7.5rem); margin: 22px 0 0; }
 .ideas-comb--still .comb-tile { cursor: default; }
 .comb-score { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); font-variant-numeric: tabular-nums; }
 .rep-stopped.vc-alert { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: 210mm; box-sizing: border-box; margin: 0; }
@@ -375,7 +387,6 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .rep-table-wrap { margin: 0 0 10px; }
 .rep-table th, .rep-table td { vertical-align: top; }
 .rep-table tr.is-pick > * { background: color-mix(in oklab, var(--vc-accent-soft) 55%, transparent); }
-.rep-map th[scope="row"], .rep-glance th[scope="row"] { min-width: 9rem; }
 .rep-issue { display: inline; font-weight: var(--vc-weight-semibold); }
 .rep-ref { margin-inline-start: 4px; font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); color: var(--vc-text-muted); white-space: nowrap; }
 .rep-a { display: inline-block; min-width: 2.2em; font-weight: var(--vc-weight-bold); font-variant-numeric: tabular-nums; }
@@ -391,37 +402,79 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 /* The vote sheet: boxes to write in by hand, as on paper. */
 .rep-box { display: block; border: 1px solid var(--vc-border-strong); background: var(--vc-surface); }
 .rep-box--rank { width: 3rem; height: 2rem; }
-.rep-box--why { min-width: 12rem; height: 2rem; }
+.rep-box--why { height: 2rem; }
 .rep-box--line { height: 2rem; }
 .rep-box--lines { height: 5.5rem; }
-.rep-vote-why { width: 55%; }
 .rep-vote-lines { display: grid; gap: 10px; margin-top: 14px; }
 .rep-vote-lines p { display: grid; gap: 4px; margin: 0 !important; }
 .rep-vote-label { font-weight: var(--vc-weight-semibold); }
 .rep-byline { margin-top: 14px !important; }
+/* On screen a presenter may click a source on a projector: each link in the report gets a 40 px target, padded
+   beyond its text without moving the lines it stands in, as the PESTEL Challenger does. Paper and the HTML
+   file keep plain links (the file holds no .report-view). */
+@media screen {
+  .report-view .pi-report a:not([class*="vc-byline"]) { display: inline-block; max-width: 100%; min-width: 40px; padding-block: 10px; margin-block: -10px; }
+  .report-view .pi-report a.vc-byline__person { min-height: 40px; }
+  .report-view .pi-report a.vc-byline__icon { min-width: 40px; min-height: 40px; justify-content: center; }
+}
 /* In the dark theme the page's chart uses dark steps; the report is paper, so it keeps the light ones. */
 html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="light"] .chart-legend { --pi-idea: var(--vc-lilac-600); --pi-pick: var(--vc-merlot-700); }
-/* The glance table: its seven columns sized for what they hold, on screen and on paper. */
-.rep-glance { table-layout: fixed; width: 100%; }
-.rep-glance th:nth-child(1) { width: 6%; }
-.rep-glance th:nth-child(2) { width: 15%; }
-.rep-glance th:nth-child(3) { width: 21%; }
-.rep-glance th:nth-child(4) { width: 31%; }
-.rep-glance th:nth-child(5) { width: 10%; }
-.rep-glance th:nth-child(6) { width: 9%; }
-.rep-glance th:nth-child(7) { width: 8%; }
+/* The report's tables keep to their sheet, on screen and on paper, as the SWOT and PESTEL Challengers' do:
+   heads in sentence case that wrap between words, tighter cells, long words hyphenated in the report's
+   language (a word with no break point gives way inside it, so nothing runs past the sheet), figures whole.
+   Each table sets its columns, so a long name wraps in its column instead of widening the table. */
+.rep-table, .pi-report .figures-table { table-layout: fixed; width: 100%; }
+.pi-report .vc-table thead th { font-size: 0.85em; text-transform: none; letter-spacing: 0; white-space: normal; vertical-align: bottom; }
+.pi-report .vc-table :is(th, td) { overflow-wrap: break-word; hyphens: auto; hyphenate-limit-chars: 10 4 4; }
+.pi-report .rep-table :is(th, td) { padding: 6px 8px; }
+.pi-report .vc-table tbody .vc-num { overflow-wrap: normal; white-space: nowrap; }
+.pi-report .figures-table thead th:nth-child(1) { width: 27%; }
+.pi-report .figures-table thead th:nth-child(2) { width: 31%; }
+.rep-place-line { color: var(--vc-merlot-700); font-weight: var(--vc-weight-semibold); }
+/* What is at stake: the sum whole and to the right; the range, the group note and the AI tag wrap under it. */
+.rep-stake { text-align: end; font-variant-numeric: tabular-nums; }
+.rep-stake > strong { white-space: nowrap; }
+.rep-map thead th:nth-child(1) { width: 39%; }
+.rep-map thead th:nth-child(2) { width: 22%; }
+.rep-map thead th:nth-child(3) { width: 21%; }
+.rep-glance thead th:nth-child(1) { width: 8%; }
+.rep-glance thead th:nth-child(2) { width: 30%; }
+.rep-glance thead th:nth-child(3) { width: 31%; }
+.rep-glance thead th:nth-child(4) { width: 11%; }
+.rep-glance thead th:nth-child(5) { width: 11%; }
+.rep-criteria thead th:nth-child(1) { width: 27%; }
+.rep-criteria thead th:nth-child(2) { width: 13%; }
+.rep-scores thead th:nth-child(1) { width: 7%; }
+.rep-scores thead th:nth-child(2) { width: 23%; }
+.rep-scores thead th:nth-child(n + 3) { width: 8.5%; }
+.rep-stability thead th:nth-child(1) { width: 31%; }
+.rep-counts thead th:nth-child(1) { width: 44%; }
+.rep-costs thead th:nth-child(1) { width: 32%; }
+.rep-vote thead th:nth-child(1) { width: 34%; }
+.rep-vote thead th:nth-child(2) { width: 12%; }
+.rep-vote thead th:nth-child(3) { width: 16%; }
 @media print {
-  .rep-stopped { display: none; }
-  /* A4 holds a page for each idea: the text a step smaller, the gaps tighter, every table whole. */
-  .pi-report .vc-report__page { font-size: 8.5pt; line-height: 1.38; }
+  /* On paper the notice stands at the top of every page instead, and the cover still opens the first. */
+  .rep-stopped.vc-alert { display: none; }
+  .pi-report > .vc-report__cover { break-before: auto; }
+  /* On paper the text is 9.5 pt, as the SWOT Challenger prints its report (the PESTEL Challenger prints 10 pt),
+     tables 9 pt; the gaps are tighter, so A4 holds a page for each idea. */
+  .pi-report .vc-report__page { font-size: 9.5pt; line-height: 1.4; }
   .pi-report .vc-report__page:not(.vc-report__cover) > :is(h2, h3, h4, h5):first-child { font-size: 15pt; margin-bottom: 5px; }
   .pi-report .vc-report__page :is(h3, h4, h5, h6):not(.vc-report__title) { margin: 7px 0 2px; font-size: 10pt; }
   .pi-report .vc-report__title { font-size: 26pt; }
-  .pi-report .ideas-comb--still { --vc-honeycomb-cell: 30mm; }
-  .pi-report .vc-table { font-size: 8pt; }
+  .pi-report .ideas-comb--still { --pi-cell: 30mm; }
+  .pi-report .vc-table { font-size: 9pt; }
   .pi-report .vc-table :is(th, td) { padding-block: 2px; }
+  .pi-report .vc-table :is(th, td) { padding: 1mm 1.6mm; }
   .pi-report .rating-cells .vc-rating__cell { width: 11px; height: 9.5px; }
-  .pi-report .rep-chart .score-chart { max-height: 76mm; }
+  .pi-report .rep-glance { font-size: 8.5pt; }
+  /* On paper the numbers' heads fit narrower columns, so the idea and what it does take the room back. */
+  .rep-glance thead th:nth-child(1) { width: 7%; }
+  .rep-glance thead th:nth-child(2) { width: 32%; }
+  .rep-glance thead th:nth-child(3) { width: 33%; }
+  .rep-glance thead th:nth-child(4) { width: 10%; }
+  .rep-glance thead th:nth-child(5) { width: 9%; }
   .pi-report :is(.rep-map, .rep-glance, .rep-stability, .rep-counts, .rep-vote) { break-inside: auto; }
   .pi-report tr { break-inside: avoid; }
   /* On paper the short sections pair up: the issue beside what the room sees, the data beside the risks. */
@@ -436,8 +489,17 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
   .pi-report .idea-facts { gap: 6px; }
   .pi-report .idea-facts p { padding: 3px 7px; gap: 0; }
   .pi-report .idea-facts strong { font-size: 10.5pt; }
-  .pi-report .idea-how > div { padding: 1px 0; grid-template-columns: 7rem minmax(0, 1fr); }
+  .pi-report .idea-how > div { padding: 1px 0; grid-template-columns: 9.8rem minmax(0, 1fr); }
+  .pi-report .idea-how > .how-decision { padding: 2px 6px; }
   .pi-report .idea-section :is(ul, ol) { gap: 1px; }
+  /* An idea's page is a fact sheet, a half step smaller, so A4 holds each whole as the reference report does;
+     the SWOT Challenger sets its facts that size too. */
+  .pi-report .rep-page--idea { font-size: 9pt; line-height: 1.28; }
+  .pi-report .rep-page--idea .idea-page { gap: 4px 16px; }
+  .pi-report .rep-page--idea .vc-table { font-size: 8.5pt; }
+  .pi-report .rep-page--idea .idea-section :is(h3, h4, h5, h6) { font-size: 9.5pt; margin: 3px 0 1px; }
+  .pi-report .rep-page--idea .idea-facts .muted { font-size: 7.5pt; line-height: 1.25; }
+  .pi-report .rep-page--idea .ratings-table :is(th, td) { padding-block: 0.6mm; }
   .rep-idea-tags { margin: -4px 0 6px !important; }
   .rep-stats { margin: 2px 0 4px; }
   .rep-stat.vc-stat { padding: 5px 8px; }
@@ -446,7 +508,6 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
 .turn-downloads { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 6px; }
 .turn-hint { margin: 2px 0 0; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
 .save-run.vc-button { text-decoration: underline; text-underline-offset: 3px; }
-.stop-done { margin-top: 8px; padding-top: 8px; border-top: 1px solid color-mix(in oklab, currentColor 18%, transparent); }
 .stop-done__text { margin: 0; font-size: var(--vc-font-size-sm); }
 /* The HTML file and the ideas file stand above the report they come from. */
 .report-head { flex: none; }
@@ -514,9 +575,11 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
 .turn-bar--inline .cta.vc-button { --_h: 46px; }
 .turn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .turn-bar--stopped .cta.vc-button { --_h: var(--vc-control-md); --_fs: var(--vc-font-size-sm); }
-.stop-problems { margin-top: 2px; }
-.stop-problems summary { cursor: pointer; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; list-style: none; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); }
-.stop-problems summary::-webkit-details-marker { display: none; }
+/* What the checks found and the report so far: folded under the stopped bar's actions, one line each. */
+.stop-problems, .stop-done { margin-top: 2px; }
+:is(.stop-problems, .stop-done) summary { cursor: pointer; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; list-style: none; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); }
+:is(.stop-problems, .stop-done) summary::-webkit-details-marker { display: none; }
+.stop-problems + .stop-done { margin-top: 0; }
 .stop-problems ul { margin: 0 0 4px; padding-left: 1.2em; font-size: var(--vc-font-size-sm); line-height: 1.35; max-height: 7.5em; overflow: auto; }
 /* A text the fact audit refused twice: shown, with why. */
 .unchecked-tag { white-space: nowrap; vertical-align: 0.1em; margin-inline-start: 6px; }

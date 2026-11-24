@@ -42,7 +42,7 @@ import { briefBlocks, briefMarkdown, composedPart } from "./brief.js";
 import { turnBar, uncheckedNote } from "./views/common.js";
 import { clear, h, copyText } from "./dom.js";
 import { fmtScore, fmtEur, fmtEurSpend } from "./format.js";
-import { LIMITS, BUDGET, MODELS } from "./config.js";
+import { LIMITS, BUDGET, MODELS, PRESETS, DEFAULT_PRESET } from "./config.js";
 import { openLiveDialog } from "./live_dialog.js";
 import { readStep, ideasStep, writerStep, briefStep } from "./live_agents.js";
 import { liveScenario, acceptedFiles, readingSize, privateSources, savedRun, briefRequest } from "./live_run.js";
@@ -181,7 +181,7 @@ export async function start() {
   for (const g of $$(".vc-guide")) g.addEventListener("vc:guideclose", (e) => { if (e.detail?.returnValue === "done" && S.mode === "simulation" && S.reached > 0) play(); });
 
   // Ctrl+P prints the report alone, as Save as PDF does, wherever there is one to print.
-  printWithKeys(() => printable());
+  printWithKeys(() => { const report = printable(); return report ? { report, name: pdfName() } : null; });
   showLang(getLang());
   onLang(() => { showLang(getLang()); render(); fillGuide(); if ($("#brief-drawer")?.open) drawBrief(); });
   fillGuide();
@@ -788,10 +788,15 @@ function liveBar() {
   return turnBar({ kind: "stopped", text: stopText(st), action: primary, actions, extra: [problems, doneRow(st)] });
 }
 
-/** Under a stopped bar: what is done, in the report and its downloads, once the run has issues to show. */
+/**
+ * Under a stopped bar: what is done, in the report and its downloads, once the run has issues to show. Folded,
+ * as What the checks found is, so the bar keeps to the one thing to do; opened, the story scrolls to its end.
+ */
 function doneRow(st) {
   if (!stoppedReportable(st)) return null;
-  return h("div", { class: "stop-done" },
+  const reveal = (e) => { if (e.target.open) { const panel = e.target.closest(".panel"); if (panel) panel.scrollTop = panel.scrollHeight; } };
+  return h("details", { class: "stop-done", on: { toggle: reveal } },
+    h("summary", {}, h("span", { class: "vc-icon vc-icon--chevron-right summary-chevron", "aria-hidden": "true" }), t("report.doneOpen")),
     h("p", { class: "stop-done__text" }, t("report.done")),
     h("div", { class: "turn-downloads" }, downloadButtons({ onPdf: savePdf, onHtml: saveHtml, onJson: saveJson })),
     h("p", { class: "turn-hint" }, t("report.pdfHint")));
@@ -874,11 +879,13 @@ const stopOf = () => ({ agent: S.live.stop.agent, reason: stopReason(S.live.stop
 /** What the report says about its run: the mode, the model and setting, the files read, a stop, the marks. */
 function reportMeta(run, lang, stopped) {
   const live = S.mode === "live";
-  const st = S.live.settings;
+  // A simulation names the setting a live run starts with, so its cover says what a live run would use.
+  const start = PRESETS.find((p) => p.id === DEFAULT_PRESET);
+  const st = live ? S.live.settings : { ...start, preset: start.id };
   return {
     lang, mode: live ? "live" : "simulation", date: today(),
-    model: live && st ? modelLabel(st.model) : null,
-    setting: live && st ? t("rep.meta.setting", { preset: t(`ld.preset.${st.preset}`, null, lang), effort: t(`effort.${st.effort}`, null, lang) }, lang) : null,
+    model: st ? modelLabel(st.model) : null,
+    setting: st ? t("rep.meta.setting", { preset: t(`ld.preset.${st.preset}`, null, lang), effort: t(`effort.${st.effort}`, null, lang) }, lang) : null,
     files: live ? acceptedFiles(S.live.entries).length : (run.documents || []).length,
     stopped, unchecked: live ? liveMarks() : null, cutoff: live
   };
@@ -899,13 +906,19 @@ function printable() {
   return null;
 }
 
+/** The PDF's file name, which Save as PDF offers: the report's, without an extension. */
+function pdfName() {
+  const lang = docLang();
+  return fileName(currentRun(lang).company?.name, lang, "");
+}
+
 /** Save as PDF: the browser's print dialog on the report alone; the person chooses Save as PDF. */
 function savePdf() {
   const report = printable();
   if (!report) return;
   announce(t("report.pdfHint"));
   log("download", STEPS[S.step], { kind: "pdf" });
-  printReport(report);
+  printReport(report, pdfName());
 }
 
 /** The HTML file: the report as a page of its own, its pictures as data. */
@@ -1119,6 +1132,9 @@ const findByKey = (key) => {
   }) || null;
 };
 
+/** The stop whose bar the story last scrolled to, so a stop scrolls the story once. */
+let shownStop = null;
+
 function render() {
   if (!stage) return;
   const lang = getLang();
@@ -1150,6 +1166,11 @@ function render() {
   stage.append(view);
   for (const d of stage.querySelectorAll("details")) if (open.has(d.className)) d.open = true;
   if (sameStep) [...stage.querySelectorAll(".panel, .vc-table-wrap")].forEach((el, i) => { if (scrolls[i]) el.scrollTop = scrolls[i]; });
+  // A stop that has just come shows its bar under what the agents finished, not over it: the story scrolls
+  // to its end once, and keeps where the person scrolls after that.
+  const stopBar = stage.querySelector("#turn.turn-bar--stopped");
+  if (stopBar && shownStop !== S.live.stop) { const story = stopBar.closest(".panel"); if (story) story.scrollTop = story.scrollHeight; }
+  shownStop = stopBar ? S.live.stop : null;
   if (focusKey) {
     const target = findByKey(focusKey);
     if (target && !target.disabled) target.focus({ preventScroll: true });

@@ -384,7 +384,7 @@ try {
       const cutoff = await page.textContent(".live-cutoff");
       const lead = d["report.measured"].split("{cost}")[0];
       res.push([measured.startsWith(lead) && measured.includes(d["ld.preset.balanced"]) && measured.includes("Haiku 5.5") && cutoff === d["report.cutoff"], `${lang}: the Report step says what the run cost and took ("${measured}") and the knowledge-cutoff note`]);
-      const headline = await page.textContent(".report-headline");
+      const headline = await page.textContent(".rep-headline");
       res.push([headline.includes(A(s1, lang).recommendation.headline.split("{{")[0].trim().slice(0, 20)), `${lang}: the Writer's headline is on the report's page ("${headline.slice(0, 60)}…")`]);
       res.push([fake.agents().join() === "merges,ideator,writer" && !fake.violations.length, `${lang}: three requests in all: ${fake.agents().join(", ")}`]);
       const outside = net.filter((x) => !x.url.startsWith("https://api.anthropic.com/"));
@@ -620,7 +620,7 @@ try {
       await page.waitForTimeout(200);
       res.push([fake.agents().join() === "merges,ideator,ideator" && !!note && drawer, "an idea whose text the fact audit refuses twice comes through marked Unchecked, on the step and on the idea's page"]);
       await toReport(page);
-      const tag = await page.$$eval(".report-page .unchecked-tag", (els) => els.length);
+      const tag = await page.$$eval(".rep-page--short :not(.unchecked-note) > .unchecked-tag", (els) => els.length);
       res.push([tag === 1 && fake.agents().filter((x) => x === "writer").length === 2 && !errors.length, "the Writer's text refused twice shows Unchecked beside it on the report"]);
       await context.close();
     }
@@ -845,9 +845,13 @@ try {
     await stepIs(page, "read");
     await findIdeas(page);
     await toReport(page);
-    const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btn-cta")]);
-    const file = await download.path();
-    const saved = readFileSync(file, "utf8");
+    // The report's own downloads carry no key either: the HTML file and the ideas file, from 0.4.0.
+    const files = [];
+    for (const action of ["download-html", "download-json", "save-run"]) {
+      const [d] = await Promise.all([page.waitForEvent("download"), page.click(`[data-action="${action}"]`)]);
+      files.push(readFileSync(await d.path(), "utf8"));
+    }
+    const saved = files.join("\n");
     const guard = await page.evaluate(() => { const e = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; });
     res.push([!guard, "after Save run as simulation, leaving the page no longer asks"]);
     const kept = await page.evaluate(async () => ({
@@ -894,7 +898,7 @@ try {
     const ids = await page.$$eval(".pick-idea, [data-idea]", (els) => [...new Set(els.map((e) => e.dataset.idea).filter(Boolean))]);
     await page.click("#btn-cta");
     await stepIs(page, "report");
-    const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btn-cta")]);
+    const [download] = await Promise.all([page.waitForEvent("download"), page.click('[data-action="save-run"]')]);
     const name = download.suggestedFilename();
     const text = readFileSync(await download.path(), "utf8");
     const saved = JSON.parse(text);

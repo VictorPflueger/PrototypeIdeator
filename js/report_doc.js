@@ -30,7 +30,7 @@ export function stopReason(stop) {
 
 /**
  * The report of a run. meta: { lang, mode (simulation or live), date (an ISO day), model and setting (a
- * live run's, in words), files (how many documents were read), stopped ({ agent, reason } when a live run
+ * live run's in words, or in a simulation those a live run starts with), files (how many documents were read), stopped ({ agent, reason } when a live run
  * stopped early), unchecked ({ issues, ideas, report }: what the fact audit refused twice), cutoff (true
  * when no web research ran), level (the title's heading level: 3 inside the Report step's panel, whose
  * title is an h2), id (a prefix for the ids inside), reportId (the article's own id) }.
@@ -87,7 +87,9 @@ export function reportDoc(run, meta) {
   const sector = SECTORS.find((s) => s.id === run.company?.sector)?.name?.[lang] || "";
   const metaRows = [
     [tr("rep.meta.date"), fmtDate(meta.date, lang)],
-    [tr("rep.meta.mode"), meta.mode === "live" ? tr("rep.meta.live", { model: meta.model || "", setting: meta.setting || "" }) : tr("rep.meta.sim")],
+    [tr("rep.meta.mode"), meta.mode === "live" ? tr("rep.meta.live") : tr("rep.meta.sim")],
+    // The model and setting stand on the cover in a simulation too, as the brief asks and the challengers do.
+    [tr("rep.meta.model"), meta.mode === "live" ? tr("rep.meta.modelLive", { model: meta.model || "", setting: meta.setting || "" }) : tr("rep.meta.modelSim", { model: meta.model || "", setting: meta.setting || "" })],
     sector ? [tr("rep.meta.sector"), sector] : null,
     meta.files ? [tr("rep.meta.read"), tn("read.files", meta.files, {}, lang)] : null,
     [tr("rep.meta.language"), tr(`rep.lang.${lang}`)]
@@ -162,20 +164,21 @@ export function reportDoc(run, meta) {
   };
   const mapPage = page("map", tr("rep.map.title"),
     h("p", { class: "rep-lead" }, tn("rep.map.lead", kept.length, {}, lang)),
+    // Four columns keep the map on its sheet, on screen too: where an issue was found stands under its title.
     table("rep-map", tr("rep.map.title"),
-      [[tr("rep.map.col.issue")], [tr("rep.map.col.stake"), true], [tr("rep.map.col.kpis")], [tr("rep.map.col.source")], [tr("rep.map.col.ideas")]],
+      [[tr("rep.map.col.issue")], [tr("rep.map.col.stake"), true], [tr("rep.map.col.kpis")], [tr("rep.map.col.ideas")]],
       kept.map((issue) => {
         const members = merged.filter((m) => m.merged_into === issue.id);
         const kpis = (issue.kpis || []).map((k) => (k.today ? `${k.name}: ${k.today}` : k.name)).join("; ");
         const answered = ideasFor(issue.id);
+        const where = [found(issue), issue.area].filter(Boolean).join(" · ");
         return h("tr", { dataset: { issue: issue.id } },
           h("th", { scope: "row" },
             h("span", { class: "rep-issue" }, issue.title, marks.issues.has(issue.id) ? uncheckedTag(lang) : null),
-            issue.area ? h("span", { class: "rep-sub" }, issue.area) : null,
+            where ? h("span", { class: "rep-sub" }, tr("rep.map.found", { where })) : null,
             members.length ? h("span", { class: "rep-sub" }, tr("rep.map.with", { titles: members.map((m) => m.title).join("; ") })) : null),
-          h("td", { class: "vc-num" }, stake(issue)),
+          h("td", { class: "rep-stake" }, stake(issue)),
           h("td", {}, kpis),
-          h("td", {}, found(issue)),
           h("td", {}, answered.length ? answered.join(", ") : h("span", { class: "rep-muted" }, tr("rep.map.noIdea"))));
       })),
     ...part(tr("rep.map.parked"), parked.length
@@ -185,15 +188,18 @@ export function reportDoc(run, meta) {
   // ---- 4 The ideas at a glance ------------------------------------------------------------------------------
   const glance = hasIdeas ? page("glance", tr("rep.glance.title"),
     h("p", { class: "rep-lead" }, tr("rep.glance.lead")),
+    // Six columns keep the table on its sheet: the issue an idea answers stands under its name.
     table("rep-glance", tr("rep.glance.title"),
-      [[tr("score.col.rank"), true], [tr("score.col.idea")], [tr("rep.glance.col.answers")], [tr("rep.glance.col.what")], [tr("rep.glance.col.days"), true], [tr("rep.glance.col.cost"), true], [tr("rep.glance.col.score"), true]],
+      [[tr("score.col.rank"), true], [tr("score.col.idea")], [tr("rep.glance.col.what")], [tr("rep.glance.col.days"), true], [tr("rep.glance.col.cost"), true], [tr("rep.glance.col.score"), true]],
       ranked.map((r) => {
         const idea = ideaOf(r.id);
         const place = picks.indexOf(r.id);
+        const answers = [...new Set(idea.issues.map((id) => (names.keptOf(id) || names.issue(id))?.title).filter(Boolean))].join("; ");
         return h("tr", { class: place >= 0 ? "is-pick" : null, dataset: { idea: r.id } },
           h("td", { class: "vc-num" }, String(r.rank)),
-          h("th", { scope: "row" }, idea.name, place >= 0 ? h("span", { class: "rep-sub" }, tr("rep.idea.place", { n: place + 1 })) : null),
-          h("td", {}, [...new Set(idea.issues.map((id) => (names.keptOf(id) || names.issue(id))?.title).filter(Boolean))].join("; ")),
+          h("th", { scope: "row" }, h("span", { class: "rep-issue" }, idea.name),
+            answers ? h("span", { class: "rep-sub" }, tr("rep.glance.answers", { issue: answers })) : null,
+            place >= 0 ? h("span", { class: "rep-sub rep-place-line" }, tr("rep.idea.place", { n: place + 1 })) : null),
           h("td", {}, fill(idea.what_it_does)),
           h("td", { class: "vc-num" }, tr("rep.glance.days", { low: fmtInt(idea.effort_days.low, lang), high: fmtInt(idea.effort_days.high, lang) })),
           h("td", { class: "vc-num" }, fmtEur(cost(r.id), lang)),
@@ -202,7 +208,7 @@ export function reportDoc(run, meta) {
     h("div", { class: "rep-chart vc-report__keep" }, scoreChart(ranked.map((r) => {
       const idea = ideaOf(r.id);
       return { id: r.id, name: r.name, value: r.value, low: idea.effort_days.low, high: idea.effort_days.high };
-    }), { picks, lang, still: true, idPrefix: `${P}-chart` }))) : null;
+    }), { picks, lang, still: true, idPrefix: `${P}-chart`, height: 220 }))) : null;
 
   // ---- 5 One page per idea ----------------------------------------------------------------------------------
   const ideaPages = hasIdeas ? ranked.map((r) => {

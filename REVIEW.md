@@ -44,6 +44,8 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `js/format.js` | Sovereignty Assessment | Adapted | Scores with two decimals; money at stake through `js/risk.js` |
 | `js/facts.js` | Sovereignty Assessment | Adapted | Placeholders and the audit stay; years, dates, counts in words up to twelve and names with digits as the documents write them pass; block ids, lever ids and legal references go |
 | `favicon.svg` | none | New | Vici's sparkle in a lilac hexagon, as on the portfolio card |
+| `js/report_doc.js`, `js/exports.js` | none, on Vici's report pattern (ViciDesign `64044bd`) | New | The report built from a run as Vici's report pattern sets it out, printed in the SWOT and PESTEL Challengers' format (9.5 pt, heads in sentence case, the model and setting on the cover); the file names, Save as PDF and Ctrl+P under the report's file name, the HTML file through `Vici.report.html` and the ideas file `prototype-ideas/1`, checked against its schema |
+| `js/brief.js` | none | New | The build brief's template in English and German, the idea's part composed from its page, the two blocks, and the checks on the Brief writer's answer |
 
 ## Tests and tools
 
@@ -52,6 +54,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `tests/lib/harness.mjs` | Sovereignty Assessment | Adapted | This tool's storage keys, output folder and browser settings |
 | `tests/lib/prototype.mjs` | Sovereignty Assessment | Adapted | This page's name, colour pairs, hexagon tour and page icon |
 | `tests/lib/fake-claude.mjs` | Sovereignty Assessment | Adapted | Single structured requests instead of a tool loop: it streams each answer, plays errors with retry-after, and checks every request's model, effort, thinking, format and headers |
+| `tests/report.mjs` | none, after the PESTEL Challenger's report suite | New | The report, its PDF, its tables on screen and paper, the challengers' print format, its HTML and ideas files, a stopped run's notice, the downloads and the build brief, with Vici's report rule and PDF reader |
 | `tests/lib/live-route.mjs`, `tests/live.mjs`, `tests/pipeline.mjs`, `tests/privacy.mjs` | none | New | The stand-in on a browser context; the live run in Chromium; the pipeline in Node; the private-data scan |
 | `tests/hygiene.mjs` | Sovereignty Assessment (from the Timetable Translator) | Copied | The private term list comes from `HYGIENE_TERMS` |
 | `tests/hexagon.mjs`, `tests/page-icon.mjs` | Sovereignty Assessment | Copied | The page's values sit in `tests/lib/prototype.mjs` |

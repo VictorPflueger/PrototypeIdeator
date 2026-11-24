@@ -38,18 +38,20 @@ export function renderReport(ctx) {
     text: t("report.turn"),
     action: { label: t("report.pdf"), icon: "download", onClick: ctx.onPdf },
     actions: [brief],
-    extra: [h("p", { class: "turn-hint" }, t("report.pdfHint")), save]
+    extra: [h("p", { class: "turn-hint" }, t("report.pdfHint"))]
   });
+  // At 1280 × 720 the story holds the step's words and the bar; what a live run cost and Save run as
+  // simulation stand with the report they belong to.
   return h("div", { class: "step", dataset: { step: "report" } },
     storyPanel(
       ...heading(t("report.title"), t("report.lead")),
       agentLine(live?.agentExtra ? `${t("report.agent")} ${live.agentExtra}` : t("report.agent")),
       unchecked.size ? uncheckedNote() : null,
-      live ? h("p", { class: "step-note live-measured" }, live.measured, " ", h("span", { class: "live-cutoff" }, live.cutoff)) : null,
       turn),
     h("section", { class: "panel evidence", "aria-labelledby": "evidence-title" },
       h("div", { class: "panel-head report-head" },
         h("h2", { class: "panel-title", id: "evidence-title" }, t("report.panel")),
-        h("div", { class: "turn-downloads report-downloads" }, downloadButtons({ onHtml: ctx.onHtml, onJson: ctx.onJson }))),
+        h("div", { class: "turn-downloads report-downloads" }, downloadButtons({ onHtml: ctx.onHtml, onJson: ctx.onJson }), save)),
+      live ? h("p", { class: "step-note live-measured" }, live.measured, " ", h("span", { class: "live-cutoff" }, live.cutoff)) : null,
       h("div", { class: "report-view" }, ctx.report)));
 }
