@@ -65,14 +65,28 @@ export async function readStep({ entries, form, runLang, key, settings, meter, s
   return { ...none, reader: out.answer, unchecked: out.unchecked, repaired: out.repaired, ms: out.ms };
 }
 
-/** The Ideator on the run as it stands (the kept issues). Returns { ideas, unchecked, repaired, ms, count }. */
+/**
+ * The Ideator on the run as it stands (the kept issues). Returns { ideas, unchecked, repaired, ms, count,
+ * trimmed }: trimmed is { from, to } when the repaired answer still held more ideas than were asked for and
+ * code kept the first ones, refusing the rest (brief §6.1), rather than stopping the run; null otherwise.
+ */
 export async function ideasStep({ run, form, runLang, key, settings, meter, signal, onEvent = () => {}, send }) {
   const req = ideatorRequest({ run, form, runLang });
+  let trimmed = null;
   const out = await runStep({
     agent: "ideator", key, settings, system: req.system, content: req.content, schema: req.schema, meter, signal, onEvent, send,
-    check: (a) => ideaProblems(a, { count: req.count, issues: run.issues, facts: req.citable, evidence: run.evidence })
+    check: (a, { attempt = 1 } = {}) => {
+      // The first answer with too many ideas goes back once (AC-17); after that, the ideas past the number
+      // asked for are refused one by one, and the answer is checked without them. The prompt asks for the
+      // strongest first.
+      if (attempt > 1 && Array.isArray(a?.ideas) && a.ideas.length > req.count) {
+        trimmed = { from: a.ideas.length, to: req.count };
+        a.ideas.splice(req.count);
+      }
+      return ideaProblems(a, { count: req.count, issues: run.issues, facts: req.citable, evidence: run.evidence });
+    }
   });
-  return { ideas: out.answer, unchecked: out.unchecked, repaired: out.repaired, ms: out.ms, count: req.count };
+  return { ideas: out.answer, unchecked: out.unchecked, repaired: out.repaired, ms: out.ms, count: req.count, trimmed };
 }
 
 /** The Writer on the shortlist. Returns { recommendation, unchecked, repaired, ms }. */

@@ -53,7 +53,7 @@ export function ideaProblems(answer, { count = LIMITS.ideasDefault, issues = [],
   const allIds = new Set(issues.map((i) => i.id));
 
   if (!ideas.length) refusals.push("no ideas");
-  if (ideas.length > cap) refusals.push(`${ideas.length} ideas, but at most ${cap} were asked for`);
+  if (ideas.length > cap) refusals.push(`${ideas.length} ideas, but at most ${cap} were asked for: keep the ${cap} strongest and drop the rest; an issue may go without an idea`);
   else if (ideas.length < cap) notes.push(`${ideas.length} ideas, ${cap} were asked for`);
 
   const names = new Map();

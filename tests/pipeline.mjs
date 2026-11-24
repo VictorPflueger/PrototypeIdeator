@@ -118,6 +118,45 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
   try { await step(fake); } catch (e) { err = e; }
   r.check(err instanceof StepFailed && err.reason === "refusal" && fake.requests.length === 1, "a refusal stops the step without a repair");
 }
+// The check hears which answer it reads, so a step can treat a repaired answer as the last word.
+{
+  const bad = { headline: "", looked_at: "x", found: "y", needed: "z" };
+  const fake = createFakeClaude([{ answer: bad }, { answer: writerAnswer }]);
+  stub(fake);
+  const seen = [];
+  await step(fake, { check: (a, ctx) => { seen.push(ctx?.attempt); return writerCheck(a); } });
+  r.check(seen.join() === "1,2", `the step's check hears which answer it reads: the first, then the repair (${seen.join(", ")})`);
+}
+// Too many ideas go back once; if the repair still has too many, code keeps the first ones the Ideator
+// listed (strongest first) and refuses the rest, so the run goes on (brief §6.1, 0.3.2).
+{
+  const { ideasStep } = await imp("js/live_agents.js");
+  const { recordedRun } = await imp("js/simulation.js");
+  const { scenarioById } = await imp("js/scenarios.js");
+  const sc = scenarioById("s1");
+  const run = recordedRun(sc, "en");
+  const wire = sc.answers.en.ideas.ideas;
+  const four = { ideas: wire.slice(0, 4) };
+  const ctx = { run, form: { count: 3 }, runLang: "en", key: KEY, settings: settingsOf({ preset: "fast" }), meter: createMeter("claude-haiku-5-5", 0.5) };
+  {
+    const fake = createFakeClaude([{ answer: four }, { answer: four }]);
+    stub(fake);
+    const out = await ideasStep(ctx);
+    const note = fake.requests[1]?.req.messages.at(-1)?.content?.[0]?.text || "";
+    r.check(fake.requests.length === 2 && /4 ideas, but at most 3 were asked for: keep the 3 strongest and drop the rest/.test(note) && out.ideas.ideas.length === 3 && out.ideas.ideas.map((i) => i.name).join() === wire.slice(0, 3).map((i) => i.name).join() && out.trimmed?.from === 4 && out.trimmed?.to === 3 && out.repaired,
+      `four ideas twice for three asked: the first goes back with what to do, the second keeps the first three and says so (${out.ideas?.ideas?.length}, ${JSON.stringify(out.trimmed)})`);
+  }
+  {
+    const fake = createFakeClaude([{ answer: four }, { answer: { ideas: wire.slice(0, 3) } }]);
+    stub(fake);
+    const out = await ideasStep(ctx);
+    r.check(out.ideas.ideas.length === 3 && out.trimmed === null && out.repaired, "a repair with the number asked for keeps all its ideas and trims nothing");
+  }
+  {
+    const { ideaProblems } = await imp("js/guards.js");
+    r.control(ideaProblems(structuredClone(four), { count: 3, issues: run.issues }).refusals.some((x) => /4 ideas, but at most 3/.test(x)), "the guard itself refuses four ideas for three, so the trim above is the step's own doing");
+  }
+}
 // Control: the repair check can fail, since a good first answer sends one request only.
 {
   const fake = createFakeClaude([{ answer: writerAnswer }, { answer: writerAnswer }]);

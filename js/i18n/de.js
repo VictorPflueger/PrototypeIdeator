@@ -264,6 +264,7 @@ export default {
   "live.unchecked": "Ungeprüft",
   "live.unchecked.why": "Code konnte eine Zahl in diesem Text auch nach einer Korrektur weder den Dokumenten noch der Berechnung zuordnen. Prüfen Sie ihn, bevor Sie sich darauf verlassen.",
   "live.repaired": "Seine erste Antwort fiel durch eine Prüfung und ging einmal zurück.",
+  "live.trimmed": "Auch die zweite Antwort enthielt {from} Ideen statt {to}; Code hat die ersten {to} behalten und den Rest verworfen.",
   "api.unauthorized": "Anthropic hat den Schlüssel abgelehnt. Prüfen Sie, ob er aktiv und vollständig kopiert ist, und geben Sie ihn neu ein.",
   "api.cors": "Die Organisation dieses Schlüssels erlaubt keine Anfragen aus einem Browser. Nutzen Sie einen Schlüssel einer Organisation, die sie erlaubt, oder die Simulation.",
   "api.forbidden": "Dieser Schlüssel darf {model} nicht nutzen. Wählen Sie unter „Erweitert“ ein anderes Modell oder prüfen Sie den Workspace in der Claude Console.",
