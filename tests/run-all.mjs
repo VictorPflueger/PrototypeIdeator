@@ -11,7 +11,7 @@ const SUITES = [
   { id: "tokens", what: "colour system on Vici's tokens, light and dark: contrast and colour-blind separation", file: "tests/tokens.mjs", browser: false },
   { id: "page-icon", what: "page icon: favicon, header and loading screen, as on the website's card", file: "tests/page-icon.mjs", browser: false },
   { id: "i18n", what: "both languages: the same keys, no empty value, the same placeholders, every key used, no typed sentence", file: "tests/i18n.mjs", browser: false },
-  { id: "policy", what: "the security policy, one request module and one host, nothing inline, the storage rule in the code", file: "tests/policy.mjs", browser: false },
+  { id: "policy", what: "the security policy, the client and the token count the only request modules, one host, nothing inline, the storage rule in the code", file: "tests/policy.mjs", browser: false },
   { id: "unit", what: "the shared client against a stand-in, cost, formats, the key store, the session held in memory", file: "tests/unit.mjs", browser: false },
   { id: "engine", what: "golden cases PI1 to PI3 in both languages: scores, rankings and tie-breaks, stability, estimates to the cent", file: "tests/engine.mjs", browser: false },
   { id: "handoff", what: "golden case PI4: a challenger's file read without a request, and every refusal", file: "tests/handoff.mjs", browser: false },
@@ -20,9 +20,11 @@ const SUITES = [
   { id: "scenarios", what: "the three scenarios: the checker on S1 to S3, planted defects caught, stand-ins marked, the S3 PDF's quotes on their pages", file: "tests/scenarios.mjs", browser: false },
   { id: "simulation", what: "the simulation model: frozen figures in both languages, and another path that agrees with the engine", file: "tests/simulation.mjs", browser: false },
   { id: "kpis", what: "the shared KPI library: sectors, ids, names in both languages, no benchmark value", file: "tests/kpis.mjs", browser: false },
-  { id: "guards", what: "the Ideator's guards: every refusal, the fact audit and the notes on a broken copy of a good answer", file: "tests/guards.mjs", browser: false },
+  { id: "guards", what: "the agents' guards: every refusal, the fact audit and the notes on a broken copy of a good answer", file: "tests/guards.mjs", browser: false },
   { id: "prompts", what: "the Ideator's prompt and input: rules, rubric, criteria, the cap, about 700 tokens", file: "tests/prompts.mjs", browser: false },
   { id: "probe", what: "the Ideator probe against a scripted stand-in: requests, checks, ranking, cost, errors, the key", file: "tests/probe.mjs", browser: false },
+  { id: "pipeline", what: "the live pipeline against the stand-in: settings, one repair, the budget cap, the meter to 1e-9, retries, Stop, every error's message", file: "tests/pipeline.mjs", browser: false },
+  { id: "privacy", what: "what looks private: e-mail addresses, phone numbers, IBANs and keywords found, clean text left alone", file: "tests/privacy.mjs", browser: false },
   { id: "parity", what: "the shared parts equal every sibling's copy that exists", file: "tests/parity.mjs", browser: false },
   { id: "hygiene", what: "no client, prospect, contact or meeting named in any published file", file: "tests/hygiene.mjs", browser: false },
   { id: "docs", what: "the documents: sections, version, every path they name, the probe line, the prices", file: "tests/docs.mjs", browser: false },
@@ -30,6 +32,7 @@ const SUITES = [
   { id: "hexagon", what: "nothing round: the app's files, and the rendered page in both themes", file: "tests/hexagon.mjs", browser: true },
   { id: "presenter", what: "the simulation played in Chromium: scenarios, key figures, choices, weights, Play, ideas and the guide", file: "tests/presenter.mjs", browser: true },
   { id: "intake", what: "the live run's intake: what the drop zone reads, refuses and limits, with no request", file: "tests/intake.mjs", browser: true },
+  { id: "live", what: "a live run in Chromium against the stand-in: the dialog, presets, the flow, repairs, guards, Stop, the cap, cost, errors, storage, Save run", file: "tests/live.mjs", browser: true },
   { id: "page", what: "the page in Chromium: languages, key figures, storage, layout at both projector sizes, the probe line", file: "tests/page.mjs", browser: true }
 ];
 

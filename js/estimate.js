@@ -64,3 +64,76 @@ export function estimateRun(run, presetId = "balanced") {
   const usd = [0, 1].map((i) => steps.reduce((s, x) => s + usageCostUsd(preset.model, { input_tokens: x.input[i], output_tokens: x.output }), 0));
   return { preset: preset.id, model: preset.model, steps, input, output, usd, eur: usd.map((u) => u * FX_USD_EUR) };
 }
+
+// ---- a live run, before it starts ------------------------------------------------------------------------
+
+const span = (xs) => (xs.length ? [Math.min(...xs), Math.max(...xs)] : [0, 0]);
+
+/**
+ * What the recorded scenarios say each step takes, for a live run's estimate: the Ideator's input and its
+ * output per idea, the Writer's input and output, the Reader's output per issue and the merges answer, each
+ * a [low, high] range over the scenarios' recorded runs (js/simulation.js buildRun, in one language).
+ */
+export function liveSizes(runs) {
+  const steps = (r) => r.estimate.fast.steps;
+  const pick = (agent, fn) => runs.map((r) => { const s = steps(r).find((x) => x.agent === agent); return s ? fn(s, r) : null; }).filter((v) => v !== null && Number.isFinite(v));
+  const docIssues = (r) => r.issues.filter((i) => i.source?.kind !== "handoff").length || 1;
+  return {
+    ideatorInput: span(pick("ideator", (s) => s.input[0])),
+    ideatorPerIdea: span(pick("ideator", (s, r) => s.output / Math.max(1, r.ideas.length))),
+    writerInput: span(pick("writer", (s) => s.input[0])),
+    writerOutput: span(pick("writer", (s) => s.output)),
+    readerPerIssue: span(pick("reader", (s, r) => s.output / docIssues(r))),
+    mergesOutput: span(pick("merges", (s) => s.output))
+  };
+}
+
+/** Seconds as the dialog says them: under a minute, about a minute, or a range of whole minutes. */
+export function timeWords(seconds, t) {
+  const [lo, hi] = seconds;
+  if (hi < 50) return t("ld.time.under");
+  const a = Math.max(1, Math.round(lo / 60));
+  const b = Math.max(1, Math.ceil(hi / 60));
+  if (b <= 1) return t("ld.time.about");
+  return t("ld.time.range", { low: Math.min(a, b - 1), high: b });
+}
+
+/**
+ * The whole live run on a setting, before it starts: the reading request from the real files (a PDF by
+ * Anthropic's rule per page, the text files by their size), the Ideator and the Writer from the recorded
+ * scenarios' sizes for the number of ideas asked for, each with the setting's thinking allowance. Returns
+ * { steps, eur, seconds, longPrompt }: euros and seconds as [low, high]; longPrompt when a request could pass
+ * Haiku 5.5's 100,000-token price step. reading: "reader", "merges" or "none" (js/live_run.js readingOf);
+ * from: the step the run starts or goes on from (read, ideas or write), so a run that goes on after a stop
+ * is estimated for what is left.
+ */
+export function estimateLive({ reading, readerText = "", pdfPages = 0, textChars = 0, mergesText = "", count = 5, settings, sizes, lang = "en", from = "read" }) {
+  const model = settings.model;
+  const preset = PRESETS.find((p) => p.id === settings.preset) || PRESETS[1];
+  const thinking = settings.thinking && settings.thinking.type === "disabled" ? 0 : ESTIMATE.thinkingTokens[preset.id === "fast" ? "balanced" : preset.id] ?? 1500;
+  const steps = [];
+  if (reading === "reader") {
+    const [plo, phi] = pdfTokens(pdfPages);
+    const base = tokensOf(readerPrompt({ lang })) + tokensOf(readerText) + tokensOf(json(readerSchema())) + Math.ceil(textChars / ESTIMATE.charsPerToken);
+    const [ilo, ihi] = ESTIMATE.readerIssues;
+    const per = sizes.readerPerIssue;
+    steps.push({ agent: "reader", input: [base + plo, base + phi], output: [Math.round(ilo * per[0]) + thinking, Math.round(ihi * per[1]) + thinking] });
+  } else if (reading === "merges") {
+    const base = tokensOf(mergesPrompt({ lang })) + tokensOf(mergesText) + tokensOf(json(mergesSchema()));
+    steps.push({ agent: "merges", input: [base, base], output: [sizes.mergesOutput[0] + thinking, Math.max(sizes.mergesOutput[1], 200) + thinking] });
+  }
+  const ideas = Math.max(1, Number(count) || 1);
+  steps.push({ agent: "ideator", input: [...sizes.ideatorInput], output: [Math.round(ideas * sizes.ideatorPerIdea[0]) + thinking, Math.round(ideas * sizes.ideatorPerIdea[1]) + thinking] });
+  steps.push({ agent: "writer", input: [...sizes.writerInput], output: [sizes.writerOutput[0] + thinking, sizes.writerOutput[1] + thinking] });
+  const left = from === "write" ? steps.filter((x) => x.agent === "writer") : from === "ideas" ? steps.filter((x) => x.agent === "ideator" || x.agent === "writer") : steps;
+  steps.splice(0, steps.length, ...left);
+  const usd = [0, 1].map((i) => steps.reduce((s, x) => s + usageCostUsd(model, { input_tokens: x.input[i], output_tokens: x.output[i] }), 0));
+  const rate = ESTIMATE.outputTokensPerSecond[model] || ESTIMATE.outputTokensPerSecond["claude-haiku-5-5"];
+  const [slo, shi] = ESTIMATE.requestSeconds;
+  const seconds = [
+    steps.reduce((s, x) => s + slo + x.output[0] / rate[1], 0),
+    steps.reduce((s, x) => s + shi + x.output[1] / rate[0], 0)
+  ];
+  const long = model === "claude-haiku-5-5" && steps.some((x) => x.input[1] > 100000);
+  return { steps, usd, eur: usd.map((u) => u * FX_USD_EUR), seconds, longPrompt: long };
+}

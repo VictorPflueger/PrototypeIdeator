@@ -10,7 +10,7 @@ import { fmtScore, fmtEur, fmtInt } from "../format.js";
 import { renderFacts } from "../facts.js";
 import { CRITERIA } from "../engine.js";
 import { honeycomb } from "../charts.js";
-import { heading, agentLine, turnBar, storyPanel, evidencePanel, namesOf } from "./common.js";
+import { heading, agentLine, turnBar, storyPanel, evidencePanel, namesOf, uncheckedNote } from "./common.js";
 
 /** Five hexagon cells, filled up to a rating of 1 to 5 (Vici's rating cells), with the number in words. */
 export function ratingCells(score) {
@@ -18,8 +18,8 @@ export function ratingCells(score) {
     [1, 2, 3, 4, 5].map((k) => h("span", { class: ["vc-rating__cell", k <= score ? "vc-rating__cell--on" : ""], "aria-hidden": "true" })));
 }
 
-/** The idea's page, for the drawer. ctx: { run, lang, onClose }. */
-export function ideaPage(idea, { run, lang }) {
+/** The idea's page, for the drawer. ctx: { run, lang, unchecked (true when the fact audit refused a text of it twice) }. */
+export function ideaPage(idea, { run, lang, unchecked = false }) {
   const names = namesOf(run);
   const facts = run.facts;
   const fill = (s) => renderFacts(s, facts, lang);
@@ -33,6 +33,7 @@ export function ideaPage(idea, { run, lang }) {
   });
   const section = (key, ...children) => h("section", { class: "idea-section" }, h("h3", { class: "idea-h" }, t(key)), ...children);
   return h("article", { class: "idea-page", dataset: { idea: idea.id } },
+    unchecked ? uncheckedNote() : null,
     h("p", { class: "idea-what" }, fill(idea.what_it_does)),
     h("div", { class: "idea-facts" },
       h("p", {}, h("span", { class: "idea-label" }, t("drawer.score")), h("strong", {}, ranked ? fmtScore(ranked.value, lang) : "…"), ranked ? h("span", { class: "muted" }, t("drawer.rank", { n: ranked.rank, of: run.ideas.length })) : null),
@@ -57,7 +58,7 @@ export function ideaPage(idea, { run, lang }) {
     section("drawer.why", h("p", {}, fill(idea.why))));
 }
 
-/** The Ideate step. ctx: { run, lang, picks, onOpen(id), onNext }. */
+/** The Ideate step. ctx: { run, lang, picks, onOpen(id), onNext, agentExtra (a live run's note on a repair), unchecked (true when an idea shows Unchecked) }. */
 export function renderIdeate(ctx) {
   const { run } = ctx;
   const n = run.ideas.length;
@@ -66,7 +67,8 @@ export function renderIdeate(ctx) {
   return h("div", { class: "step", dataset: { step: "ideate" } },
     storyPanel(
       ...heading(title, t("ideate.lead")),
-      agentLine(tn("ideate.agent", n)),
+      agentLine(ctx.agentExtra ? `${tn("ideate.agent", n)} ${ctx.agentExtra}` : tn("ideate.agent", n)),
+      ctx.unchecked ? uncheckedNote() : null,
       h("p", { class: "step-note" }, t("ideate.hint")),
       turnBar({ kind: "next", text: t("ideate.turn"), action: { label: t("ideate.next"), icon: "arrow-right", onClick: ctx.onNext } })),
     evidencePanel(t("ideate.panel"),

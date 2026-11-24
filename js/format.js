@@ -44,6 +44,17 @@ export function fmtEur(value, lang = getLang()) {
 }
 
 /**
+ * What a live run has spent, for the cost meter: four decimals under a cent, three under a euro, then
+ * cents ("€0.0042", "€0.137", "€1.24"), so a run of Haiku requests never reads €0.00.
+ */
+export function fmtEurSpend(value, lang = getLang()) {
+  if (!has(value)) return noData(lang);
+  const v = Number(value);
+  const digits = v === 0 || v >= 1 ? 2 : v < 0.01 ? 4 : 3;
+  return nf(lang, { style: "currency", currency: "EUR", minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v);
+}
+
+/**
  * Money at stake in short form, as the four tools write it: the money format of js/risk.js, shared with
  * the challengers (brief 4.1), from about €1m in millions with one decimal ("€2.8m", "2,8 Mio. €"), from
  * about €1,000 in whole thousands ("€600k", "600 Tsd. €"), below in whole euros ("€800", "800 €").

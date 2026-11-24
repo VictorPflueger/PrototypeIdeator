@@ -2,10 +2,10 @@
 // works guides and their key figures (guideProblems), the byline (bylineProblems), the Writing guideline's
 // checkable patterns (writingProblems), the AI notice of a page that can start a live run
 // (aiNoticeProblems), names, not record ids (recordIdProblems), the strict security policy
-// (policyProblems) and Nothing is kept (storageProblems on the scripts, storedKeyProblems on what a visit
-// leaves behind). They run on the page as served, on the
-// page as rendered in English and in German (at its first step and after Run it live), on both string
-// files and on the docs. ViciDesign's check-guide-render.mjs drives the guide over http. vici/ holds
+// (policyProblems), the live-run dialog (liveDialogProblems) and Nothing is kept (storageProblems on the
+// scripts, storedKeyProblems on what a visit leaves behind). They run on the page as served, on the
+// page as rendered in English and in German (at its first step, after Run it live, on every step of the
+// scenarios and on a live run against the scripted stand-in), on both string files and on the docs. ViciDesign's check-guide-render.mjs drives the guide over http. vici/ holds
 // Vici's files byte for byte, at the commit vici/README.md and the workflow name.
 //
 // Each imported check first fails on a planted control. Prints VICI CONTROLS OK, VICI STANDARDS OK and
@@ -17,7 +17,9 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { APP_ROOT, REQUIRE_VICI, viciDir, launchBrowser, serveStatic, NETWORK_NOISE } from "./lib/harness.mjs";
+import { APP_ROOT, REQUIRE_VICI, viciDir, launchBrowser, serveStatic, NETWORK_NOISE, MOCK_KEY } from "./lib/harness.mjs";
+import { createFakeClaude } from "./lib/fake-claude.mjs";
+import { routeStandIn } from "./lib/live-route.mjs";
 
 const dir = viciDir();
 if (!dir) {
@@ -32,6 +34,7 @@ const { aiNoticeProblems, canRunLive, AI_NOTICE } = await lib("ai.mjs");
 const { recordIdProblems } = await lib("ids.mjs");
 const { policyProblems } = await lib("policy.mjs");
 const { storageProblems, storedKeyProblems } = await lib("storage.mjs");
+const { liveDialogProblems } = await lib("live.mjs");
 const mod = (p) => import(pathToFileURL(path.join(APP_ROOT, p)).href);
 
 const read = (f) => readFileSync(path.join(APP_ROOT, f), "utf8");
@@ -54,6 +57,7 @@ control(policyProblems(html.replace("</head>", "<style>p{}</style></head>")).len
 control(storageProblems({ "js/x.js": "localStorage.setItem('pi.notes', text);" }, { allow: ["js/lang.js"] }).length === 1 && storageProblems({ "js/x.js": "const db = indexedDB.open('pi');" }).length === 1 && !storageProblems({ "js/x.js": "// localStorage is not used here" }).length, "storageProblems catches local storage outside the allowed modules and any database, and ignores a comment");
 control(storedKeyProblems({ local: ["vc-theme", "pi.lang", "pi.key"], session: ["vc-guide:/#guide-en"] }, { prefix: "pi" }).length === 1, "storedKeyProblems catches a stray key and lets the three allowed ones pass");
 control(aiNoticeProblems(html.split(AI_NOTICE.en).join("An assistant")).length > 0 && !aiNoticeProblems('<meta http-equiv="Content-Security-Policy" content="connect-src \'none\'"><p>Replay</p>').length, "aiNoticeProblems catches a live page that never says it is an AI, and leaves a page that cannot run live alone");
+control(liveDialogProblems(html.replace('<input type="checkbox" id="live-ack">', '<input type="checkbox" id="live-ack" checked>')).some((p) => /unticked/.test(p)) && !liveDialogProblems(html).length, "liveDialogProblems catches the acknowledgement ticked in the markup, and passes the page's dialog");
 
 // ---- the page as served -------------------------------------------------------------------------------------
 const g = guideProblems(html);
@@ -105,6 +109,59 @@ for (const sc of allScenarios()) for (const lang of ["en", "de"]) {
 }
 check(IDS.size > 120, `the data's ids are known (${IDS.size}, with ${IDEA_IDS.size} idea ids)`);
 
+const name = (lang) => (lang === "en" ? "English" : "German");
+
+/**
+ * The live screens in one language, from S1's three reports against the scripted stand-in: the dialog's
+ * markup, a step at work, a stop after two failed checks with what they found open, and the live report.
+ */
+async function liveScreens(lang) {
+  const sc = allScenarios().find((x) => x.id === "s1");
+  const a = sc.answers[lang];
+  const bad = structuredClone(a.ideas);
+  bad.ideas[0].issues = [bad.ideas[1].issues[0], "bmc-I99"];
+  // An issue merged into another is not kept: the guards name it by its id, the screen by its title.
+  bad.ideas[2].issues = [a.merges.merges[0].merged[0]];
+  const fake = createFakeClaude([{ answer: a.merges }, { answer: bad }, { answer: bad }, { answer: a.ideas }, { answer: a.recommendation }]);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  await routeStandIn(context, fake, { hold: (n) => (n === 2 ? 1500 : 0) });
+  const p = await context.newPage();
+  const errors = [];
+  p.on("pageerror", (e) => errors.push(String(e.message || e)));
+  p.on("console", (m) => { if (m.type() === "error" && !NETWORK_NOISE.test(m.text())) errors.push(m.text()); });
+  await p.goto(`${server.base}?guide=0&lang=${lang}`);
+  await p.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+  await p.click("#btn-live");
+  await p.setInputFiles("#intake-files", sc.documents.map((d) => ({ name: d.name[lang], mimeType: "application/json", buffer: Buffer.from(JSON.stringify(sc.files[d.id][lang], null, 2)) })));
+  await p.waitForTimeout(200);
+  await p.selectOption("#intake-count", String(a.ideas.ideas.length));
+  await p.click("#btn-cta");
+  await p.waitForSelector("#live-dialog[open]");
+  await p.waitForTimeout(200);
+  const dialog = await p.evaluate(() => document.getElementById("live-dialog").outerHTML);
+  await p.fill("#live-key", MOCK_KEY);
+  await p.check("#live-ack");
+  await p.click("#live-start");
+  const settled = (step) => p.waitForFunction((n) => !!document.querySelector(`.step[data-step="${n}"]`) && !document.querySelector("#turn[aria-busy]"), step, { timeout: 30000 });
+  await settled("read");
+  const screens = [];
+  await p.click("#btn-cta");
+  await p.waitForSelector("#turn.turn-bar--busy");
+  screens.push(await p.content());
+  await p.waitForSelector("#turn.turn-bar--stopped", { timeout: 30000 });
+  await p.click(".stop-problems summary");
+  screens.push(await p.content());
+  const listed = await p.$$eval(".stop-problems li", (lis) => lis.map((li) => li.textContent));
+  if (!listed.some((x) => /is not kept/.test(x))) errors.push(`the stop lists no issue that is not kept: ${listed.join(" | ")}`);
+  await p.click("#btn-cta");
+  await settled("ideate");
+  screens.push(await p.content());
+  for (const step of ["score", "shortlist", "report"]) { await p.click("#btn-cta"); await settled(step); }
+  screens.push(await p.content());
+  await context.close();
+  return { dialog, screens, errors };
+}
+
 // ---- the page as rendered, in English and in German -----------------------------------------------------------
 const browser = await launchBrowser();
 const server = await serveStatic(APP_ROOT, 8600 + Math.floor(Math.random() * 300));
@@ -133,6 +190,14 @@ try {
       if (step === 3) { await p.click(".comb-tile"); await p.waitForTimeout(250); steps.push(await p.content()); await p.keyboard.press("Escape"); }
       if (step === 4) for (const v of ["table", "stability"]) { await p.click(`label:has(#view-${v})`); await p.waitForTimeout(150); steps.push(await p.content()); }
     }
+    // The live screens: the live-run dialog (Vici's own check of the pattern), a step at work, a stop with
+    // what the checks found open, and the live report, from S1's reports against the scripted stand-in.
+    const live = await liveScreens(lang);
+    steps.push(...live.screens);
+    const ld = liveDialogProblems(live.dialog);
+    const la = aiNoticeProblems(live.dialog);
+    check(!ld.length && !live.errors.length, `rendered in ${name(lang)}: the live-run dialog passes Vici's liveDialogProblems, and the live run has no page error${[...ld, ...live.errors].length ? `: ${[...ld, ...live.errors].join("; ")}` : ""}`);
+    check(live.dialog.includes(lang === "de" ? AI_NOTICE.de : AI_NOTICE.en) && !la.length, `rendered in ${name(lang)}: the AI notice stands beside Start the live run, in its language`);
     // The page in one language shows one guide: the other is out of its way (lang.js takes its
     // data-vc-guide-auto and its button), so Vici's guide check sees the page as a one-language page.
     const other = lang === "en" ? "de" : "en";
@@ -140,16 +205,15 @@ try {
     const rb = bylineProblems(views[0]);
     const rw = views.flatMap((v) => writingProblems(v));
     const ra = aiNoticeProblems(views[0]);
-    const name = lang === "en" ? "English" : "German";
-    check(!rg.length && !rb.length && !rw.length && !ra.length && !errors.length, `rendered in ${name}: the guide, the byline, the writing and the AI notice pass, at the first step and after Run it live${[...rg, ...rb, ...rw, ...ra, ...errors].length ? `: ${[...rg, ...rb, ...rw, ...ra, ...errors].join("; ")}` : ""}`);
-    check(new RegExp(`<html[^>]*lang="${lang === "de" ? "de" : "en-GB"}"`).test(views[0]) && views[0].includes(lang === "de" ? AI_NOTICE.de : AI_NOTICE.en), `rendered in ${name}: the page says its language and carries the AI notice in it`);
+    check(!rg.length && !rb.length && !rw.length && !ra.length && !errors.length, `rendered in ${name(lang)}: the guide, the byline, the writing and the AI notice pass, at the first step and after Run it live${[...rg, ...rb, ...rw, ...ra, ...errors].length ? `: ${[...rg, ...rb, ...rw, ...ra, ...errors].join("; ")}` : ""}`);
+    check(new RegExp(`<html[^>]*lang="${lang === "de" ? "de" : "en-GB"}"`).test(views[0]) && views[0].includes(lang === "de" ? AI_NOTICE.de : AI_NOTICE.en), `rendered in ${name(lang)}: the page says its language and carries the AI notice in it`);
     const ri = [...views, ...steps].flatMap((v) => [...recordIdProblems(v, IDS), ...recordIdProblems(v, IDEA_IDS, { min: 2 })]);
-    check(steps.length === 18 + 3 + 6 && !ri.length, `rendered in ${name}: names, not record ids, on every step of S1, S2 and S3, on each idea's page and in every Score view (${steps.length} screens)${ri.length ? `: ${[...new Set(ri)].slice(0, 6).join("; ")}` : ""}`);
+    check(steps.length === 18 + 3 + 6 + 4 && !ri.length, `rendered in ${name(lang)}: names, not record ids, on every step of S1, S2 and S3, on each idea's page, in every Score view and on the live screens (${steps.length} screens)${ri.length ? `: ${[...new Set(ri)].slice(0, 6).join("; ")}` : ""}`);
     const sw = steps.flatMap((v) => writingProblems(v));
-    check(!sw.length, `rendered in ${name}: every step keeps Vici's writing rules${sw.length ? `: ${[...new Set(sw)].slice(0, 6).join("; ")}` : ""}`);
+    check(!sw.length, `rendered in ${name(lang)}: every step keeps Vici's writing rules${sw.length ? `: ${[...new Set(sw)].slice(0, 6).join("; ")}` : ""}`);
     const stores = await p.evaluate(async () => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), databases: (await indexedDB.databases()).map((d) => d.name), caches: await caches.keys(), cookie: document.cookie }));
     const sk = storedKeyProblems(stores, { prefix: "pi" });
-    check(!sk.length, `rendered in ${name}: the visit leaves only the allowed keys behind (${[...stores.local, ...stores.session].join(", ") || "none"})${sk.length ? `: ${sk.join("; ")}` : ""}`);
+    check(!sk.length, `rendered in ${name(lang)}: the visit leaves only the allowed keys behind (${[...stores.local, ...stores.session].join(", ") || "none"})${sk.length ? `: ${sk.join("; ")}` : ""}`);
     await context.close();
   }
   // ViciDesign's own drive of the guide, over http.

@@ -22,30 +22,40 @@ export function agentLine(text) {
     h("span", {}, text));
 }
 
+const TURN_TITLES = { turn: "turn.yours", decision: "turn.decision", next: "turn.next", busy: "turn.busy", stopped: "turn.stopped" };
+const TURN_ICONS = { turn: "hand", decision: "hand", next: "arrow-right", stopped: "warning" };
+
 /**
  * The Your turn bar: the one primary action of the step, where the eye is. kind: "turn" (your turn),
- * "decision" (your decision) or "next" (the story goes on). action: { label, icon, onClick, disabled,
- * reason }. note: a line under the action, such as when Play moves on.
+ * "decision" (your decision), "next" (the story goes on), "busy" (an agent is working: lilac, with Stop)
+ * or "stopped" (a live run stopped: honey, with what to do next). action: { label, icon, onClick,
+ * disabled, reason, secondary }. actions: the other ways on, quiet buttons beside the action in a
+ * stopped bar, whose text takes the bar's whole width. extra: what goes under the text.
  */
-export function turnBar({ kind = "turn", text, action, extra = null }) {
-  const title = kind === "decision" ? t("turn.decision") : kind === "next" ? t("turn.next") : t("turn.yours");
+export function turnBar({ kind = "turn", text, action, actions = [], extra = null }) {
+  const title = t(TURN_TITLES[kind] || TURN_TITLES.turn);
   const button = h("button", {
     type: "button",
-    class: ["vc-button", "cta", kind !== "next" ? "vc-attention" : ""],
+    class: ["vc-button", action.secondary ? "vc-button--secondary" : "", "cta", ["turn", "decision", "stopped"].includes(kind) ? "vc-attention" : ""],
     id: "btn-cta",
     disabled: action.disabled || undefined,
     "aria-describedby": action.reason ? "cta-reason" : undefined,
     on: { click: () => { if (!action.disabled) action.onClick(); } }
   }, action.icon ? h("span", { class: `vc-icon vc-icon--${action.icon}`, "aria-hidden": "true" }) : null, h("span", {}, action.label));
-  return h("div", { class: ["vc-callout", "turn-bar", `turn-bar--${kind}`], id: "turn" },
-    h("span", { class: "vc-callout__cell", "aria-hidden": "true" }, h("span", { class: `vc-icon vc-icon--${kind === "next" ? "arrow-right" : "hand"}` })),
+  const cell = kind === "busy"
+    ? h("span", { class: "vc-callout__cell", "aria-hidden": "true" }, h("span", { class: "vc-spinner vc-spinner--sm turn-spinner" }))
+    : h("span", { class: "vc-callout__cell", "aria-hidden": "true" }, h("span", { class: `vc-icon vc-icon--${TURN_ICONS[kind] || "hand"}` }));
+  const stopped = kind === "stopped";
+  return h("div", { class: ["vc-callout", kind === "busy" ? "vc-callout--ai" : stopped ? "vc-callout--caution" : "", "turn-bar", `turn-bar--${kind}`], id: "turn", "aria-busy": kind === "busy" ? "true" : undefined },
+    cell,
     h("div", { class: "vc-callout__body" },
       h("p", { class: "vc-callout__title" }, title),
       text ? h("p", { class: "turn-text" }, text) : null,
       action.reason ? h("p", { class: "turn-reason", id: "cta-reason" }, action.reason) : null,
       h("p", { class: "foot-note", id: "foot-note", "aria-live": "off" }),
+      stopped ? h("div", { class: "turn-actions" }, button, ...actions) : null,
       extra),
-    button);
+    stopped ? null : button);
 }
 
 /** "Fictional company, illustrative figures", the scenario's date and, after 90 days, Check for updates. */
@@ -55,6 +65,21 @@ export function fictionalLine(sc, lang, today) {
     h("span", { class: "vc-tag vc-tag--sm fiction-tag" }, t("fiction.tag")),
     h("span", {}, t("fiction.asOf", { date: fmtDate(sc.as_of, lang) })),
     stale ? h("a", { class: "vc-link stale-link", href: "https://github.com/VictorPflueger/PrototypeIdeator/blob/main/DATA_SOURCES.md", rel: "noopener", target: "_blank" }, t("fiction.update"), h("span", { class: "vc-visually-hidden" }, t("p.newTab"))) : null);
+}
+
+/**
+ * "Unchecked": a text the fact audit refused twice, shown rather than hidden (brief §5.10), with why in
+ * its tooltip and for screen readers.
+ */
+export function uncheckedTag() {
+  return h("span", { class: "vc-tag vc-tag--sm vc-tag--warning unchecked-tag", title: t("live.unchecked.why") },
+    h("span", { class: "vc-icon vc-icon--warning", "aria-hidden": "true" }), t("live.unchecked"),
+    h("span", { class: "vc-visually-hidden" }, `: ${t("live.unchecked.why")}`));
+}
+
+/** The visible line that says why a tag reads Unchecked, once per step that shows one. */
+export function uncheckedNote() {
+  return h("p", { class: "step-note unchecked-note" }, uncheckedTag(), h("span", {}, t("live.unchecked.why")));
 }
 
 /** A small tag: the tone is a Vici tag modifier (feature for AI, neutral otherwise). */

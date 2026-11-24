@@ -37,20 +37,23 @@ export function readScenario(sc, lang) {
   const answers = sc.answers[lang];
   const handoffs = sc.documents.filter((d) => d.kind === "handoff").map((d) => ({ json: sc.files[d.id][lang], file: d.name[lang] }));
   let issues = [];
-  let company = { name: sc.company.name, sector: sc.company.sector, country: sc.company.country, description: sc.pitch[lang], fictional: true };
+  let company = { name: sc.company.name, sector: sc.company.sector, country: sc.company.country, description: sc.pitch[lang], fictional: sc.company.fictional !== false };
   let tools = [];
   if (handoffs.length) {
     const r = readHandoffs(handoffs);
     if (!r.ok) throw new Error(`scenario ${sc.id}: ${r.problems.join("; ")}`);
     issues = r.issues;
     tools = r.tools;
-    company = { ...company, ...r.company };
+    // A live run names its company as the person or the Reader does; a scenario takes the files' company.
+    company = sc.source === "live" ? { ...r.company, ...company, fictional: company.fictional } : { ...company, ...r.company };
   }
   let readerIds = new Set();
   if (answers.reader) {
     const kind = (name) => sc.documents.find((d) => d.name[lang] === name)?.kind || "text";
+    // A live run checks a text file's quotes word for word; a scenario's quotes were checked when it was made.
+    const content = typeof sc.textOf === "function" ? (name) => sc.textOf(name) : () => null;
     readerIds = new Set(answers.reader.issues.map((i) => i.id));
-    issues = [...issuesFromReader(answers.reader, { kind, content: () => null }), ...issues];
+    issues = [...issuesFromReader(answers.reader, { kind, content }), ...issues];
   }
   const merges = answers.reader ? answers.reader.merges : answers.merges ? answers.merges.merges : [];
   return { issues, company, tools, proposals: mergeProposals(merges, issues, readerIds) };

@@ -1,10 +1,10 @@
 # Technical notes
 
-Version 0.2.0 (M2 Simulation), 24 November 2026; first written for 0.1.0 (M1 Foundations) on 23 November 2026. These notes record what was checked at source, with the date, and the decisions the code rests on. PLAN.md is the plan Victor approved on 23 November 2026. Where the code says "brief §6.4", it means section 6.4 of Victor's build brief, which is not part of this repository.
+Version 0.3.0 (M3 Live), 24 November 2026; first written for 0.1.0 (M1 Foundations) on 23 November 2026 and extended for 0.2.0 (M2 Simulation) on 24 November 2026. These notes record what was checked at source, with the date, and the decisions the code rests on. PLAN.md is the plan Victor approved on 23 November 2026. Where the code says "brief §6.4", it means section 6.4 of Victor's build brief, which is not part of this repository.
 
 ## 1. Models and prices
 
-Read on 23 November 2026 at https://platform.claude.com/docs/en/about-claude/pricing and https://platform.claude.com/docs/en/about-claude/models/overview. US dollars per million tokens; `js/config.js` holds the same values and `tests/docs.mjs` compares them with this table.
+Read on 23 November 2026 at https://platform.claude.com/docs/en/about-claude/pricing and https://platform.claude.com/docs/en/about-claude/models/overview, and read again on 24 November 2026, before the live run relied on them: unchanged. US dollars per million tokens; `js/config.js` holds the same values and `tests/docs.mjs` compares them with this table.
 
 | Model | API id | Input | Output | Cache write (5 min) | Cache read |
 |---|---|---|---|---|---|
@@ -12,7 +12,9 @@ Read on 23 November 2026 at https://platform.claude.com/docs/en/about-claude/pri
 | Sonnet 5.5 | `claude-sonnet-5-5` | $2 | $10 | $2.50 | $0.10 |
 | Opus 5.5 | `claude-opus-5-5` | $4 | $20 | $5 | $0.20 |
 
-Haiku 5.5 prompts over 100,000 tokens cost $0.50 input, $2.50 output, $0.625 cache write and $0.05 cache read, so no request may come near that size. Web search costs $10 per 1,000 searches plus its tokens; token counting is free. The three models share a context of one million tokens, 128,000 output tokens and a reliable knowledge cutoff of June 2026 (models overview, read again on 23 November 2026). Euros at 1 USD = 0.894 EUR, the sister prototypes' fixed rate.
+Haiku 5.5 prompts over 100,000 tokens cost $0.50 input, $2.50 output, $0.625 cache write and $0.05 cache read, so no request may come near that size; the page prices each request on its own, as the pricing page says, so only a request above the step pays it. Web search costs $10 per 1,000 searches plus its tokens; token counting is free (token-counting page, read on 24 November 2026: free, with its own limit of 5,000 requests a minute at the lowest tier). The three models share a context of one million tokens, 128,000 output tokens and a reliable knowledge cutoff of June 2026 (models overview, read again on 24 November 2026), which a live run's Report step states, since this version runs no web research (cut C4). Euros at 1 USD = 0.894 EUR, the sister prototypes' fixed rate.
+
+A paid Claude plan doesn't pay for the API: it is billed on its own, and Max, Ultra and Team plans include monthly API credits (support.claude.com, article 9876003, read again on 24 November 2026). The live-run dialog says so under the key.
 
 ## 2. The API from the browser
 
@@ -24,7 +26,14 @@ Probed on 23 November 2026; PLAN.md, section 4, holds the full table with its so
 - Effort goes in `output_config.effort`. Haiku 5.5 takes `thinking: { "type": "disabled" }` up to high effort; Sonnet 5.5 refuses it; Opus 5.5 always thinks. Thinking counts towards `max_tokens`.
 - Every request sends `anthropic-version: 2023-06-01`, as every sister prototype does.
 
-Versions 0.1.0 and 0.2.0 send no request from the page: the simulation plays recorded answers, and a challenger's report dropped on the live Start step is read without one. The only code that calls the API is the Ideator probe (section 8), which Victor runs by hand.
+Read again on 24 November 2026, for the live run of 0.3.0 (the errors and token-counting pages):
+
+- A 401 whose message begins "CORS requests are not allowed for this Organization" is no fault of the key: the organisation refuses requests from a browser. The page names it apart from a rejected key (`api.cors`) and asks for a key from another organisation.
+- A 400 `invalid_request_error` is also what a spend limit the organisation or workspace set returns; a 429 at a tier's spend cap or a workspace's limit has no `retry-after` and keeps failing. Neither is retried; the page says to raise the limit in the Console. A credit balance that is too low comes as a 400 with that message, or a 402 `billing_error`.
+- 500, 502, 503, 504, 529 and network failures are retried twice, after 1.5 and 4 seconds, and a 429 after its `retry-after` (at most 20 seconds), as the brief's 5.8 says; the SDKs do the same.
+- `POST /v1/messages/count_tokens` takes base64 PDFs as the Messages API reads them. The page sends it the system prompt and the messages without the output schema, whose tokens it adds itself at four characters a token.
+
+Since 0.3.0 the page calls the API in a live run: `GET /v1/models` to check the key (free), `POST /v1/messages/count_tokens` before a request that carries a PDF (free), and one `POST /v1/messages` a step. A challenger's report from one challenger is still read with no request. The Ideator probe (section 8) stays as Victor's console line.
 
 ## 3. The policy and what the browser keeps
 
@@ -62,9 +71,11 @@ The cost of a replay is the estimate of what the same run would cost live (`js/e
 
 The SWOT Challenger merged its M1 first, on 23 November 2026 at 21:35 (commit a52fd6f, merged as 617b122). By the brief's rule the first tool to merge a shared file is its source, so these come from it unchanged: `data/kpis.js` (115 KPIs in thirteen sectors) with its test, `tests/kpis.mjs`; `schemas/strategy-challenge-1.json` with its module twin and `tools/schema-module.mjs`, which writes the twin; and `js/risk.js`. The Ideator's money at stake takes the format of `js/risk.js`: millions with one decimal ("€2.8m", "2,8 Mio. €"), so PI4's range shows as €2.0m–€6.0m where the brief writes "€2m–€6m" (section 9).
 
-No sibling had the live client or the key store yet, so this tool sets them for the others to copy: `js/anthropic.js`, `js/sse.js` and `js/cost.js` from the Sovereignty Assessment 2.0.0 (35c0dea), with the app's name read from `config.js` so the file can be byte-identical in all four tools, and `js/keystore.js`, held in memory only.
+This tool set the live client and the key store for the others to copy: `js/anthropic.js`, `js/sse.js` and `js/cost.js` from the Sovereignty Assessment 2.0.0 (35c0dea), with the app's name read from `config.js` so the file can be byte-identical in all four tools, and `js/keystore.js`, held in memory only. The SWOT and PESTEL Challengers took all four in their 0.3.0 (main at 40a3239 and 37113ee, fetched on 24 November 2026), and `tests/parity.mjs` finds them byte for byte the same. A candidate for a change made in all four at once: `usageCostUsd` prices a model it doesn't know as Haiku 5.5, where refusing it would be safer; every model id this tool sends is in the price table.
 
-The drop zone is this tool's pattern in Vici (ViciDesign PR 32, merged on 24 November 2026 as 2759b7a, "From Prototype Ideator 0.2.0"): a real file input behind a label, the public-information notice, one cancelable `vc:files` event, and file rows with a refused or warning state in words, with its docs on the Forms page and `dropzoneProblems` as its check. `vici/` holds main at 5b8fea3, which adds the PESTEL Challenger's fix to the risk matrix and horizon strip on top of it.
+The drop zone is this tool's pattern in Vici (ViciDesign PR 32, merged on 24 November 2026 as 2759b7a, "From Prototype Ideator 0.2.0"): a real file input behind a label, the public-information notice, one cancelable `vc:files` event, and file rows with a refused or warning state in words, with its docs on the Forms page and `dropzoneProblems` as its check.
+
+The live-run dialog is the SWOT Challenger's pattern in Vici (ViciDesign PR 36, merged on 24 November 2026 as bf11426): the key, the setting, Advanced, the budget cap, the acknowledgement, the warning, the estimate and the start button with the AI notice, in that order, checked by `liveDialogProblems`. This tool is the first to build it into a page, in `js/live_dialog.js` and `index.html`, with `tests/live.mjs` running Vici's check on the rendered dialog; the challengers can take the file with their own settings. Four fixes this tool found went into Vici on 24 November 2026: a callout now gives its content every text and surface token in its own ink (PR 35, ead182e), tables set tabular figures in number cells only (PR 37, a855df3), a callout's actions keep to its ink too, so a secondary button such as the busy bar's Stop stays readable in the dark theme (PR 38, 8940e41), and the live-run dialog fits 1280 × 720, so the box and the estimate show without scrolling until a warning appears (PR 39, ca9c552, with `scripts/check-live-fit.mjs`). `vici/` holds main at ca9c552.
 
 `tests/parity.mjs` compares every shared part with every sibling checkout that has it, and CI clones the three challengers for it. The Business Model Canvas Challenger merged its M1 later the same day (849e6ee) with the same bytes, so on 23 November 2026 three of the four tools hold one KPI library, one handoff schema and one `js/risk.js`; the PESTEL Challenger had not merged its M1 yet.
 
@@ -86,6 +97,20 @@ The probe, `js/probe.js`, tries the riskiest part before the screens are built o
 
 It asks for the key in a dialog, so the key is never typed into the console, and sends three requests: Fast and Balanced on Haiku 5.5, Thorough on Sonnet 5.5. At the prices of section 1 that is under €0.15 for all three, most of it Sonnet's. It prints two tables, the runs and the ideas; `copy(piProbe)` copies everything the model wrote, without the key. `tests/probe.mjs` runs it against a scripted stand-in, and `tests/page.mjs` runs this exact line in the page under its security policy. Not yet run with a key; its results go here, with the date, when Victor has run it.
 
+**The live run (0.3.0).** `js/prompts.js` holds the four prompts a live run sends: the Reader's (the documents, the company's fields and the challengers' issue titles in, an issue map out), the Reader's merges-only request for several challengers' reports, the Ideator's and the Writer's. Each step is one structured request (`js/pipeline.js`, `js/live_agents.js`): the step's prompt, the run's state as JSON and its output schema, with the setting's model, effort and thinking. The answer is validated, checked by the step's guards (`readerProblems`, `mergesProblems`, `ideaProblems`, `writerProblems`) and the fact audit, and sent back once with its problems listed. A second failure stops the step and keeps what is done; a text the fact audit refuses twice comes through marked Unchecked. Before every request the budget check works out its worst case: the input at four characters a token, a PDF's tokens counted by the free endpoint (Anthropic's rule's high end if the count fails), plus max_tokens at the output price. When the spend so far and the worst case pass the cap, max_tokens drops to the step's minimum; when that still doesn't fit, nothing is sent and the bar says before which step the run stopped. The meter prices each answer's usage at the model that gave it, so a run that goes on after Change settings on another model keeps its spend.
+
+| Step | max_tokens | Minimum under the cap |
+|---|---|---|
+| Reader | 8,000 | 3,000 |
+| Reader, merges only | 2,000 | 1,000 |
+| Ideator | 8,000 | 4,000 |
+| Writer | 2,000 | 1,000 |
+| Brief writer (0.4.0) | 6,000 | 3,000 |
+
+These start values are the brief's 8,000 a step and PLAN.md's smaller ones for the short answers. They are still to be measured: Victor's first live run on each preset sets each step's value, and its date and the measured use go here. Save run as simulation writes each step's requests, tokens and largest answer into the file (`run.usage`), so the measurement is the saved file itself; each max_tokens becomes about one and a half times the largest answer seen across the three presets, rounded up to the next 500 and never below the minimum. Not yet measured on 24 November 2026.
+
+The estimate before a live run (`estimateLive` in `js/estimate.js`) builds the reading request from the real files (a PDF by Anthropic's rule per page, a text file by its size), takes the Ideator's and the Writer's sizes from the three recorded scenarios for the number of ideas asked for, assumes the Reader maps four to twelve issues, and adds 1,500 thinking tokens a step on Balanced and Thorough. Time: three to eight seconds a request plus the output at an assumed 60 to 150 tokens a second on Haiku 5.5 and 30 to 80 on Sonnet 5.5. These are assumptions until Victor's runs measure them; after a run the dialog also shows the tab's last measured cost and time.
+
 ## 9. Decisions and deviations
 
 Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, section 2) as approved with the plan; D15, a merged issue counts once at its largest member's expected euros; D14, S3's story line, follows the municipal heat plan due by the end of 2026, which runs through most of Auental Energie's issues.
@@ -106,9 +131,16 @@ Defaults used, as the brief allows: D13 (the cut list C1 to C7 of PLAN.md, secti
 | Every step past Start names the company and "Fictional company, illustrative figures" above its title | PLAN.md, section 10.1 (the words in the intro strip only) | A room that joins late still knows which company it sees, and that it is invented |
 | German uses Behalten, Bündeln and Parken for keep, merge and park | The first German strings | "Zusammenführen" and "Zurückstellen" did not fit the decision buttons or a step title at 1280 px |
 | The guide has six chapters: "What the scores mean" stands apart from "How ideas are scored" | PLAN.md, section 10.5 (five chapters) | Vici's guide rule allows one table or list a chapter |
-| Tabular figures only in number cells | Vici's tables, which set them on every cell | Inter's tabular figures also widen the hyphen, so "person-days" read "person - days"; `css/app.css` turns them off in text cells. A candidate fix for Vici, not yet proposed there |
+| Tabular figures only in number cells | Vici's tables before 24 November 2026, which set them on every cell | Inter's tabular figures also widen the hyphen, so "person-days" read "person - days". Fixed in Vici (PR 37, from this tool); the app's own override is gone since 0.3.0 |
 | In the dark theme the chart tells the shortlist from the other ideas by fill as well as colour | The dataviz palette's checks | Light uses merlot-700 and lilac-600, which pass every check. Dark uses merlot-600 and lilac-500: they pass contrast and colour-blind separation on the dark surface but, like all of Vici's dark steps, fall below the validator's chroma floor, so filled and outlined hexagons, the place numbers and the labels carry the difference |
-| Inside the Your turn bar the app uses only the tokens Vici's callout sets for itself | Vici's callout, which keeps its pastel in the dark theme but leaves `--vc-bg-subtle` and `--vc-on-accent-soft` to the page | Play's note, the reason under a disabled action and the Next bar's hexagon vanished in the dark theme; they now take `--vc-text-muted` and `--vc-bg-sunken`, and the layout check measures rendered contrast. A candidate fix for Vici, not yet proposed there |
+| Inside the Your turn bar the app uses only the tokens Vici's callout sets for itself | Vici's callout before 24 November 2026, which kept its pastel in the dark theme but left `--vc-bg-subtle` and `--vc-on-accent-soft` to the page | Play's note, the reason under a disabled action and the Next bar's hexagon vanished in the dark theme; they take `--vc-text-muted` and `--vc-bg-sunken`, and the layout check measures rendered contrast. Vici's callout now sets every token in its own ink (PR 35, from this tool), so the app's choice and Vici's agree |
+| The live-run dialog opens when a model is first needed | The brief's 5.3, where Start the agents opens it | One challenger's report reads with no request at all (AC-18), so its button reads "Read the files" and the dialog opens at Find prototype ideas; reading that calls a model opens it from Start the agents, as the brief says |
+| The free token count lives in `js/count.js`, beside the shared client | The brief's 4.1, which shares the live client | `js/anthropic.js` stays the same file in the four tools; `tests/policy.mjs` allows fetch in these two modules only |
+| Advanced holds the model (Haiku 5.5 or Sonnet 5.5) and the effort; the dialog has no language field | The brief's 5.3 | Cuts C5 and C7, approved with the plan: the analysis follows the interface's language when the run starts |
+| Save run as simulation is the live Report step's one action in 0.3.0 | PLAN.md, section 2, fix 4 (a quiet link under the downloads) | The downloads come in 0.4.0, which moves it under them |
+| Each mode keeps its own run | 0.2.0, where Back to the simulation started the scenario over | A live run costs money: switching to the simulation and back keeps both runs, and Start a new run sets a live run aside with Undo |
+| A step that failed twice lists what the checks found in English | The brief's 5.11 | The guards write their findings for the model, in English; the German page says "(auf Englisch)" beside the list |
+| The saved run has its own contract, `SavedRun` | The Scenario contract | A saved run is one language, marked "live", with the setting and cost it ran on; Victor curates it into a scenario, adds the second language and marks it "recorded" |
 | S3's annual-report excerpt comes as two PDFs, one a language | PLAN.md, section 5 | A German audience reads the German excerpt; both are built from `tools/s3-annual-report.html` and every quote is checked on its page in each |
 
 ## 10. Tests

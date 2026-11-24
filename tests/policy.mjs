@@ -124,9 +124,12 @@ const unknown = [...hosts].filter(([h, f]) => h !== "api.anthropic.com" && !LINK
 check(!unknown.length, `code names api.anthropic.com and links only${unknown.length ? `; also ${unknown.map(([h, f]) => `${h} (${f})`).join(", ")}` : ""}`);
 const fetches = [...js, ...data].flatMap((f) => [...stripComments(read(f)).matchAll(/\bfetch\(\s*([^,)]+)/g)].map((m) => `${f}: ${m[1].trim()}`));
 const okFetch = (x) => /ANTHROPIC\.(messagesUrl|modelsUrl|countTokensUrl)|\burl\b/.test(x);
-check(fetches.length > 0 && fetches.every(okFetch) && fetches.every((x) => x.startsWith("js/anthropic.js")), `only the shared client calls fetch, with the API's addresses (${fetches.length} call sites)`);
+// The shared client, and beside it the free token count, which stays out of the shared file so that file
+// remains the same in all four tools.
+check(fetches.length > 0 && fetches.every(okFetch) && fetches.every((x) => /^js\/(anthropic|count)\.js/.test(x)), `only the shared client and the token count call fetch, with the API's addresses (${fetches.length} call sites)`);
 const hrefs = [...html.matchAll(/<a\b[^>]*\shref="([^"]+)"/g)].map((m) => m[1]);
-check(hrefs.every((h) => /^https:\/\/(www\.linkedin\.com\/in\/victorpflueger|victorpflueger\.github\.io\/)/.test(h) || h.startsWith("#")), `the page links only to Victor's profiles and sites (${hrefs.length} links)`);
+// Victor's profiles and sites, and the Claude Console's keys page, which the live-run dialog names (brief §5.3).
+check(hrefs.every((h) => /^https:\/\/(www\.linkedin\.com\/in\/victorpflueger|victorpflueger\.github\.io\/|platform\.claude\.com\/settings\/keys$)/.test(h) || h.startsWith("#")), `the page links only to Victor's profiles and sites and the Console's keys page (${hrefs.length} links)`);
 check(!/github\.com\/VictorPflueger\/PrototypeIdeator/i.test(html), "the page doesn't link to its own repository");
 
 // ---- inline ----------------------------------------------------------------------------------------

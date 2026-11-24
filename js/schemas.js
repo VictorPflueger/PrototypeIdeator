@@ -226,10 +226,68 @@ const AuditEvent = closed({
   detail: { anyOf: [{ type: "null" }, { type: "object" }] }
 });
 
+/** One language filled and the other null: what a live run writes before it is curated (brief §7). */
+const oneLang = (schema) => closed({ en: { anyOf: [{ type: "null" }, schema] }, de: { anyOf: [{ type: "null" }, schema] } });
+const inLang = (schema) => closed({ en: schema, de: schema }, []);
+
+/**
+ * Save run as simulation: a live run in the scenarios' format, in the one language it ran in, with the
+ * person's choices, the engine's figures for them and what the run took. Victor curates such a file into a
+ * scenario (the second language, the checks) and marks it "recorded"; until then it plays as it is.
+ */
+const SavedRun = closed({
+  schema: { const: "pi-scenario/1" },
+  id: { const: "live" },
+  source: { const: "live" },
+  as_of: { type: "string", format: "date" },
+  language: { enum: ["en", "de"] },
+  tool: closed({ name: str, version: str, url: str }),
+  company: closed({ name: str, sector: { enum: SECTOR_IDS }, country: { type: "string", pattern: "^[A-Z]{2}$" }, fictional: { type: "boolean" } }),
+  pitch: oneLang(str),
+  count: { type: "integer", minimum: LIMITS.ideasMin, maximum: LIMITS.ideasMax },
+  focus: oneLang(str),
+  documents: {
+    type: "array", minItems: 1, maxItems: LIMITS.files,
+    items: closed({
+      id: { type: "string", pattern: "^d\\d+$" },
+      kind: { enum: ["pdf", "markdown", "text", "csv", "handoff"] },
+      tool: { enum: ["bmc", "swot", "pestel", null] },
+      name: oneLang({ type: "string", minLength: 1 }),
+      title: { type: "null" },
+      href: { type: "null" },
+      stand_in: { type: "boolean" },
+      fictional: { type: "boolean" },
+      bytes: inLang({ type: "integer", minimum: 1 }),
+      pages: { anyOf: [{ type: "null" }, inLang({ type: "integer", minimum: 1 })] }
+    })
+  },
+  files: { type: "object", additionalProperties: inLang({ type: "object" }) },
+  facts: { type: "array", maxItems: 0, items: { $ref: "#/$defs/ScenarioFact" } },
+  answers: oneLang({ $ref: "#/$defs/Answers" }),
+  choices: { $ref: "#/$defs/Choices" },
+  // The engine's figures for the choices saved, the cost estimates in the run's one language.
+  reference: { anyOf: [{ type: "null" }, { ...Reference, properties: { ...Reference.properties, cost_cents: inLang(Reference.properties.cost_cents.properties.en) } }] },
+  run: closed({
+    setting: { enum: ["fast", "balanced", "thorough", null] },
+    model: strOrNull,
+    effort: { enum: ["low", "medium", "high", null] },
+    cost_eur: { type: ["number", "null"], minimum: 0 },
+    seconds: { type: ["number", "null"], minimum: 0 },
+    // What each step took, repairs included: its requests, its tokens and its largest answer, from which a
+    // step's max_tokens is set. Tokens only; no text.
+    usage: closed(Object.fromEntries(["reader", "merges", "ideator", "writer"].map((agent) => [agent, closed({
+      requests: { type: "integer", minimum: 1 },
+      input_tokens: { type: "integer", minimum: 0 },
+      output_tokens: { type: "integer", minimum: 0 },
+      max_output_tokens: { type: "integer", minimum: 0 }
+    })])), [])
+  })
+});
+
 /** Every schema a $ref may name, by its name. */
 export const REGISTRY = Object.freeze({
   ...D,
-  Document, Quote, IssueKpi, IssueRecord, Source, Merge, IssueMap, Recommendation, BuildBrief, Choices, Answers, ScenarioDocument, ScenarioFact, Reference, Scenario, RunEvent, AuditEvent
+  Document, Quote, IssueKpi, IssueRecord, Source, Merge, IssueMap, Recommendation, BuildBrief, Choices, Answers, ScenarioDocument, ScenarioFact, Reference, Scenario, SavedRun, RunEvent, AuditEvent
 });
 
 /** The brief's section 10, name by name. */
