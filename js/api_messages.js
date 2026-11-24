@@ -4,10 +4,10 @@
 // the Sovereignty Assessment 2.0.0 (35c0dea), with the credit, model, browser and stop cases of this tool.
 // The keys stand here in full, so tests/i18n.mjs finds every one of them in use.
 
-const BUDGET = { reader: "live.budget.reader", merges: "live.budget.merges", ideator: "live.budget.ideator", writer: "live.budget.writer" };
-const FAILED = { reader: "live.failed.reader", merges: "live.failed.merges", ideator: "live.failed.ideator", writer: "live.failed.writer" };
-const DECLINED = { reader: "live.declined.reader", merges: "live.declined.merges", ideator: "live.declined.ideator", writer: "live.declined.writer" };
-const CUT = { reader: "live.cut.reader", merges: "live.cut.merges", ideator: "live.cut.ideator", writer: "live.cut.writer" };
+const BUDGET = { reader: "live.budget.reader", merges: "live.budget.merges", ideator: "live.budget.ideator", writer: "live.budget.writer", brief: "live.budget.brief" };
+const FAILED = { reader: "live.failed.reader", merges: "live.failed.merges", ideator: "live.failed.ideator", writer: "live.failed.writer", brief: "live.failed.brief" };
+const DECLINED = { reader: "live.declined.reader", merges: "live.declined.merges", ideator: "live.declined.ideator", writer: "live.declined.writer", brief: "live.declined.brief" };
+const CUT = { reader: "live.cut.reader", merges: "live.cut.merges", ideator: "live.cut.ideator", writer: "live.cut.writer", brief: "live.cut.brief" };
 
 /** True when a 400, 402 or 429 says the account has no credit left. */
 export function isCreditError(e) {

@@ -1,5 +1,6 @@
 // The scenario checker can fail (AC-06): tools/check-scenarios.mjs passes S1 to S3 as they are, and each
-// kind of defect the brief's section 7 lists, planted into a copy, fails for its own reason. Three parts,
+// kind of defect the brief's section 7 lists, planted into a copy, fails for its own reason (and, from 0.4.0,
+// a recorded build brief that touches the template or misses its counts). Three parts,
 // each with its own success token:
 //   defects    a broken schema, a missing id, a missing language, an untranslated text, placeholders
 //              that differ, prose the fact audit refuses, a figure off its frozen reference, a fact
@@ -74,7 +75,12 @@ if (want("defects")) run("scenario defects", "SCENARIO DEFECTS CAUGHT", (r) => {
     ["fact", "a fact missing from DATA_SOURCES.md", planted("s1", () => {}), { dataSources: new Map([...base.dataSources].filter(([id]) => id !== "S1-WCI")) }],
     ["fact", "a fact read on another day", planted("s2", (sc) => { sc.facts[0].read_on = "2026-11-02"; })],
     ["key", "something shaped like a key", planted("s3", (sc) => { sc.answers.en.ideas.ideas[1].data[0] = "Use sk-ant-api03-AbCdEfGhIjKlMnOpQr to call the API"; })],
-    ["thinking", "a thinking block in a recorded answer", planted("s2", (sc) => { sc.answers.en.ideas.thinking = [{ type: "thinking", thinking: "Let me weigh the ideas.", signature: "x" }]; })]
+    ["thinking", "a thinking block in a recorded answer", planted("s2", (sc) => { sc.answers.en.ideas.thinking = [{ type: "thinking", thinking: "Let me weigh the ideas.", signature: "x" }]; })],
+    ["brief", "a recorded build brief that repeats a link the template holds", planted("s1", (sc) => both(sc, (a) => { a.brief.data.push(a === sc.answers.en ? "Vici's rules at https://victorpflueger.github.io/ViciDesign/index.html" : "Vicis Regeln unter https://victorpflueger.github.io/ViciDesign/index.html"); }))],
+    ["brief", "a recorded build brief that names a skill and Phase 0", planted("s3", (sc) => both(sc, (a) => { a.brief.guardrails.push(a === sc.answers.en ? "Run /unlazy in Phase 0." : "In Phase 0 /unlazy ausführen."); }))],
+    ["brief", "a recorded build brief with one golden case", planted("s2", (sc) => both(sc, (a) => { a.brief.golden_cases.splice(1); }))],
+    ["brief", "a recorded build brief for no idea", planted("s3", (sc) => { sc.choices.brief_idea = null; })],
+    ["audit", "a number written into a build brief's prose", planted("s2", (sc) => both(sc, (a) => { a.brief.builds += a === sc.answers.en ? " It saves 40 visits a month." : " Es spart 40 Einsätze im Monat."; }))]
   ];
   for (const [kind, what, sc, extra] of cases) {
     const got = kinds(checkScenario(sc, ctx(sc, extra || {})));

@@ -101,9 +101,6 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .step-title:focus { outline: none; }
 .step-lead { margin: 0; font-size: var(--vc-font-size-lg); line-height: 1.4; color: var(--vc-text); max-width: 46ch; text-wrap: pretty; }
 .step-note { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); max-width: 52ch; }
-.version-note.vc-alert { display: flex; align-items: flex-start; gap: 10px; margin: 0; max-width: 52ch; }
-.evidence > .version-note.vc-alert { max-width: none; flex: none; }
-.version-note .vc-icon { flex: none; margin-top: 2px; }
 .challengers { display: grid; gap: 6px; }
 .challenger-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
 .challenger-links li { display: flex; align-items: center; margin: 0; }
@@ -347,20 +344,130 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .place-group { display: flex; gap: 4px; }
 .place-btn.vc-button { min-width: 2.75rem; justify-content: center; }
 
-/* ---- Report: the short version ------------------------------------------------------------------------------- */
-.report-page { display: grid; gap: 14px; max-width: 46rem; padding: 18px 22px; border: 1px solid var(--vc-border-subtle); border-radius: var(--vc-radius-md); background: var(--vc-surface); box-shadow: var(--vc-shadow-sm); }
-.report-kicker { margin: 0; font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); text-transform: uppercase; letter-spacing: var(--vc-tracking-caps); color: var(--vc-text-muted); }
-.report-headline { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; font-family: var(--vc-font-display); font-size: var(--vc-font-size-2xl); line-height: 1.15; letter-spacing: var(--vc-tracking-heading); }
-.report-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.report-stat.vc-stat { padding: 8px 10px; }
-.report-stat .vc-stat__value { font-size: var(--vc-font-size-xl); font-variant-numeric: tabular-nums; }
-.report-block { display: grid; gap: 4px; }
-.report-block p { margin: 0; line-height: 1.45; }
-.report-h { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--vc-font-size-md); font-weight: var(--vc-weight-semibold); }
-.report-picks { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
-.report-pick__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-.report-pick__head span { font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
-.report-foot { margin: 0; padding-top: 10px; border-top: 1px solid var(--vc-border-subtle); font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+/* ---- Report: the whole report beside the story, and its downloads -------------------------------------------- */
+/* The report is Vici's (.vc-report): light sheets on the evidence panel, in either theme. What follows sets
+   this tool's own parts inside it; Vici sets the pages, the cover, the headings and the print layout. */
+.report-view { display: grid; grid-template-columns: minmax(0, 1fr); padding-block: 4px 8px; }
+.pi-report { gap: 18px; grid-template-columns: minmax(0, 1fr); }
+.pi-report .vc-report__page { font-size: var(--vc-font-size-sm); line-height: 1.5; }
+.pi-report .vc-report__page p { margin: 0 0 8px; }
+.pi-report .vc-report__page > p:last-child { margin-bottom: 0; }
+.pi-report .vc-report__title { font-size: clamp(1.6rem, 1rem + 1.6vw, 2.35rem); }
+.pi-report .vc-report__brand .vc-cell { flex: none; }
+.rep-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0 !important; }
+.pi-report .ideas-comb--still { --vc-honeycomb-cell: clamp(5.5rem, 9vw, 7.5rem); margin: 22px 0 0; }
+.ideas-comb--still .comb-tile { cursor: default; }
+.comb-score { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); font-variant-numeric: tabular-nums; }
+.rep-stopped.vc-alert { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: 210mm; box-sizing: border-box; margin: 0; }
+.rep-headline { font-family: var(--vc-font-display); font-size: var(--vc-font-size-xl); line-height: 1.25; letter-spacing: var(--vc-tracking-heading); }
+.rep-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 8px; }
+.rep-stat.vc-stat { padding: 8px 10px; }
+.rep-stat .vc-stat__value { font-size: var(--vc-font-size-xl); font-variant-numeric: tabular-nums; }
+.rep-muted { color: var(--vc-text-muted); }
+.rep-sub { display: block; font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-regular); color: var(--vc-text-muted); }
+.rep-lead { color: var(--vc-text-muted); }
+.rep-note { font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+.rep-picks { margin: 0 0 8px; padding-left: 1.3em; display: grid; gap: 8px; }
+.rep-picks p { margin: 0 !important; }
+.rep-pick__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.rep-where, .rep-pattern, .rep-parked, .rep-sources { margin: 0 0 8px; padding-left: 1.3em; display: grid; gap: 3px; }
+.rep-sources { overflow-wrap: anywhere; }
+.rep-table-wrap { margin: 0 0 10px; }
+.rep-table th, .rep-table td { vertical-align: top; }
+.rep-table tr.is-pick > * { background: color-mix(in oklab, var(--vc-accent-soft) 55%, transparent); }
+.rep-map th[scope="row"], .rep-glance th[scope="row"] { min-width: 9rem; }
+.rep-issue { display: inline; font-weight: var(--vc-weight-semibold); }
+.rep-ref { margin-inline-start: 4px; font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); color: var(--vc-text-muted); white-space: nowrap; }
+.rep-a { display: inline-block; min-width: 2.2em; font-weight: var(--vc-weight-bold); font-variant-numeric: tabular-nums; }
+.rep-assumptions { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.rep-assumptions li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); }
+.rep-two { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; align-items: start; }
+.rep-chart { margin-top: 6px; }
+.rep-idea-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 12px !important; }
+.pi-report .idea-page { gap: 12px; }
+.pi-report .idea-what { font-size: var(--vc-font-size-md); }
+.pi-report .idea-facts strong { font-size: var(--vc-font-size-lg); }
+.pi-report .idea-h.idea-h { margin: 0; font-size: var(--vc-font-size-md); }
+/* The vote sheet: boxes to write in by hand, as on paper. */
+.rep-box { display: block; border: 1px solid var(--vc-border-strong); background: var(--vc-surface); }
+.rep-box--rank { width: 3rem; height: 2rem; }
+.rep-box--why { min-width: 12rem; height: 2rem; }
+.rep-box--line { height: 2rem; }
+.rep-box--lines { height: 5.5rem; }
+.rep-vote-why { width: 55%; }
+.rep-vote-lines { display: grid; gap: 10px; margin-top: 14px; }
+.rep-vote-lines p { display: grid; gap: 4px; margin: 0 !important; }
+.rep-vote-label { font-weight: var(--vc-weight-semibold); }
+.rep-byline { margin-top: 14px !important; }
+/* In the dark theme the page's chart uses dark steps; the report is paper, so it keeps the light ones. */
+html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="light"] .chart-legend { --pi-idea: var(--vc-lilac-600); --pi-pick: var(--vc-merlot-700); }
+/* The glance table: its seven columns sized for what they hold, on screen and on paper. */
+.rep-glance { table-layout: fixed; width: 100%; }
+.rep-glance th:nth-child(1) { width: 6%; }
+.rep-glance th:nth-child(2) { width: 15%; }
+.rep-glance th:nth-child(3) { width: 21%; }
+.rep-glance th:nth-child(4) { width: 31%; }
+.rep-glance th:nth-child(5) { width: 10%; }
+.rep-glance th:nth-child(6) { width: 9%; }
+.rep-glance th:nth-child(7) { width: 8%; }
+@media print {
+  .rep-stopped { display: none; }
+  /* A4 holds a page for each idea: the text a step smaller, the gaps tighter, every table whole. */
+  .pi-report .vc-report__page { font-size: 8.5pt; line-height: 1.38; }
+  .pi-report .vc-report__page:not(.vc-report__cover) > :is(h2, h3, h4, h5):first-child { font-size: 15pt; margin-bottom: 5px; }
+  .pi-report .vc-report__page :is(h3, h4, h5, h6):not(.vc-report__title) { margin: 7px 0 2px; font-size: 10pt; }
+  .pi-report .vc-report__title { font-size: 26pt; }
+  .pi-report .ideas-comb--still { --vc-honeycomb-cell: 30mm; }
+  .pi-report .vc-table { font-size: 8pt; }
+  .pi-report .vc-table :is(th, td) { padding-block: 2px; }
+  .pi-report .rating-cells .vc-rating__cell { width: 11px; height: 9.5px; }
+  .pi-report .rep-chart .score-chart { max-height: 76mm; }
+  .pi-report :is(.rep-map, .rep-glance, .rep-stability, .rep-counts, .rep-vote) { break-inside: auto; }
+  .pi-report tr { break-inside: avoid; }
+  /* On paper the short sections pair up: the issue beside what the room sees, the data beside the risks. */
+  .pi-report .idea-page { gap: 6px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pi-report .idea-page > * { grid-column: 1 / -1; }
+  .pi-report .idea-page > :is(.idea-section--answers, .idea-section--data) { grid-column: 1; }
+  .pi-report .idea-page > :is(.idea-section--room, .idea-section--risks) { grid-column: 2; }
+  .pi-report .ratings-table th[scope="row"] { width: 30%; white-space: nowrap; }
+  .pi-report .ratings-table td:nth-child(2) { width: 1%; white-space: nowrap; }
+  .pi-report .idea-section { gap: 2px; align-content: start; break-inside: avoid; }
+  .pi-report .idea-what { font-size: 9.5pt; }
+  .pi-report .idea-facts { gap: 6px; }
+  .pi-report .idea-facts p { padding: 3px 7px; gap: 0; }
+  .pi-report .idea-facts strong { font-size: 10.5pt; }
+  .pi-report .idea-how > div { padding: 1px 0; grid-template-columns: 7rem minmax(0, 1fr); }
+  .pi-report .idea-section :is(ul, ol) { gap: 1px; }
+  .rep-idea-tags { margin: -4px 0 6px !important; }
+  .rep-stats { margin: 2px 0 4px; }
+  .rep-stat.vc-stat { padding: 5px 8px; }
+}
+/* The downloads beside Save as PDF, and the hint for the print dialog. */
+.turn-downloads { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 6px; }
+.turn-hint { margin: 2px 0 0; font-size: var(--vc-font-size-xs); color: var(--vc-text-muted); }
+.save-run.vc-button { text-decoration: underline; text-underline-offset: 3px; }
+.stop-done { margin-top: 8px; padding-top: 8px; border-top: 1px solid color-mix(in oklab, currentColor 18%, transparent); }
+.stop-done__text { margin: 0; font-size: var(--vc-font-size-sm); }
+/* The HTML file and the ideas file stand above the report they come from. */
+.report-head { flex: none; }
+.report-downloads { margin-top: 0; }
+/* The brief's drawer. */
+.brief-drawer.vc-dialog--drawer { width: min(52rem, 96vw); }
+.brief-body { display: grid; gap: 14px; align-content: start; }
+.brief-lead { margin: 0; }
+.brief-ideas { margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.brief-ideas .vc-segmented { flex-wrap: wrap; }
+.brief-repo .vc-input { max-width: 26rem; font-family: var(--vc-font-mono); }
+.brief-source.vc-alert { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
+.brief-busy.vc-callout, .brief-stopped.vc-callout { margin: 0; }
+.brief-busy .vc-callout__body > * + *, .brief-stopped .vc-callout__body > * + * { margin-top: 4px; }
+.brief-problems { margin: 4px 0; padding-left: 1.2em; font-size: var(--vc-font-size-sm); }
+.brief-blocks { display: grid; gap: 14px; }
+.brief-block.vc-code { margin: 0; }
+.brief-block .vc-code__header { font-family: var(--vc-font-text); font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
+.brief-pre { max-height: 22rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--vc-font-size-xs); line-height: 1.5; }
+.brief-pre:focus-visible { outline: 2px solid var(--vc-focus); outline-offset: -2px; }
+.brief-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
 
 /* ---- Start, live: the drop zone and the fields ------------------------------------------------------------------ */
 /* The zone takes the story's free height; its file list scrolls inside it, never under the Your turn bar. */
@@ -402,7 +509,9 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .evidence[inert], .story > [inert] { opacity: 0.62; transition: opacity var(--vc-duration-base, 0.2s) ease; }
 /* When a step stops: what happened across the bar's whole width, then the one thing to do with the other
    ways on beside it, then what the checks found, folded. */
-.turn-bar--stopped.vc-callout { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.turn-bar--stopped.vc-callout, .turn-bar--inline.vc-callout { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.turn-bar--inline .turn-actions { margin-top: 6px; }
+.turn-bar--inline .cta.vc-button { --_h: 46px; }
 .turn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .turn-bar--stopped .cta.vc-button { --_h: var(--vc-control-md); --_fs: var(--vc-font-size-sm); }
 .stop-problems { margin-top: 2px; }

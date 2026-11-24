@@ -10,8 +10,8 @@
 import { checkIntake } from "./documents.js";
 import { readHandoffs } from "./handoff.js";
 import { SECTORS, kpisFor } from "../data/kpis.js";
-import { readerPrompt, readerInput, mergesPrompt, mergesInput, ideatorPrompt, ideatorInput, writerPrompt, writerInput, DEFAULT_CONSTRAINTS } from "./prompts.js";
-import { readerSchema, mergesSchema, ideasSchema, recommendationSchema } from "./schemas.js";
+import { readerPrompt, readerInput, mergesPrompt, mergesInput, ideatorPrompt, ideatorInput, writerPrompt, writerInput, briefPrompt, briefInput, DEFAULT_CONSTRAINTS } from "./prompts.js";
+import { readerSchema, mergesSchema, ideasSchema, recommendationSchema, briefSchema } from "./schemas.js";
 import { LIMITS, APP } from "./config.js";
 import { pdfTokens } from "./estimate.js";
 
@@ -198,6 +198,15 @@ export function ideatorRequest({ run, form, runLang }) {
 export function writerRequest({ run, runLang }) {
   const kept = run.issues.filter((i) => i.status === "kept");
   return { system: writerPrompt({ lang: runLang }), content: [{ type: "text", text: writerInput({ company: run.company, documents: run.documents, issues: kept, ranked: run.ranked, facts: run.facts }) }], schema: recommendationSchema() };
+}
+
+/** The Brief writer's request: the company, one idea from the Ideator, the kept issues it answers, the fact keys. */
+export function briefRequest({ run, idea, runLang }) {
+  const issues = [...new Set(idea.issues.map((id) => {
+    const i = run.issues.find((x) => x.id === id);
+    return i && i.status === "merged" ? run.issues.find((x) => x.id === i.merged_into) || i : i;
+  }).filter(Boolean))];
+  return { system: briefPrompt({ lang: runLang }), content: [{ type: "text", text: briefInput({ company: run.company, idea, issues, facts: run.facts }) }], schema: briefSchema() };
 }
 
 /**

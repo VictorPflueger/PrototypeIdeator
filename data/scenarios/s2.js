@@ -451,6 +451,47 @@ const RECOMMENDATION = {
   needed: L("Rank your top three, name who should see the demo, and say whether a synthetic fleet of connected drives is acceptable for the first build.", "Reihen Sie Ihre drei Favoriten, nennen Sie, wer die Demo sehen soll, und sagen Sie, ob eine synthetische Flotte vernetzter Antriebe für den ersten Bau in Ordnung ist.")
 };
 
+/** The Brief writer's part for the first shortlisted idea, Remote First Fix (P2), as recorded. */
+const BRIEF = {
+  builds: L(
+    "A tool for field service that reads a connected drive's condition data when an alarm comes in, names the likely fault and prepares the visit: the fix, the parts and the right technician. The dispatcher decides between a remote fix and a visit, so technicians drive out less often and arrive with the right parts.",
+    "Ein Werkzeug für den Außendienst, das bei einem Alarm die Zustandsdaten eines vernetzten Antriebs liest, den wahrscheinlichen Fehler nennt und den Einsatz vorbereitet: Lösung, Teile und den passenden Techniker. Die Disposition entscheidet zwischen Fernlösung und Einsatz, sodass Techniker seltener losfahren und mit den richtigen Teilen ankommen."),
+  steps: [
+    L("An alarm comes in from a drive in a packaging plant.", "Ein Alarm kommt von einem Antrieb in einem Verpackungswerk."),
+    L("The agent reads the drive's recent condition data and its service history.", "Der Agent liest die jüngsten Zustandsdaten des Antriebs und seine Servicehistorie."),
+    L("It ranks the likely causes and names the parts each would need.", "Er reiht die wahrscheinlichen Ursachen und nennt die Teile, die jede bräuchte."),
+    L("It proposes a remote fix or a visit, with the technician who fits.", "Er schlägt eine Fernlösung oder einen Einsatz vor, mit dem passenden Techniker."),
+    L("The dispatcher confirms, and the work order and the parts list are ready.", "Die Disposition bestätigt, und Arbeitsauftrag und Teileliste sind fertig.")
+  ],
+  key_figures: [
+    { name: L("First-time fix rate", "Erstlösungsquote"), measures: L("Visits that fix the fault without a second trip, as a share of all visits", "Einsätze, die den Fehler ohne zweite Fahrt beheben, als Anteil an allen Einsätzen") },
+    { name: L("Visits saved", "Gesparte Einsätze"), measures: L("Alarms closed with a remote fix instead of a visit", "Alarme, die mit einer Fernlösung statt eines Einsatzes erledigt sind") },
+    { name: L("Money at stake a year", "Geld im Jahr auf dem Spiel"), measures: L("What a slipping service promise puts at stake, {{fact:issue.bmc-I4.eur}} a year in the simulation", "Was ein reißendes Serviceversprechen aufs Spiel setzt, in der Simulation {{fact:issue.bmc-I4.eur}} im Jahr") }
+  ],
+  data: [
+    L("Synthetic condition data for drives, with planted faults", "Synthetische Zustandsdaten von Antrieben, mit eingebauten Fehlern"),
+    L("A synthetic parts catalogue and the stock in each van", "Ein synthetischer Teilekatalog und der Bestand in jedem Servicewagen"),
+    L("A synthetic roster of technicians with their skills and regions", "Ein synthetischer Einsatzplan der Techniker mit ihren Fähigkeiten und Regionen")
+  ],
+  tools: [
+    { name: L("Alarm watch", "Alarmwache"), does: L("Spots alarms and unusual readings from connected drives", "Nimmt Alarme und auffällige Werte vernetzter Antriebe auf") },
+    { name: L("History check", "Historienprüfung"), does: L("Checks the drive's service history and similar past faults", "Prüft die Servicehistorie des Antriebs und ähnliche frühere Fehler") },
+    { name: L("Cause ranker", "Ursachenreihung"), does: L("Ranks the likely causes and works out the parts each needs", "Reiht die wahrscheinlichen Ursachen und rechnet die Teile für jede aus") },
+    { name: L("Fix proposer", "Lösungsvorschlag"), does: L("Proposes a remote fix or a visit with the parts and the technician", "Schlägt eine Fernlösung oder einen Einsatz mit Teilen und Techniker vor") },
+    { name: L("Work order writer", "Arbeitsauftrag"), does: L("Prepares the work order and the parts list for the dispatcher", "Bereitet Arbeitsauftrag und Teileliste für die Disposition vor") }
+  ],
+  guardrails: [
+    L("Code ranks the causes from the data and shows why; the model explains the ranking in words.", "Code reiht die Ursachen aus den Daten und zeigt den Grund; das Modell erklärt die Reihung in Worten."),
+    L("The dispatcher confirms every visit and every remote fix.", "Die Disposition bestätigt jeden Einsatz und jede Fernlösung."),
+    L("The demo's fault patterns are synthetic, and the page says so.", "Die Fehlermuster der Demo sind synthetisch, und die Seite sagt das.")
+  ],
+  golden_cases: [
+    { name: L("Bearing wear", "Lagerverschleiß"), given: L("vibration up 40 % over two weeks with normal temperature, on a drive with 30,000 operating hours", "Vibration in zwei Wochen um 40 % gestiegen bei normaler Temperatur, an einem Antrieb mit 30.000 Betriebsstunden"), expect: L("bearing wear ranked first, the bearing kit as the part and a visit within a week", "Lagerverschleiß an erster Stelle, der Lagersatz als Teil und ein Einsatz innerhalb einer Woche") },
+    { name: L("Remote fix", "Fernlösung"), given: L("a parameter fault code right after a firmware update, with every reading normal", "ein Parameterfehler direkt nach einem Firmware-Update, bei normalen Werten"), expect: L("a remote fix ranked first, with no parts and no visit", "eine Fernlösung an erster Stelle, ohne Teile und ohne Einsatz") },
+    { name: L("First-time fix rate", "Erstlösungsquote"), given: L("20 visits, 17 of them closed without a second trip", "20 Einsätze, davon 17 ohne zweite Fahrt erledigt"), expect: L("a first-time fix rate of 85 %", "eine Erstlösungsquote von 85 %") }
+  ]
+};
+
 const name = (tool) => L(`${tool}-challenger-arvento-drives-2026-11-23-en.json`, `${tool}-challenger-arvento-drives-2026-11-23-de.json`);
 
 export default {
@@ -467,7 +508,7 @@ export default {
     { id: "d2", kind: "handoff", tool: "pestel", name: name("pestel"), stand_in: true, fictional: true, spec: PESTEL }
   ],
   facts: Object.values(FACTS),
-  answers: { reader: null, merges: MERGES, ideas: IDEAS, recommendation: RECOMMENDATION, brief: null },
+  answers: { reader: null, merges: MERGES, ideas: IDEAS, recommendation: RECOMMENDATION, brief: BRIEF },
   choices: {
     issues: [
       { id: "pestel-I1", action: "merge", into: "bmc-I1", reason: null },
@@ -477,7 +518,7 @@ export default {
     ],
     weights: null,
     shortlist: ["P2", "P4", "P1"],
-    brief_idea: null
+    brief_idea: "P2"
   },
   // The engine's figures along the recorded choices, frozen: tools/check-scenarios.mjs fails when a change
   // to the engine, the files, the prompts or the answers moves one (--print-reference prints them anew).

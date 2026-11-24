@@ -7,8 +7,8 @@
 
 import { ESTIMATE, PRESETS, FX_USD_EUR } from "./config.js";
 import { usageCostUsd } from "./cost.js";
-import { readerPrompt, mergesPrompt, ideatorPrompt, writerPrompt } from "./prompts.js";
-import { readerSchema, mergesSchema, ideasSchema, recommendationSchema } from "./schemas.js";
+import { readerPrompt, mergesPrompt, ideatorPrompt, writerPrompt, briefPrompt } from "./prompts.js";
+import { readerSchema, mergesSchema, ideasSchema, recommendationSchema, briefSchema } from "./schemas.js";
 
 /** Tokens of a text at about four characters a token. */
 export const tokensOf = (text) => Math.ceil(String(text ?? "").length / ESTIMATE.charsPerToken);
@@ -136,4 +136,22 @@ export function estimateLive({ reading, readerText = "", pdfPages = 0, textChars
   ];
   const long = model === "claude-haiku-5-5" && steps.some((x) => x.input[1] > 100000);
   return { steps, usd, eur: usd.map((u) => u * FX_USD_EUR), seconds, longPrompt: long };
+}
+
+/**
+ * The Brief writer's one request (brief §6.6: estimated before it runs and counted against the same cap):
+ * its real prompt, the idea's input and its schema in; the answer's expected size and the thinking
+ * allowance out. Returns what estimateLive returns, for this one step.
+ */
+export function estimateBrief({ settings, inputText = "", lang = "en" }) {
+  const model = settings.model;
+  const preset = PRESETS.find((p) => p.id === settings.preset) || PRESETS[1];
+  const thinking = settings.thinking && settings.thinking.type === "disabled" ? 0 : ESTIMATE.thinkingTokens[preset.id === "fast" ? "balanced" : preset.id] ?? 1500;
+  const input = tokensOf(briefPrompt({ lang })) + tokensOf(inputText) + tokensOf(json(briefSchema()));
+  const steps = [{ agent: "brief", input: [input, input], output: [ESTIMATE.briefOutput[0] + thinking, ESTIMATE.briefOutput[1] + thinking] }];
+  const usd = [0, 1].map((i) => usageCostUsd(model, { input_tokens: steps[0].input[i], output_tokens: steps[0].output[i] }));
+  const rate = ESTIMATE.outputTokensPerSecond[model] || ESTIMATE.outputTokensPerSecond["claude-haiku-5-5"];
+  const [slo, shi] = ESTIMATE.requestSeconds;
+  const seconds = [slo + steps[0].output[0] / rate[1], shi + steps[0].output[1] / rate[0]];
+  return { steps, usd, eur: usd.map((u) => u * FX_USD_EUR), seconds, longPrompt: false };
 }

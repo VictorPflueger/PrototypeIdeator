@@ -6,7 +6,7 @@
 //
 // 0.1.0 held the shared rules and the Ideator, which the probe (js/probe.js) sends. 0.2.0 adds the
 // Reader, its merges-only form and the Writer, so that the session-cost estimate (js/estimate.js) prices
-// the real prompts; live runs send them from 0.3.0. The Brief writer follows in 0.4.0.
+// the real prompts; live runs send them from 0.3.0. 0.4.0 adds the Brief writer.
 
 import { CRITERIA } from "./engine.js";
 
@@ -180,6 +180,38 @@ export function writerInput({ company = {}, documents = [], issues = [], ranked 
     documents: documents.map((d) => ({ name: d.name, kind: d.kind })),
     issues: issues.filter((i) => i.status === "kept").map((i) => ({ id: i.id, title: i.title })),
     ranking: ranked.map((r) => ({ id: r.id, name: r.name })),
+    facts: Object.keys(facts)
+  });
+}
+
+/** The Brief writer's system prompt: the idea's own part of a build brief; code adds the fixed parts. */
+export function briefPrompt({ lang = "en" } = {}) {
+  return `You are the Brief writer of Prototype Ideator. You write the idea's own part of a build brief, for a builder who will make this one prototype in a new Claude project.
+
+${sharedRules(lang)}
+
+Code adds the fixed parts: the design system, the byline, the talk track, the skills, the standing rules and the first phase. Never write a link to them, a skill's name or a heading.
+
+RETURN, from the idea in the input and nothing else:
+- builds: what the prototype does and for whom, in two or three sentences.
+- steps: three to seven steps the room sees, in order, one sentence each.
+- key_figures: two to four, each its name and what it measures.
+- data: the public or synthetic data it runs on, one line each.
+- tools: the agent's tools, each a short name and what it does, covering spot, check, calculate, propose and prepare.
+- guardrails: what code checks, and where a person decides.
+- golden_cases: two or three, each a name, what is given and what the build must return. Use synthetic values here: given and expect are the fields made for numbers.`;
+}
+
+/** The Brief writer's user turn: the company, the idea from the Ideator, its issues and the fact keys. */
+export function briefInput({ company = {}, idea = {}, issues = [], facts = {} } = {}) {
+  return compact({
+    company: { name: company.name || "", sector: company.sector || "", fictional: company.fictional === true },
+    idea: {
+      name: idea.name, what_it_does: idea.what_it_does, audience: idea.audience, room: idea.room, how: idea.how,
+      key_figures: (idea.key_figures || []).map((f) => ({ name: f.name, today: f.today, source: f.source, demo: f.demo })),
+      data: idea.data, risks: idea.risks
+    },
+    issues: issues.map((i) => ({ title: i.title, description: i.description || "" })),
     facts: Object.keys(facts)
   });
 }

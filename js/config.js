@@ -107,6 +107,8 @@ export const ESTIMATE = {
   // the Reader is assumed to map four to twelve issues from documents. Time: a few seconds a request plus
   // the output at an assumed rate, until Victor's first live runs measure both (TECH_NOTES §8).
   readerIssues: [4, 12],
+  // The Brief writer's answer: the idea's own part of a build brief, about 400 to 1,100 words of JSON.
+  briefOutput: [600, 1500],
   requestSeconds: [3, 8],
   outputTokensPerSecond: { "claude-haiku-5-5": [60, 150], "claude-sonnet-5-5": [30, 80], "claude-opus-5-5": [20, 50] }
 };
