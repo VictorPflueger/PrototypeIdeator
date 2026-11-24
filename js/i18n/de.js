@@ -281,7 +281,7 @@ export default {
   "read.title.done.other": "{n} Themen behalten, {merged} gebündelt, {parked} geparkt",
   "read.lead.one": "Die Bündelung ist angewendet; Behalten macht sie rückgängig. Ein geparktes Thema bleibt mit seinem Grund im Bericht.",
   "read.lead.other": "Die Bündelungen sind angewendet; Behalten macht eine rückgängig. Ein geparktes Thema bleibt mit seinem Grund im Bericht.",
-  "read.lead.none": "Behalten, bündeln oder parken Sie jedes Thema. Ein geparktes Thema bleibt mit seinem Grund im Bericht.",
+  "read.lead.none": "Jedes Thema ist zunächst behalten. Bündeln Sie eines in ein anderes, das dasselbe sagt, oder parken Sie eines, das nicht passt; ein geparktes Thema bleibt mit seinem Grund im Bericht.",
   "read.lead.done": "Die Ideen beantworten die behaltenen Themen. Ändern Sie hier eine Entscheidung, und die Zahlen folgen.",
   "read.agent.handoff.one": "Die Dateien der Challenger wurden ohne Modellaufruf gelesen. Der Leser verglich ihre Themen und schlug eine Bündelung vor.",
   "read.agent.handoff.other": "Die Dateien der Challenger wurden ohne Modellaufruf gelesen. Der Leser verglich ihre Themen und schlug {n} Bündelungen vor.",
@@ -488,6 +488,9 @@ export default {
   "p.boot.failed": "Die Seite konnte nicht starten. Laden Sie sie neu, um es noch einmal zu versuchen.",
   "p.boot.module": "Ein Teil der Seite wurde nicht geladen: {error}",
   "p.error.title": "Etwas ist schiefgelaufen",
+  "p.error.hiddenDialog": "Ein unsichtbares Fenster hat die Seite blockiert. Es ist jetzt geschlossen; klicken Sie noch einmal.",
+  "p.error.covered": "Etwas, das nicht zu dieser Seite gehört, hat Ihren Klick abgefangen, vielleicht eine Browsererweiterung. Versuchen Sie ein Fenster ohne Erweiterungen.",
+  "read.notTaken": "Ihre Wahl für „{title}“ hat nicht gegriffen. Klicken Sie noch einmal.",
 
   // ---- die Worte der Engine: Zahlen, Geld, der Satz zur Stabilität ------------------------------------
   "fact.noData": "keine Angabe",

@@ -25,6 +25,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `js/session.js` | none | New | Everything a person enters and a run makes, held in memory, with Clear everything and the leave-page warning |
 | `js/live_dialog.js` | Data Quality Agent | Adapted | Its key check with the free model list and its refusal inside a frame; Vici's live-run dialog with this tool's presets, Advanced, budget cap, warning and estimate; the key in memory only |
 | `js/api_messages.js` | Sovereignty Assessment | Adapted | Each API answer and each stop of a step as a plain message with the one thing to do next, with this tool's credit, model, browser and budget cases |
+| `js/watch.js` | none | New | A problem on screen until closed, once per message; a hidden modal dialog closed by the next press; a press caught by a layer the page didn't draw, named |
 | `js/pipeline.js`, `js/live_agents.js`, `js/live_run.js`, `js/count.js`, `js/privacy.js` | none | New | One structured request a step under the budget cap with one repair; the four agents' requests and checks; a live run in the scenarios' format and Save run as simulation; the free token count; what looks private |
 
 ## Page, languages and settings

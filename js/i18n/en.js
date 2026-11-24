@@ -281,7 +281,7 @@ export default {
   "read.title.done.other": "{n} issues kept, {merged} merged, {parked} parked",
   "read.lead.one": "The merge is applied; Keep undoes it. A parked issue stays in the report with its reason.",
   "read.lead.other": "The merges are applied; Keep undoes one. A parked issue stays in the report with its reason.",
-  "read.lead.none": "Keep, merge or park each issue. A parked issue stays in the report with its reason.",
+  "read.lead.none": "Every issue starts as kept. Merge one into another that says the same, or park one that doesn't belong; a parked issue stays in the report with its reason.",
   "read.lead.done": "The ideas answer the kept issues. Change a decision here and the figures follow.",
   "read.agent.handoff.one": "The challengers' files were read without a model call. The Reader compared their issues and proposed one merge.",
   "read.agent.handoff.other": "The challengers' files were read without a model call. The Reader compared their issues and proposed {n} merges.",
@@ -488,6 +488,9 @@ export default {
   "p.boot.failed": "The page could not start. Reload it to try again.",
   "p.boot.module": "A part of the page did not load: {error}",
   "p.error.title": "Something went wrong",
+  "p.error.hiddenDialog": "A window that couldn't be seen was blocking the page. It is closed now; click again.",
+  "p.error.covered": "Something that isn't part of this page caught your click, perhaps a browser extension lying over it. Try a window without extensions.",
+  "read.notTaken": "Your choice for “{title}” didn't take. Click once more.",
 
   // ---- the engine's words: figures, money, the stability sentence -------------------------------------
   "fact.noData": "no figure",

@@ -8,6 +8,7 @@ import { initLang, applyStatic, t } from "./i18n/index.js";
 import { installLeaveWarning } from "./session.js";
 import { redactSecrets } from "./keystore.js";
 import { APP } from "./config.js";
+import { problem, watchPresses } from "./watch.js";
 
 boot().catch((err) => {
   console.error(`[${APP.name}] Start-up failed:`, redactSecrets(String(err?.stack || err)));
@@ -36,12 +37,13 @@ async function boot() {
   const el = document.getElementById("boot");
   el.dataset.state = "done";
   setTimeout(() => el.remove(), 300);
-  // A last resort: an error the page did not expect says so on screen, with anything shaped like a key
-  // taken out.
-  const report = (message) => {
-    if (!message || message === "Script error.") return;
-    window.Vici?.toast?.({ title: t("p.error.title"), message: redactSecrets(String(message)).slice(0, 200), tone: "danger" });
+  // A last resort: an error the page did not expect says so on screen and stays until it is closed, with
+  // where it happened and anything shaped like a key taken out; a press that something else catches says so.
+  const where = () => {
+    const st = presenter.presenter?.state;
+    return st ? `${APP.version}, ${st.mode}, ${presenter.STEPS?.[st.step] || st.step}` : APP.version;
   };
-  window.addEventListener("error", (e) => report(e.message || e.error?.message));
-  window.addEventListener("unhandledrejection", (e) => { if (e.reason?.name !== "AbortError" && typeof e.reason !== "symbol") report(e.reason?.message || e.reason); });
+  window.addEventListener("error", (e) => problem(e.message || e.error?.message, where()));
+  window.addEventListener("unhandledrejection", (e) => { if (e.reason?.name !== "AbortError" && typeof e.reason !== "symbol") problem(e.reason?.message || e.reason, where()); });
+  watchPresses(document);
 }

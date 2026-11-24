@@ -1,6 +1,6 @@
 # Data sources
 
-Version 0.3.0; the facts are those of 0.2.0, read on the dates given. The three scenario companies are fictional, and so are their own figures. What a scenario says about the world (a law, a price, a market shift) is real: each fact below was read at its source on the date given, and its id is how a scenario cites it. `tools/check-scenarios.mjs` fails when a scenario cites a fact or an address that this file doesn't list. A scenario older than 90 days shows "Check for updates" beside its date.
+Version 0.3.1; the facts are those of 0.2.0, read on the dates given. The three scenario companies are fictional, and so are their own figures. What a scenario says about the world (a law, a price, a market shift) is real: each fact below was read at its source on the date given, and its id is how a scenario cites it. `tools/check-scenarios.mjs` fails when a scenario cites a fact or an address that this file doesn't list. A scenario older than 90 days shows "Check for updates" beside its date.
 
 The four tools of the set tell one story per company. The challengers' plans of 23 November 2026 settled the stories: S1's routes switch back to Suez rather than close, and S3 meets the heat plan its town must finish by the end of 2026 rather than "the end of gas heating", since the 2026 heating law allows gas heating again.
 
