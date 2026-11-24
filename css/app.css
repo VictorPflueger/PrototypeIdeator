@@ -148,14 +148,15 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .cta.vc-button { position: relative; overflow: hidden; }
 .cta::after { content: ""; position: absolute; inset: auto 0 0; height: 4px; background: currentColor; opacity: 0.55; transform: scaleX(var(--fill, 0)); transform-origin: left; pointer-events: none; }
 .vc-attention-late { box-shadow: 0 0 0 4px color-mix(in oklab, var(--vc-accent) 28%, transparent); }
-.foot-note { margin: 0; color: var(--vc-on-accent-soft); font-size: var(--vc-font-size-sm); font-variant-numeric: tabular-nums; }
+/* The notes under the action sit in the callout, which keeps its pastel in the dark theme too: they take the
+   callout's own muted ink, never a page-theme token such as --vc-on-accent-soft, which turns pale in the dark. */
+.foot-note { margin: 0; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); font-variant-numeric: tabular-nums; }
 .foot-note:empty, .turn-reason:empty { display: none; }
-.turn-reason { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-on-accent-soft); }
+.turn-reason { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
 .turn-text { margin: 0; }
 .turn-bar--next.vc-callout { background: var(--vc-surface); border-color: var(--vc-border-subtle); }
-.turn-bar--next .vc-callout__cell { background: var(--vc-bg-subtle); color: var(--vc-text-muted); }
+.turn-bar--next .vc-callout__cell { background: var(--vc-bg-sunken); color: var(--vc-text-muted); }
 .turn-bar--next .vc-callout__title, .turn-bar--next .turn-text { color: var(--vc-text); }
-.turn-bar--next .foot-note { color: var(--vc-text-muted); }
 .turn-bar--next .cta.vc-button { --vc-accent: revert-layer; }
 .cta.vc-button:disabled { cursor: not-allowed; }
 .story > .turn-bar { margin-top: auto; }
