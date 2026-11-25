@@ -638,7 +638,8 @@ try {
       res.push([b.instructions.includes("https://github.com/VictorPflueger/allowance-gapagent,") && b.instructions.includes("https://victorpflueger.github.io/allowance-gapagent/"), "the repository name goes into both of its addresses, cleaned to what GitHub allows"]);
       for (const key of ["instructions", "message"]) {
         await page.click(`#brief-copy-${key}`);
-        await page.waitForTimeout(150);
+        // Wait for the page to say it copied, not a fixed time, which a loaded machine can outlast (review B16).
+        await page.waitForFunction((want) => (document.getElementById("announce")?.textContent || "").includes(want), T.en[`brief.block.${key}`], { timeout: 5000 }).catch(() => {});
         const got = await page.evaluate(() => navigator.clipboard.readText());
         const said = await page.textContent("#announce");
         res.push([got === b[key] && said.includes(T.en[`brief.block.${key}`]), `Copy puts the ${key === "instructions" ? "project instructions" : "first message"} on the clipboard, word for word, and says so`]);

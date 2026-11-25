@@ -31,6 +31,12 @@ export function hexPoints(x, y, r) {
 }
 
 /**
+ * The longest word of a name, split at spaces and hyphens: a cell steps its font down for a long one, so
+ * "Vulnerability" or "Leercontainer" stays whole where no hyphenation dictionary breaks it (review B7).
+ */
+const longWord = (name) => Math.max(0, ...String(name ?? "").split(/[\s\-\u2010\u2011]+/u).map((w) => w.length));
+
+/**
  * The honeycomb: a list of hexagon cells, one per idea, each a button that opens the idea's page.
  * ideas: [{ id, name }]; picks: ids of the shortlist (their cells carry their place); onOpen(id). still:
  * for the report, cells that are text, not buttons, each with its score (scores: id → score in words).
@@ -47,7 +53,7 @@ export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = n
       const place = picks.indexOf(idea.id);
       const inner = [
         place >= 0 ? h("span", { class: "comb-place" }, t("short.place", { n: place + 1 }, lang)) : null,
-        h("span", { class: "comb-name" }, idea.name),
+        h("span", { class: ["comb-name", longWord(idea.name) >= 15 ? "comb-name--longer" : longWord(idea.name) >= 12 ? "comb-name--long" : ""] }, idea.name),
         scores && scores[idea.id] ? h("span", { class: "comb-score" }, scores[idea.id]) : null
       ];
       const tone = ["vc-tile", place >= 0 ? "vc-tile--merlot comb-tile--pick" : "vc-tile--lilac", "comb-tile"];

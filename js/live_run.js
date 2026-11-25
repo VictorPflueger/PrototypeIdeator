@@ -211,8 +211,9 @@ export function briefRequest({ run, idea, runLang }) {
 
 /**
  * Save run as simulation: the run in the scenarios' format, in its one language, with the person's choices
- * and the engine's figures as its reference. No key, no prompt, no thinking and no document text: the
- * challengers' files stay (they are the Reader's input), PDFs and text files are named only.
+ * and the engine's figures as its reference. No key, no prompt, no thinking and no document text beyond the
+ * Reader's quotes of up to 150 characters each, which its issues cite: the challengers' files stay (they are
+ * the Reader's input), PDFs and text files are named only (review A13).
  */
 export function savedRun(sc, { decisions, weights, picks, reference, settings, cost, timing, byAgent = {} }) {
   const usage = Object.fromEntries(Object.entries(byAgent).map(([agent, a]) => [agent, { requests: a.requests, input_tokens: a.input_tokens, output_tokens: a.output_tokens, max_output_tokens: a.max_output_tokens }]));

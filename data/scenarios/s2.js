@@ -522,5 +522,5 @@ export default {
   },
   // The engine's figures along the recorded choices, frozen: tools/check-scenarios.mjs fails when a change
   // to the engine, the files, the prompts or the answers moves one (--print-reference prints them anew).
-  reference: {at_stake: {eur: 6500000, stated: 7, of: 7}, kept: 7, covered: {covered: 6, of: 7}, ideas: 6, order: ["P2", "P4", "P1", "P3", "P5", "P6"], top: {id: "P2", score: 4.55}, firsts: {P1: 0, P2: 8, P3: 0, P4: 1, P5: 0, P6: 0}, shortlist_share: 0.425, cost_cents: {en: {fast: [0, 0], balanced: [0, 0], thorough: [8, 8]}, de: {fast: [0, 0], balanced: [0, 0], thorough: [8, 8]}}}
+  reference: {at_stake: {eur: 6500000, stated: 7, of: 7}, kept: 7, covered: {covered: 6, of: 7}, ideas: 6, order: ["P2", "P4", "P1", "P3", "P5", "P6"], top: {id: "P2", score: 4.55}, firsts: {P1: 0, P2: 8, P3: 0, P4: 1, P5: 0, P6: 0}, shortlist_share: 0.425, cost_cents: {en: {fast: [0, 0], balanced: [0, 0], thorough: [9, 9]}, de: {fast: [0, 0], balanced: [0, 0], thorough: [10, 10]}}}
 };

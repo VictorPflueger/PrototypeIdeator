@@ -5,10 +5,10 @@
 
 import { h } from "../dom.js";
 import { t } from "../i18n/index.js";
-import { fmtScore, fmtEur, fmtInt, fmtShare } from "../format.js";
+import { fmtScore, fmtEurRun, fmtInt, fmtShare } from "../format.js";
 import { CRITERIA, WEIGHT_RULE, DEFAULT_WEIGHTS, normaliseWeights, weightProblems } from "../engine.js";
 import { scoreChart } from "../charts.js";
-import { heading, turnBar, storyPanel, evidencePanel } from "./common.js";
+import { heading, turnBar, storyPanel, evidencePanel, aiNote } from "./common.js";
 
 /** The seven sliders. weights: the weights in use; draft: what the sliders show (may be all zero). */
 export function weightSliders({ weights, draft, onChange, lang }) {
@@ -18,7 +18,9 @@ export function weightSliders({ weights, draft, onChange, lang }) {
   return h("div", { class: "weights", id: "weights" },
     h("div", { class: "weights-grid" }, CRITERIA.map((c) => {
       const id = `w-${c}`;
-      const out = h("output", { for: id, class: "weight-out" }, `${draft[c]} %`, total !== 100 && shares ? h("span", { class: "weight-share" }, t("score.share", { share: fmtShare(shares[c], lang) })) : null);
+      // Not tied to the slider with for=: Vici's slider script would write the bare value into it and drop
+      // the % and the share (review B4); the slider's aria-valuetext says the value.
+      const out = h("output", { class: "weight-out", id: `${id}-out` }, `${draft[c]} %`, total !== 100 && shares ? h("span", { class: "weight-share" }, t("score.share", { share: fmtShare(shares[c], lang) })) : null);
       // While a slider moves, only its own figure changes; the ranking follows when it is let go (change),
       // so a drag is never cut short by the step drawing itself again.
       return h("div", { class: "vc-field weight-field" },
@@ -59,7 +61,7 @@ export function scoreTable(run, { picks = [], lang, onOpen }) {
           CRITERIA.map((c) => h("td", { class: "vc-num crit-col" }, String(idea.ratings[c].score))),
           h("td", { class: "vc-num score-value" }, h("strong", {}, fmtScore(r.value, lang))),
           h("td", { class: "vc-num wide-col" }, t("score.days", { low: fmtInt(idea.effort_days.low, lang), high: fmtInt(idea.effort_days.high, lang) })),
-          h("td", { class: "vc-num wide-col" }, fmtEur(run.facts[`idea.${r.id}.cost`]?.value, lang)));
+          h("td", { class: "vc-num wide-col" }, fmtEurRun(run.facts[`idea.${r.id}.cost`]?.value, lang)));
       }))));
 }
 
@@ -116,5 +118,8 @@ export function renderScore(ctx) {
       h("div", { class: "panel-head" }, h("h2", { class: "panel-title", id: "evidence-title" }, t("score.panel")), switcher),
       view === "chart" ? scoreChart(rows, { picks })
         : view === "table" ? scoreTable(run, { picks, lang, onOpen: ctx.onOpen })
-          : stabilityTable(run, lang)));
+          : stabilityTable(run, lang),
+      // The ratings and the person-days are the Ideator's; code works the rest out from them (review A8). The
+      // chart's axis says so in its own words, where a note under it would leave the panel at 1280 × 720.
+      view === "table" ? aiNote(t("score.aiNote")) : null));
 }

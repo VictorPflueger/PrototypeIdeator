@@ -5,17 +5,26 @@
 // the step; what is done stays done. Code computes every figure; the meter prices each response's usage.
 //
 // Budget cap (brief §5.5): before every request its worst case is worked out, the input at the input price
-// plus max_tokens at the output price. When the spend so far plus the worst case would pass the cap, the
-// request drops to its step's smallest max_tokens; when even that does not fit, the run stops before the
-// request and says after which step. No run sends more requests than its steps and their repairs.
+// plus max_tokens at the output price. The input is counted by Anthropic's free token count (js/count.js)
+// with a margin, and taken at a cautious ratio when the count fails (CAP_INPUT in js/config.js). When the
+// spend so far plus the worst case would pass the cap, the request drops to its step's smallest max_tokens;
+// when even that does not fit, the run stops before the request and says after which step. No run sends
+// more requests than its steps and their repairs; the counts are free and are not requests to a model.
 //
 // Nothing here touches storage, the DOM or the console; the key is read from js/keystore.js at the moment
 // a request goes out and goes nowhere but api.anthropic.com.
 
 import { streamMessage, withRetry } from "./anthropic.js";
+import { countTokens } from "./count.js";
 import { usageCostUsd, normalizeUsage } from "./cost.js";
-import { AGENT_TOKENS, PRESETS, DEFAULT_PRESET, FX_USD_EUR, EFFORTS, MODELS, ESTIMATE } from "./config.js";
+import { AGENT_TOKENS, PRESETS, DEFAULT_PRESET, FX_USD_EUR, EFFORTS, MODELS, CAP_INPUT } from "./config.js";
 import { validate, describeErrors } from "./schema.js";
+
+function abortError() {
+  const e = new Error("Aborted");
+  e.name = "AbortError";
+  return e;
+}
 
 /** The run stopped before a request whose worst case would pass the cap. */
 export class BudgetStop extends Error {
@@ -66,15 +75,40 @@ export function requestOf({ settings, system, content, schema, maxTokens, histor
 }
 
 /**
- * A request's input tokens: its texts at about four characters a token and its schema, plus a PDF's tokens,
- * counted by the free endpoint in a live run or by Anthropic's rule (pdfTokens).
+ * Tokens of a text at the cautious ratio: two characters a token for plain ASCII, one token for every other
+ * character (CAP_INPUT). More than Anthropic's glossary gives for English text on the 5.5 models.
+ */
+export function cautiousTokensOf(text) {
+  const s = String(text ?? "");
+  let ascii = 0;
+  for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) < 0x80) ascii += 1;
+  return Math.ceil(ascii / CAP_INPUT.asciiCharsPerToken + (s.length - ascii) / CAP_INPUT.otherCharsPerToken);
+}
+
+/** The output schema's tokens at the cautious ratio: what the cap adds to a count that leaves it out. */
+export const schemaTokensOf = (body) => cautiousTokensOf(JSON.stringify(body.output_config?.format?.schema || {}));
+
+/**
+ * A request's input tokens when the count fails: the system prompt, the schema and every text block at the
+ * cautious ratio, a few tokens a message for its frame, plus the PDFs' tokens at Anthropic's rule's high end
+ * (pdfTokens).
  */
 export function inputTokensOf(body, { pdfTokens = 0 } = {}) {
-  let chars = String(body.system || "").length + JSON.stringify(body.output_config?.format?.schema || {}).length;
+  let tokens = cautiousTokensOf(body.system) + schemaTokensOf(body);
   for (const m of body.messages || []) {
-    for (const b of Array.isArray(m.content) ? m.content : [{ type: "text", text: m.content }]) if (b.type === "text") chars += String(b.text || "").length;
+    tokens += CAP_INPUT.messageTokens;
+    for (const b of Array.isArray(m.content) ? m.content : [{ type: "text", text: m.content }]) if (b.type === "text") tokens += cautiousTokensOf(b.text);
   }
-  return Math.ceil(chars / ESTIMATE.charsPerToken) + pdfTokens;
+  return tokens + pdfTokens;
+}
+
+/**
+ * The input the budget check reckons with: the free count with its margin and the schema at the cautious
+ * ratio, or, when the count failed (counted null), the whole request at the cautious ratio.
+ */
+export function checkedInputTokens(body, counted, { pdfTokens = 0 } = {}) {
+  if (Number.isFinite(counted) && counted > 0) return Math.ceil(counted * (1 + CAP_INPUT.countMargin)) + CAP_INPUT.countMarginTokens + schemaTokensOf(body);
+  return inputTokensOf(body, { pdfTokens });
 }
 
 /** A request's worst case in euros: its input at the input price plus max_tokens at the output price. */
@@ -91,9 +125,17 @@ export function worstCaseEur(model, inputTokens, maxTokens) {
 export function createMeter(model, capEur) {
   const totals = { usd: 0, requests: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, web_searches: 0 };
   const byAgent = {};
+  // What a stream that broke off may have cost: Anthropic's pages don't say whether it is billed, so the cap
+  // holds its worst case as spent (review A15). The tiles and the report show the billed usage only.
+  let held = 0;
   return {
     model,
     capEur,
+    /** A broken stream's worst case, held against the cap. */
+    hold(eur) { held += Math.max(0, Number(eur) || 0); },
+    heldEur() { return held; },
+    /** What the cap counts as spent: the billed usage and what broken streams may have cost. */
+    reservedEur() { return totals.usd * FX_USD_EUR + held; },
     add(usage, agent = null, at = this.model) {
       const u = normalizeUsage(usage);
       const usd = usageCostUsd(at, usage);
@@ -121,7 +163,7 @@ export function createMeter(model, capEur) {
       this.model = m;
     },
     spentEur() { return totals.usd * FX_USD_EUR; },
-    snapshot() { return { ...totals, eur: totals.usd * FX_USD_EUR, capEur: this.capEur, model: this.model, byAgent: JSON.parse(JSON.stringify(byAgent)) }; }
+    snapshot() { return { ...totals, eur: totals.usd * FX_USD_EUR, heldEur: held, capEur: this.capEur, model: this.model, byAgent: JSON.parse(JSON.stringify(byAgent)) }; }
   };
 }
 
@@ -160,6 +202,9 @@ export function repairText({ read = null, schemaErrors = [], refusals = [], audi
   return `Your answer has these problems:\n${lines.map((l) => `- ${l}`).join("\n")}\nReturn the whole answer again, corrected, in the same JSON shape.`;
 }
 
+/** The free token count, as the pipeline uses it: the request's input tokens, or null when it fails. */
+const defaultCount = ({ key, body, signal }) => countTokens({ key, body, signal });
+
 /** The shared client's call, as the pipeline uses it; tests pass their own. */
 async function defaultSend({ key, body, signal, onText, onRetry }) {
   const started = performance.now();
@@ -170,11 +215,13 @@ async function defaultSend({ key, body, signal, onText, onRetry }) {
 /**
  * One agent's step. agent: reader, merges, ideator, writer or brief (AGENT_TOKENS names its max_tokens);
  * content: the user turn's blocks; check(answer, { attempt }): { refusals: [text], audit: [{ where, tokens, unknownFacts }] } from the
- * step's guards; pdfTokens: the PDFs' input tokens (counted, or the rule's high end). onEvent gets
- * { type: request | text | retry | answer | repair, … }. Returns { answer, unchecked (paths the fact audit
- * refused twice), repaired, ms, maxTokens }. Throws BudgetStop, StepFailed, an ApiError or an AbortError.
+ * step's guards; pdfTokens: the PDFs' input tokens at Anthropic's rule's high end, which the cap takes when
+ * the free count fails. Every attempt's input is counted first (count, free; tests pass their own). onEvent
+ * gets { type: counting | request | text | retry | answer | repair, … }. Returns { answer, unchecked (paths
+ * the fact audit refused twice), repaired, ms, maxTokens }. Throws BudgetStop, StepFailed, an ApiError or an
+ * AbortError.
  */
-export async function runStep({ agent, key, settings, system, content, schema, check = () => ({ refusals: [], audit: [] }), meter, signal, pdfTokens = 0, onEvent = () => {}, send = defaultSend }) {
+export async function runStep({ agent, key, settings, system, content, schema, check = () => ({ refusals: [], audit: [] }), meter, signal, pdfTokens = 0, onEvent = () => {}, send = defaultSend, count = defaultCount }) {
   const limits = AGENT_TOKENS[agent];
   if (!limits) throw new Error(`No output limits for the agent "${agent}"`);
   let history = [];
@@ -182,17 +229,29 @@ export async function runStep({ agent, key, settings, system, content, schema, c
   let maxTokensUsed = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
     const probe = requestOf({ settings, system, content, schema, maxTokens: limits.max, history });
-    const inputTokens = inputTokensOf(probe, { pdfTokens });
-    const fit = fitToCap({ model: settings.model, inputTokens, limits, spentEur: meter.spentEur(), capEur: meter.capEur });
+    onEvent({ type: "counting", agent, attempt, pdf: pdfTokens > 0 });
+    const counted = await count({ key, body: probe, signal });
+    if (signal?.aborted) throw abortError();
+    const inputTokens = checkedInputTokens(probe, counted, { pdfTokens });
+    const reserved = () => (meter.reservedEur ? meter.reservedEur() : meter.spentEur());
+    const fit = fitToCap({ model: settings.model, inputTokens, limits, spentEur: reserved(), capEur: meter.capEur });
     if (fit.maxTokens === null) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur });
     const body = { ...probe, max_tokens: fit.maxTokens };
     maxTokensUsed = fit.maxTokens;
-    onEvent({ type: "request", agent, attempt, maxTokens: fit.maxTokens, inputTokens, worstEur: fit.worstEur, repair: attempt > 1 });
+    onEvent({ type: "request", agent, attempt, maxTokens: fit.maxTokens, inputTokens, counted: Number.isFinite(counted) && counted > 0, worstEur: fit.worstEur, repair: attempt > 1 });
     let chars = 0;
     const { message, ms } = await send({
       key, body, signal,
       onText: (_i, text) => { if (text.length - chars >= 200) { chars = text.length; onEvent({ type: "text", agent, chars }); } },
-      onRetry: ({ attempt: n, waitMs, error }) => onEvent({ type: "retry", agent, attempt: n, waitMs, status: error?.status ?? 0, errorType: error?.type || "" })
+      onRetry: ({ attempt: n, waitMs, error }) => {
+        // A stream that broke off may have been billed up to its worst case: the cap holds that, and the
+        // request goes again only if its worst case still fits beside it (review A15).
+        if (error?.midStream && meter.hold) {
+          meter.hold(fit.worstEur);
+          if (reserved() + fit.worstEur > meter.capEur + 1e-12) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur });
+        }
+        onEvent({ type: "retry", agent, attempt: n, waitMs, status: error?.status ?? 0, errorType: error?.type || "" });
+      }
     });
     totalMs += ms;
     meter.add(message.usage, agent, settings.model);

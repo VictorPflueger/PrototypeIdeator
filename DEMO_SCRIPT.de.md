@@ -7,21 +7,22 @@ dieselben. Das englische Skript steht in DEMO_SCRIPT.md.
 ## Vor dem Start
 
 - Öffnen Sie die Seite in einem neuen Tab, im Vollbild, bei 1920 × 1080 oder 1280 × 720, und schalten Sie
-  oben auf DE. *So funktioniert's* öffnet sich von selbst; `?lang=de&guide=present` öffnet ihn gleich beim
-  Vortragstext.
-- Schließen Sie den Leitfaden mit **Starten**. Drücken Sie **Abspielen**, oder blättern Sie mit der
-  Pfeiltaste nach rechts oder einem Presenter: Abspielen hält, wo Sie handeln, und die Leertaste pausiert,
-  während Sie sprechen.
+  oben auf DE. *So funktioniert's* öffnet sich von selbst beim ersten Kapitel; `?lang=de&guide=present`
+  öffnet ihn gleich beim Vortragstext, der mit **Starten** endet.
+- Schließen Sie den Leitfaden mit × oder seinem **Starten**. Auf der Seite beginnt **Starten** den Lauf
+  und startet das Abspielen: Es geht die Schritte durch und hält, wo Sie handeln; öffnen Sie eine Idee
+  oder die Gewichte, wartet es auf Sie. Die Leertaste pausiert, während Sie sprechen; die Pfeiltaste nach
+  rechts oder ein Presenter blättert weiter.
 - Ein Schlüssel ist nicht nötig. Die Simulation ruft kein Modell auf und erreicht keine andere Seite.
 
 ## Die fünf Minuten
 
 | Zeit | Schritt | Sagen | Tun und zeigen |
 | --- | --- | --- | --- |
-| 1 min | Auf die Kennzahlen zeigen | „Bevor etwas läuft, sagen die Kennzahlen, was für Tidewell Lines auf dem Spiel steht: 10,8 Mio. € im Jahr.“ | Zeigen Sie auf die vier Kacheln: 10,8 Mio. € bei 7 von 8 behaltenen Themen, 8 von 8 abgedeckte Themen, ein bester Wert von 4,70 und unter 0,01 € für den Lauf. Klicken Sie **Starten**. |
+| 1 min | Auf die Kennzahlen zeigen | „Bevor etwas läuft, sagen die Kennzahlen, was für Tidewell Lines auf dem Spiel steht: 10,8 Mio. € im Jahr.“ | Zeigen Sie auf die vier Kacheln: 10,8 Mio. € bei 7 von 8 behaltenen Themen, 8 von 8 abgedeckte Themen, ein bester Wert von 4,70 und ≈ 0,01 € für den Lauf. Klicken Sie **Starten**. |
 | 1 min | Lesen: drei Berichte zu einer Reederei | „Drei Challenger haben dasselbe Unternehmen geprüft. Der Leser hat die Emissionskosten gebündelt, die alle drei nennen, und Sie behalten, bündeln oder parken jedes Thema.“ | Zwölf Themen. Zeigen Sie die Emissionsthemen, gebündelt unter dem ersten, jede Bündelung mit ihrem Grund in Lila. Klicken Sie **Ideen finden**. |
-| 1,5 min | Ideen: eine Idee öffnen | „Jede Zelle ist ein Prototyp, gebunden an ein Thema und seine Kennzahlen. Hier ist Zertifikatslücken-Agent: was der Raum sähe und wie sein Agent arbeitet, während ein Mensch entscheidet.“ | Acht Zellen. Öffnen Sie Zertifikatslücken-Agent: ein Wert von 4,70, 8 bis 12 Personentage, 0,02 € je Live-Lauf, die fünf Schritte des Agenten und die Entscheidung des Menschen. Schließen Sie die Seite, dann **Weiter: Ideen bewerten**. |
-| 1 min | Bewerten: ein Gewicht ändern | „Gewichten Sie den Nutzen höher und sehen Sie auf die Reihenfolge. Zertifikatslücken-Agent bleibt in 9 von 9 Rangfolgen vorn.“ | Klicken Sie **Gewichte ändern** und setzen Sie den geschäftlichen Nutzen auf 30 %: Spot-Sofortangebot fällt vom vierten auf den sechsten Platz, der beste Wert steigt auf 4,73, und der Titel sagt weiter 9 von 9. Klicken Sie **Weiter: die Auswahl**. |
+| 1,5 min | Ideen: eine Idee öffnen | „Jede Zelle ist ein Prototyp, gebunden an ein Thema und seine Kennzahlen. Hier die erste Idee, Zertifikatslücken-Agent: was der Raum sähe und wie ihr Agent arbeitet, während ein Mensch entscheidet.“ | Acht Zellen. Öffnen Sie Zertifikatslücken-Agent: ein Wert von 4,70, 8 bis 12 Personentage, 0,025 € je Live-Lauf, die fünf Schritte des Agenten und die Entscheidung des Menschen. Schließen Sie die Seite, dann **Weiter: Ideen bewerten**. |
+| 1 min | Bewerten: ein Gewicht ändern | „Gewichten Sie den Nutzen höher und achten Sie auf die Reihenfolge. Zertifikatslücken-Agent bleibt in 9 von 9 Rangfolgen vorn.“ | Klicken Sie **Gewichte ändern** und setzen Sie den geschäftlichen Nutzen auf 30 %: Spot-Sofortangebot fällt vom vierten auf den sechsten Platz, der beste Wert steigt auf 4,73, und der Titel sagt weiter 9 von 9. Klicken Sie **Weiter: die Auswahl**. |
 | 0,5 min | Auswahl, Bericht und Briefing | „Sie reihen Ihre drei Favoriten, und der Bericht ist bereit zum Drucken für den Raum. Ein Klick macht aus der ersten Wahl ein Bau-Briefing für ein neues Claude-Projekt.“ | Die ersten drei sind vorgewählt; klicken Sie **Bericht schreiben**. Die Kachel sagt jetzt, dass Ihre Auswahl 63 % dessen beantwortet, was auf dem Spiel steht. Klicken Sie **Als PDF speichern** und wählen Sie *Als PDF speichern* als Drucker, dann **Bau-Briefing schreiben** und **Kopieren**. |
 
 ## Wenn etwas schiefgeht
@@ -51,7 +52,7 @@ Rangfolge neunmal und berechnet jede Kennzahl. Eine Faktenprüfung weist jede an
 der Agenten zurück.
 
 **Was kostet ein Lauf?** Eine Wiedergabe kostet nichts. Ein Live-Lauf dieser drei Berichte kostet
-geschätzt unter 0,01 € mit der Einstellung Ausgewogen und rund 0,09 € mit Gründlich. Mit **Live
+geschätzt rund 0,01 € mit der Einstellung Ausgewogen und rund 0,11 € mit Gründlich. Mit **Live
 starten** lesen die Agenten Ihre Dokumente mit Ihrem eigenen Claude-Schlüssel, bis zu einem Kostenlimit,
 das Sie setzen.
 

@@ -1,7 +1,8 @@
 // Numbers, money and dates through Intl, in the active language (en-GB or de-DE): scores to two decimals
 // ("4.75", "4,75"), the cost meter and the live-run estimates in euros with cents ("€0.30", "0,30 €"),
-// money at stake in short form ("€2.8m", "2,8 Mio. €") and as a range ("€2.0m–€6.0m", "2,0–6,0 Mio. €"),
-// shares as whole percentages and dates with the month written out. Computed values stay at full
+// one live run of a prototype to a tenth of a cent below €0.10 ("€0.004"), money at stake in short form
+// ("€2.8m", "2,8 Mio. €") and as a range ("€2.0m–€6.0m", "2,0–6,0 Mio. €"), shares as whole percentages
+// with a no-break space ("63 %") and dates with the month written out. Computed values stay at full
 // precision; only these functions round, for display. Adapted from the Sovereignty Assessment 2.0.0
 // (35c0dea): its Intl cache, no-data rule, shares, whole numbers and dates stay; scores get two decimals.
 // Money at stake takes the money format of js/risk.js, which the SWOT Challenger published first and the
@@ -28,14 +29,38 @@ export function fmtScore(value, lang = getLang()) {
   return has(value) ? nf(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value)) : noData(lang);
 }
 
-/** A share as a whole percentage: "92%" in English, "92 %" in German. */
+/**
+ * A share as a whole percentage with a no-break space before the sign, as Vici's writing rule asks in both
+ * languages: "92 %" (review B13; Intl writes "92%" in English).
+ */
 export function fmtShare(value, lang = getLang()) {
-  return has(value) ? nf(lang, { style: "percent", maximumFractionDigits: 0 }).format(Number(value)) : noData(lang);
+  return has(value) ? nf(lang, { style: "percent", maximumFractionDigits: 0 }).format(Number(value)).replace(/(\d)\s?%/u, "$1\u00a0%") : noData(lang);
 }
 
 /** A whole number with the language's grouping: 1,122 or 1.122. */
 export function fmtInt(value, lang = getLang()) {
   return has(value) ? nf(lang, { maximumFractionDigits: 0 }).format(Math.round(Number(value))) : noData(lang);
+}
+
+/**
+ * One live run of a proposed prototype, as Victor's rule prices it: to a tenth of a cent below €0.10
+ * ("€0.004", "€0.025"), else cents. A per-run figure in cents read "€0.00" for a cheap idea, which looked
+ * free, and didn't multiply to its twenty runs (review B3); runShown gives the number shown, which "Twenty
+ * runs" multiplies. Below a twentieth of a cent it says "under €0.001".
+ */
+export function fmtEurRun(value, lang = getLang()) {
+  if (!has(value)) return noData(lang);
+  const v = Number(value);
+  const eur = (x, digits) => nf(lang, { style: "currency", currency: "EUR", minimumFractionDigits: digits, maximumFractionDigits: digits }).format(x);
+  if (v > 0 && v < 0.0005) return t("kpi.cost.under", { amount: eur(0.001, 3) }, lang);
+  return eur(v, v < 0.1 ? 3 : 2);
+}
+
+/** The per-run figure as fmtEurRun shows it, as a number: what "Twenty runs" multiplies. */
+export function runShown(value) {
+  const v = Number(value);
+  if (!Number.isFinite(v)) return null;
+  return v < 0.1 ? Math.round(v * 1000) / 1000 : Math.round(v * 100) / 100;
 }
 
 /** Euros with cents, for the cost meter and the live-run estimates: "€0.30" or "0,30 €". */

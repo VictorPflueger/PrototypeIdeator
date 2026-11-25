@@ -2,14 +2,16 @@
 // Messages API answered by tests/lib/fake-claude.mjs, every other outside host refused. Shared by the live
 // suite and the page suite's layout of the live screens, so both drive the page the same way.
 import { CORS } from "./harness.mjs";
-import { modelsFor } from "./fake-claude.mjs";
+import { modelsFor, standInTokens } from "./fake-claude.mjs";
 
 const HEADERS = { ...CORS, "access-control-allow-headers": "*", "access-control-allow-methods": "*" };
 
 /**
- * Routes a Playwright context. fake: createFakeClaude(...); models(key): the model list's answer; count: the
- * token count's answer; hold(n): ms to hold the n-th Messages answer; fail(n): true to fail the n-th request
- * at the network. Returns net: every outside request but the browser's preflights, in order.
+ * Routes a Playwright context. fake: createFakeClaude(...); models(key): the model list's answer; count: a
+ * PDF's tokens in the free token count, which answers the stand-in's count of the request's texts plus that
+ * for each document (or a function (req) giving the whole answer, or null for a count that fails);
+ * hold(n): ms to hold the n-th Messages answer; fail(n): true to fail the n-th request at the network.
+ * Returns net: every outside request but the browser's preflights, in order.
  */
 export async function routeStandIn(context, fake, { models = null, count = 9000, hold = null, fail = null } = {}) {
   const net = [];
@@ -23,7 +25,12 @@ export async function routeStandIn(context, fake, { models = null, count = 9000,
       const m = (models || modelsFor)(req.headers()["x-api-key"]);
       return route.fulfill({ status: m.status, headers: { ...HEADERS, "content-type": "application/json" }, body: JSON.stringify(m.body) });
     }
-    if (url.includes("/v1/messages/count_tokens")) return route.fulfill({ status: 200, headers: { ...HEADERS, "content-type": "application/json" }, body: JSON.stringify({ input_tokens: count }) });
+    if (url.includes("/v1/messages/count_tokens")) {
+      const body = JSON.parse(req.postData() || "{}");
+      const n = typeof count === "function" ? count(body) : count === null ? null : standInTokens(body, { docTokens: count });
+      if (n === null) return route.fulfill({ status: 500, headers: { ...HEADERS, "content-type": "application/json" }, body: JSON.stringify({ type: "error", error: { type: "api_error", message: "count failed" } }) });
+      return route.fulfill({ status: 200, headers: { ...HEADERS, "content-type": "application/json" }, body: JSON.stringify({ input_tokens: n }) });
+    }
     if (url.includes("/v1/messages")) {
       const n = fake.requests.length + 1;
       if (fail && fail(n)) { fake.requests.push({ req: JSON.parse(req.postData()), headers: req.headers(), failed: true }); return route.abort("failed"); }

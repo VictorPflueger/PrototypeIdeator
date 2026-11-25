@@ -23,7 +23,7 @@ The app needs none of this: it is static files. The suites run on Node.js 22 wit
 | `guards` | Node | The Reader's, the merges agent's, the Ideator's and the Writer's guards, each on a good answer for Tidewell Lines and on copies with one rule broken each |
 | `pipeline` | Node | The live pipeline against the stand-in through a stubbed fetch: each preset's model, effort and thinking; one repair, a second failure that stops, a text refused twice marked unchecked; the budget cap's drop to a step's minimum and its stop before a request; the meter to 1e-9; retries after 1.5 s and 4 s or retry-after; Stop; every error's message and what to do next (AC-08 to AC-10) |
 | `privacy` | Node | What a live run warns about: e-mail addresses, phone numbers, valid IBANs and the keywords found and named by kind, never repeated, and clean text, dates, amounts and standards left alone (AC-11) |
-| `prompts` | Node | The Ideator's prompt and input: the shared rules, the rubric, the criteria, the cap, about 700 tokens; the stock words equal Vici's list |
+| `prompts` | Node | The Ideator's prompt and input: the shared rules, the rubric, the criteria, the cap, under 3,040 characters (about 1,100 tokens); the stock words equal Vici's list |
 | `probe` | Node | The Ideator probe against a scripted stand-in: each preset's request, the checks, the ranking, the cost, the errors, and the key in no result |
 | `parity` | Node | The shared parts equal every sibling's copy beside the repository (`SIBLINGS_DIR`, or `../BMC-challenger` and so on) |
 | `hygiene` | Node | No private term and no e-mail address in any file the repository publishes (below) |

@@ -6,7 +6,7 @@
 
 import { h } from "../dom.js";
 import { t, tn } from "../i18n/index.js";
-import { fmtScore, fmtEur, fmtInt } from "../format.js";
+import { fmtScore, fmtEurRun, fmtInt } from "../format.js";
 import { renderFacts } from "../facts.js";
 import { CRITERIA } from "../engine.js";
 import { honeycomb } from "../charts.js";
@@ -42,7 +42,7 @@ export function ideaPage(idea, { run, lang, unchecked = false, level = 3 }) {
     h("div", { class: "idea-facts" },
       h("p", {}, h("span", { class: "idea-label" }, tr("drawer.score")), h("strong", {}, ranked ? fmtScore(ranked.value, lang) : "…"), ranked ? h("span", { class: "muted" }, tr("drawer.rank", { n: ranked.rank, of: run.ideas.length })) : null),
       h("p", {}, h("span", { class: "idea-label" }, tr("drawer.effort")), h("strong", {}, tr("drawer.days", { low: fmtInt(idea.effort_days.low, lang), high: fmtInt(idea.effort_days.high, lang) }))),
-      h("p", {}, h("span", { class: "idea-label" }, tr("drawer.cost")), h("strong", {}, cost !== undefined ? fmtEur(cost, lang) : "…"), h("span", { class: "muted" }, tr("drawer.costBasis", { calls: idea.live_inputs.model_calls, searches: idea.live_inputs.web_searches })))),
+      h("p", {}, h("span", { class: "idea-label" }, tr("drawer.cost")), h("strong", {}, cost !== undefined ? fmtEurRun(cost, lang) : "…"), h("span", { class: "muted" }, tr("drawer.costBasis", { calls: idea.live_inputs.model_calls, searches: idea.live_inputs.web_searches })))),
     section("drawer.answers", h("ul", { class: "idea-issues" }, issueItems), h("p", { class: "muted" }, tr("drawer.for", { audience: fill(idea.audience) }))),
     section("drawer.room", h("ol", { class: "idea-room" }, idea.room.map((x) => h("li", {}, fill(x))))),
     section("drawer.figures", h("div", { class: "vc-table-wrap" }, h("table", { class: "vc-table vc-table--compact figures-table" },

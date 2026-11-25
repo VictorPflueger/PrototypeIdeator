@@ -22,6 +22,13 @@ export function agentLine(text) {
     h("span", {}, text));
 }
 
+/** A lilac line that says what an agent wrote or estimated, under the evidence it rests in, with Vici's AI tag. */
+export function aiNote(text) {
+  return h("p", { class: "ai-note" },
+    h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), t("ai.tag")),
+    h("span", {}, text));
+}
+
 const TURN_TITLES = { turn: "turn.yours", decision: "turn.decision", next: "turn.next", busy: "turn.busy", stopped: "turn.stopped" };
 const TURN_ICONS = { turn: "hand", decision: "hand", next: "arrow-right", stopped: "warning" };
 

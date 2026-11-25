@@ -35,7 +35,9 @@ export function formatFact(fact, lang = getLang()) {
   switch (fact.type) {
     case "eur": {
       const amount = fmtEurCompact(fact.value, lang);
-      return fact.of !== undefined && fact.stated !== undefined && fact.stated < fact.of ? t("kpi.atStake.part", { amount, stated: fact.stated, of: fact.of }, lang) : amount;
+      const text = fact.of !== undefined && fact.stated !== undefined && fact.stated < fact.of ? t("kpi.atStake.part", { amount, stated: fact.stated, of: fact.of }, lang) : amount;
+      // A sum that holds the Reader's AI estimates says so wherever it is written (review A6).
+      return fact.estimated > 0 ? t("kpi.atStake.withAi", { text, ai: t(fact.estimated < fact.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll", null, lang) }, lang) : text;
     }
     case "eur_cents": return fmtEur(fact.value, lang);
     case "score": return fmtScore(fact.value, lang);

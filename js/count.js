@@ -1,15 +1,17 @@
-// The free token count (POST /v1/messages/count_tokens, brief §5.6) for a request that carries PDFs: the
-// budget cap needs their real input tokens before the request goes out, and Anthropic's rule of 1,500 to
-// 3,000 text tokens plus 1,568 image tokens a page is only a range. It sits beside the shared client
-// (js/anthropic.js), which stays the same file in all four tools; like it, it sends the key to
-// api.anthropic.com and nowhere else, keeps nothing and logs nothing. tests/policy.mjs allows fetch in
-// these two modules only.
+// The free token count (POST /v1/messages/count_tokens, brief §5.5 and §5.6) before every request of a live
+// run: the budget cap needs the request's real input tokens before it goes out. A character ratio is only a
+// guess, which Anthropic's glossary puts at about 2.7 characters a token for English on the 5.5 models and
+// which other languages and scripts miss by more, and Anthropic's rule of 1,500 to 3,000 text tokens plus
+// 1,568 image tokens a PDF page is only a range. It sits beside the shared client (js/anthropic.js), which
+// stays the same file in all four tools; like it, it sends the key to api.anthropic.com and nowhere else,
+// keeps nothing and logs nothing. tests/policy.mjs allows fetch in these two modules only.
 
 import { ANTHROPIC } from "./config.js";
 
 /**
- * The input tokens of a request's system prompt and messages, or null when the count fails (the run then
- * prices the PDFs at the rule's high end). The output schema is not sent: the caller adds its tokens.
+ * The input tokens of a request's system prompt and messages, or null when the count fails (the cap then
+ * takes the request at a cautious ratio and the PDFs at the rule's high end). The output schema is not
+ * sent, so the count can't fail on a field it doesn't take: the caller adds the schema's tokens.
  */
 export async function countTokens({ key, body, signal = null, timeoutMs = 20000 }) {
   const ctrl = new AbortController();

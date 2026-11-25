@@ -1,5 +1,5 @@
 // The agents' prompts (brief §5.2, PLAN.md §8.4): one per agent, in English for the model, each with the
-// shared rules and short enough for Haiku 5.5 (about 700 tokens at four characters a token). The state
+// shared rules and short enough for Haiku 5.5 (under 3,040 characters, about 1,100 tokens). The state
 // goes to the model as compact JSON in the user turn, not as a conversation, so caching is optional.
 // Everything a prompt asks for is also held in code: the output schemas in js/schemas.js, the guards in
 // js/guards.js and the fact audit in js/facts.js. The prompt only makes their refusals rare.

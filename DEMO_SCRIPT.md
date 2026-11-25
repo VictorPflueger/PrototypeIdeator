@@ -7,20 +7,22 @@ in DEMO_SCRIPT.de.md.
 ## Before you start
 
 - Open the live site in a fresh tab, full screen, at 1920 × 1080 or 1280 × 720. *How it works* opens by
-  itself; `?guide=present` opens it straight on the talk track.
-- Close the guide with **Start**. Press **Play**, or use the right arrow or a clicker: Play stops wherever
-  you act, and Space pauses while you talk.
+  itself on its first chapter; `?guide=present` opens it straight on the talk track, which ends with
+  **Start**.
+- Close the guide with × or its **Start**. On the page, **Start** begins the run and starts Play, which
+  walks the steps and stops wherever you act: open an idea or a weight and it waits for you. Space pauses
+  while you talk; the right arrow or a clicker moves on.
 - No key is needed. The simulation calls no model and reaches no other site.
 
 ## The five minutes
 
 | Time | Step | Say | Do and watch |
 | --- | --- | --- | --- |
-| 1 min | Point at the key figures | "Before anything runs, the figures say what is at stake for Tidewell Lines: €10.8m a year." | Point at the four tiles: €10.8m on 7 of 8 kept issues, 8 of 8 issues covered, a top score of 4.70 and under €0.01 for the run. Click **Start**. |
+| 1 min | Point at the key figures | "Before anything runs, the figures say what is at stake for Tidewell Lines: €10.8m a year." | Point at the four tiles: €10.8m on 7 of 8 kept issues, 8 of 8 issues covered, a top score of 4.70 and ≈ €0.01 for the run. Click **Start**. |
 | 1 min | Read: three reports on one carrier | "Three challengers looked at the same company. The Reader merged the emission costs all three raise, and you keep, merge or park each issue." | Twelve issues. Show the emissions issues merged under the first, each merge with its reason in lilac. Click **Find prototype ideas**. |
-| 1.5 min | Ideate: open one idea | "Each cell is a prototype tied to an issue and its KPIs. Here is Allowance Gap Agent: what the room would see, and how its agent works while a person decides." | Eight cells. Open Allowance Gap Agent: a score of 4.70, 8 to 12 person-days, €0.02 a live run, the five agent steps and the person's decision. Close it, then **Next: score the ideas**. |
+| 1.5 min | Ideate: open one idea | "Each cell is a prototype tied to an issue and its KPIs. Here is Allowance Gap Agent: what the room would see, and how its agent works while a person decides." | Eight cells. Open Allowance Gap Agent: a score of 4.70, 8 to 12 person-days, €0.025 a live run, the five agent steps and the person's decision. Close it, then **Next: score the ideas**. |
 | 1 min | Score: change a weight | "Weigh business value higher and watch the order. Allowance Gap Agent stays first in 9 of 9 rankings." | Click **Change the weights** and raise Business value to 30 %: Instant Spot Quote falls from fourth to sixth, the top score moves to 4.73, and the title still says 9 of 9. Click **Next: the shortlist**. |
-| 0.5 min | Shortlist, report and brief | "You rank your top three, and the report is ready to print for the room. One click turns the first pick into a build brief for a new Claude project." | The top three come preselected; click **Write the report**. The tile now says your shortlist answers 63% of what is at stake. Click **Save as PDF** and choose *Save as PDF* as the printer, then **Write a build brief** and **Copy**. |
+| 0.5 min | Shortlist, report and brief | "You rank your top three, and the report is ready to print for the room. One click turns the first pick into a build brief for a new Claude project." | The top three come preselected; click **Write the report**. The tile now says your shortlist answers 63 % of what is at stake. Click **Save as PDF** and choose *Save as PDF* as the printer, then **Write a build brief** and **Copy**. |
 
 ## If something goes wrong
 
@@ -45,8 +47,8 @@ source with the day it was read.
 each with its reason; the engine weighs the ratings, ranks the ideas, checks the ranking nine times and
 works out every key figure. A fact audit refuses any other number in the agents' words.
 
-**What does a run cost?** A replay costs nothing. A live run of these three reports is estimated at under
-€0.01 on the Balanced setting and about €0.09 on Thorough. With **Run it live**, the agents read your
+**What does a run cost?** A replay costs nothing. A live run of these three reports is estimated at about
+€0.01 on the Balanced setting and about €0.11 on Thorough. With **Run it live**, the agents read your
 documents on your own Claude key, up to a cap you set.
 
 **Does it build the prototype?** No: it proposes and ranks. The build brief turns the chosen idea into

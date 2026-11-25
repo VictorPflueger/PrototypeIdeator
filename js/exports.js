@@ -15,7 +15,11 @@ import { markDownloaded } from "./session.js";
 import { APP } from "./config.js";
 
 /** Today as an ISO day, in UTC like every date the run writes. */
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = () => {
+  // The local date, not UTC: a report made in Berlin just after midnight is dated that day (review A17).
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 /** A file name as the report's: prototype-ideator-<company>-<date>-<lang>, umlauts written out. */
 export function fileName(company, lang, suffix, date = today()) {
@@ -48,7 +52,8 @@ function titled(name) {
 /**
  * Save as PDF: the browser's print dialog on the report alone, with the footer on every page, offering the
  * file name `name` (prototype-ideator-<company>-<date>-<lang>). The person chooses Save as PDF as the printer;
- * the page can't choose it for them.
+ * the page can't choose it for them. The page can't tell a saved PDF from a cancelled dialog either, so a
+ * print leaves the leave-page warning on; the HTML and ideas files clear it (review A12).
  */
 export function printReport(report, name = "") {
   const untitle = titled(name);
@@ -56,7 +61,6 @@ export function printReport(report, name = "") {
   window.addEventListener("afterprint", after);
   if (window.Vici?.report?.print) window.Vici.report.print(report);
   else window.print();
-  markDownloaded();
 }
 
 /**
@@ -98,7 +102,9 @@ const AFTER = { reader: "start", merges: "start", ideator: "read", writer: "shor
  * The ideas file, prototype-ideas/1: the issue map, the ideas, the weights, the scores, the stability check
  * and the shortlist as the engine has them. It holds where each issue was found, never a document's text,
  * and no prompt, answer or key. meta: { lang, mode, model (a live run's API id), setting (its preset),
- * stopped ({ agent, reason }), created (an ISO time) }.
+ * stopped ({ agent, reason }), created (an ISO time), unchecked ({ issues, ideas, report }: the texts the
+ * fact audit refused twice, as liveMarks gives them) }. prototype-ideas/1 has no field for those marks,
+ * and a new field would mean a new schema name, so the disclaimer names them (review A10).
  */
 export function ideasFile(run, meta) {
   const lang = meta.lang;
@@ -142,8 +148,19 @@ export function ideasFile(run, meta) {
     scores: (run.ranked || []).map((r) => ({ idea: r.id, value: r.value, rank: r.rank })),
     stability: { of: st.of, rankings: st.rankings.map((r) => ({ label: r.label, order: [...r.order] })), counts: structuredClone(st.counts), sentence: run.sentence || "" },
     shortlist: { decided: !!run.shortlist?.decided, picks: ideas.length ? (run.shortlist?.picks || []).map((p) => ({ idea: p.idea, place: p.place, points: p.points })) : [] },
-    disclaimer: `${t("rep.ai", null, lang)}. ${t("report.public", null, lang)}`
+    disclaimer: [`${t("rep.ai", null, lang)}.`, uncheckedLine(run, meta.unchecked, lang), t("report.public", null, lang)].filter(Boolean).join(" ")
   };
+}
+
+/** The texts the fact audit refused twice, named in one sentence, or "" when there are none. */
+function uncheckedLine(run, marks, lang) {
+  if (!marks) return "";
+  const names = [
+    ...[...(marks.issues || [])].map((id) => run.issues.find((i) => i.id === id)?.title).filter(Boolean),
+    ...[...(marks.ideas || [])].map((id) => (run.ideas || []).find((i) => i.id === id)?.name).filter(Boolean),
+    ...[...(marks.report || [])].map((f) => t(`json.unchecked.${f}`, null, lang))
+  ];
+  return names.length ? t("json.unchecked", { items: names.join("; ") }, lang) : "";
 }
 
 /** What keeps an ideas file from its schema, one line each; empty when it validates. */

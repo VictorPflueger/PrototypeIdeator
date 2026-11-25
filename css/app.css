@@ -63,6 +63,9 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .kpi .vc-stat__value { font-size: var(--fs-kpi); line-height: 1.05; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 0.3em; }
 .kpi .vc-stat__value .vc-stat__was { margin-inline-end: 0; }
 .kpi .kpi-note { font-size: var(--vc-font-size-xs); line-height: 1.25; color: var(--vc-text-muted); text-wrap: balance; hyphens: auto; }
+/* The line under At stake's note when the sum holds the Reader's AI estimates: lilac, as Vici marks the AI. */
+.kpi .kpi-ai { display: flex; align-items: center; gap: 3px; color: var(--vc-feature-text); font-weight: var(--vc-weight-semibold); }
+.kpi .kpi-ai .vc-icon { --vc-icon-size: 11px; flex: none; }
 .kpi[data-state="waiting"] .kpi-value { color: var(--vc-text-subtle); letter-spacing: 0.06em; }
 
 /* One sentence on what the page does and how real its data is, beside the byline. */
@@ -102,6 +105,10 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .step-lead { margin: 0; font-size: var(--vc-font-size-lg); line-height: 1.4; color: var(--vc-text); max-width: 46ch; text-wrap: pretty; }
 .step-note { margin: 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); max-width: 52ch; }
 .challengers { display: grid; gap: 6px; }
+/* Clear everything at the foot of the live Start step's settings: quiet until pressed once. */
+.intake-clear { display: grid; justify-items: start; gap: var(--vc-space-1); margin-top: var(--vc-space-3); padding-top: var(--vc-space-3); border-top: 1px solid var(--vc-border-subtle); }
+.intake-clear .vc-help { margin: 0; }
+.live-clear[data-confirm="yes"] { font-weight: var(--vc-weight-semibold); }
 .challenger-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
 .challenger-links li { display: flex; align-items: center; margin: 0; }
 .challenger-links .vc-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-weight: var(--vc-weight-semibold); }
@@ -155,6 +162,8 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 /* What an agent did, in lilac with its tag: what the AI wrote or suggested. */
 .agent-line { display: flex; align-items: baseline; gap: 10px; margin: 0; color: var(--vc-text); font-size: var(--vc-font-size-md); line-height: 1.4; max-width: 56ch; }
 .ai-tag.vc-tag { flex: none; gap: 4px; }
+/* What an agent estimated, under the evidence it rests in. */
+.ai-note { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 0; font-size: var(--vc-font-size-xs); line-height: 1.35; color: var(--vc-text-muted); max-width: 72ch; }
 .fiction-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .fiction-tag.vc-tag { font-weight: var(--vc-weight-semibold); }
 .step-company { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -4px 0 0; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
@@ -247,6 +256,9 @@ summary::-webkit-details-marker { display: none; }
 button.vc-tile { border: 0; font: inherit; font-weight: var(--vc-weight-semibold); cursor: pointer; padding: 0 14%; }
 button.vc-tile:hover, button.vc-tile:focus-visible { --_bg: var(--vc-accent); --_fg: var(--vc-on-accent); outline: none; }
 .comb-name { line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
+/* A name with a long word steps its size down, so the word stays whole in the cell (review B7). */
+.comb-name--long { font-size: 0.88em; letter-spacing: -0.005em; }
+.comb-name--longer { font-size: 0.8em; letter-spacing: -0.01em; }
 .comb-place { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); }
 .comb-tile--pick { --_bg: var(--vc-merlot-700); --_fg: var(--vc-neutral-50); }
 .comb-note { margin-top: 8px; }
@@ -438,6 +450,7 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
 /* What is at stake: the sum whole and to the right; the range, the group note and the AI tag wrap under it. */
 .rep-stake { text-align: end; font-variant-numeric: tabular-nums; }
 .rep-stake > strong { white-space: nowrap; }
+.rep-map .rep-total > * { border-top: 2px solid var(--vc-border-strong); }
 .rep-map thead th:nth-child(1) { width: 39%; }
 .rep-map thead th:nth-child(2) { width: 22%; }
 .rep-map thead th:nth-child(3) { width: 21%; }
@@ -591,8 +604,6 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
 .unchecked-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .unchecked-note .unchecked-tag { margin-inline-start: 0; }
 .live-measured { max-width: 56ch; }
-/* The acknowledgement is the box's target too: the whole line takes the click. */
-.vc-live__ack { min-height: var(--vc-control-md); }
 
 /* ---- guides ------------------------------------------------------------------------------------------------ */
 .vc-guide .vc-guide__say { font-style: normal; }

@@ -15,6 +15,8 @@ import { fmtScore, fmtShare, fmtEur, fmtEurCompact, fmtEurSpend } from "./format
 export function costText(eur, lang) {
   const [lo, hi] = Array.isArray(eur) ? eur : [eur, eur];
   if (hi < 0.005) return t("kpi.cost.under", { amount: fmtEur(0.01, lang) }, lang);
+  // A range that starts under half a cent reads "up to", never "€0.00–€0.01", which looks free.
+  if (lo < 0.005) return t("kpi.cost.upTo", { amount: fmtEur(hi, lang) }, lang);
   const a = fmtEur(lo, lang);
   const b = fmtEur(hi, lang);
   return a === b ? t("kpi.cost.about", { amount: a }, lang) : t("kpi.cost.range", { low: a, high: b }, lang);
@@ -25,10 +27,12 @@ const covered = (c, lang) => t("kpi.covered.value", { covered: c.covered, of: c.
 /** At stake in a tile: the amount alone as the value, so it fits beside three others at 1280 px, and in the
     note how many kept issues state one ("on 7 of 8 kept issues"). The prose keeps atStakeText's one line. */
 function stakeParts(s, lang) {
-  if (s.eur === null) return { value: t("kpi.atStake.noneValue", null, lang), note: t("kpi.atStake.none", null, lang) };
+  if (s.eur === null) return { value: t("kpi.atStake.noneValue", null, lang), note: t("kpi.atStake.none", null, lang), ai: "" };
   return {
     value: fmtEurCompact(s.eur, lang),
-    note: s.stated === s.of ? t("kpi.atStake.note", null, lang) : t("kpi.atStake.notePart", { stated: s.stated, of: s.of }, lang)
+    note: s.stated === s.of ? t("kpi.atStake.note", null, lang) : t("kpi.atStake.notePart", { stated: s.stated, of: s.of }, lang),
+    // A second line, in lilac, when the sum holds the Reader's AI estimates (review A6).
+    ai: s.estimated > 0 ? t(s.estimated < s.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll", null, lang) : ""
   };
 }
 
@@ -44,6 +48,7 @@ function figuresOf(run, preview, reached, lang) {
     value: stakeNow.value,
     was: stakeNow.value !== stakeWas.value ? stakeWas.value : "",
     note: decided && f.share !== null ? t("kpi.atStake.share", { share: fmtShare(f.share, lang) }, lang) : stakeNow.note,
+    ai: stakeNow.ai,
     state: stakeMoved || decided ? "moved" : "idle"
   };
   if (!f.top || !p.top) return { stake, covered: null, top: null };
@@ -93,6 +98,7 @@ export function tileModel({ mode, run, preview, reached, lang, live = {} }) {
 
 /** Draws the model into the four tiles of index.html. */
 export function renderTiles(root, model) {
+  const doc = root.ownerDocument || root;
   const ids = { stake: "kpi-stake", covered: "kpi-covered", top: "kpi-top", cost: "kpi-cost" };
   for (const [k, id] of Object.entries(ids)) {
     const el = root.querySelector(`#${id}`);
@@ -109,9 +115,23 @@ export function renderTiles(root, model) {
     }
     if (was.textContent !== m.was) was.textContent = m.was;
     was.hidden = !m.was;
-    // The note is the tile's own text now, no longer the static default of index.html.
+    // The note is the tile's own text now, no longer the static default of index.html; an AI line under it
+    // is lilac, with Vici's sparkle.
     note.removeAttribute("data-i18n");
-    if (note.textContent !== m.note) note.textContent = m.note;
+    const ai = m.ai || "";
+    if (note.textContent !== m.note + ai || note.dataset.ai !== ai) {
+      note.replaceChildren(doc.createTextNode(m.note));
+      if (ai) {
+        const line = doc.createElement("span");
+        line.className = "kpi-ai";
+        const icon = doc.createElement("span");
+        icon.className = "vc-icon vc-icon--sparkle";
+        icon.setAttribute("aria-hidden", "true");
+        line.append(icon, doc.createTextNode(ai));
+        note.append(line);
+      }
+      note.dataset.ai = ai;
+    }
     el.dataset.state = m.state;
   }
 }

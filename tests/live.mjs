@@ -7,7 +7,8 @@
 //                 first, a rejected one is named in the dialog and nothing is sent; it shows masked and is
 //                 forgotten on request; inside another page's frame the dialog refuses
 //   privacy       (G10, AC-11) the warning names planted e-mail, phone, IBAN and keyword samples by file and field,
-//                 says PDFs can't be searched, and stays away from clean files
+//                 says PDFs can't be searched, and stays away from clean files; it comes before a run's first
+//                 request whatever its step, and again when a field changed since the last request
 //   presets       (G7, AC-08) Fast, Balanced, Thorough and an Advanced choice each send their model, effort and
 //                 thinking, the step's output format and both headers on every request
 //   flow          (G14) S1's three reports through the merges request, keep, merge and park, the Ideator, the
@@ -24,7 +25,8 @@
 //   abort         (G7, AC-08) Stop ends the running request, nothing more is sent and what is done stays; Try again
 //                 goes on from there
 //   cap           (G8, AC-09) under the cap a request drops to its step's minimum output; when even that can't fit,
-//                 nothing is sent and the bar names the step; Change settings raises the cap and the run goes on
+//                 nothing is sent and the bar names the step; Change settings raises the cap and the run goes on;
+//                 a PDF whose pages sit in an object stream is priced at its pages when the free count fails
 //   cost          (G8, AC-09) the Session cost tile and the Report's line show the stand-in's usage times the prices
 //                 at 0.894, with the cap
 //   errors        (G9, AC-10) 401, 403, 404, 400 for credit, 429, 529 and a network failure each show their message
@@ -32,9 +34,9 @@
 //                 is named in the dialog
 //   storage       (G11, AC-02) after a full run and Save run as simulation: only vc-theme, pi.lang and Vici's guide
 //                 note in storage, no database, cache or cookie, and the key in no download, console line, page
-//                 text or address
+//                 text or address; Clear everything asks once, then empties the files, fields, run and key
 //   save-run      (G15) the saved run validates, plays back to the same figures and carries no key, no prompt and
-//                 no document text beyond the challengers' files
+//                 no document text beyond the challengers' files and the Reader's short quotes
 // Prints LIVE DIALOG OK, LIVE PRIVACY OK, LIVE PRESETS OK, LIVE FLOW OK, LIVE HANDOFF OK, LIVE REPAIR OK, LIVE
 // GUARDS OK, LIVE IDEAS CAP OK, LIVE ABORT OK, LIVE CAP OK, LIVE COST OK, LIVE ERRORS OK, LIVE STORAGE OK and
 // LIVE SAVE RUN OK.
@@ -46,6 +48,7 @@ import { pathToFileURL } from "node:url";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, viciDir, REQUIRE_VICI, KEYS } from "./lib/harness.mjs";
 import { createFakeClaude, KEY } from "./lib/fake-claude.mjs";
 import { routeStandIn } from "./lib/live-route.mjs";
+import { objectStreamPdf } from "./lib/objstm-pdf.mjs";
 
 const parts = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const want = (p) => !parts.length || parts.includes(p);
@@ -135,7 +138,11 @@ const messages = (net) => net.filter((x) => x.method === "POST" && /\/v1\/messag
 const stepIs = (page, name) => page.waitForFunction((n) => !!document.querySelector(`.step[data-step="${n}"]`) && !document.querySelector("#turn[aria-busy]"), name, { timeout: 30000 });
 const turn = (page) => page.evaluate(() => document.getElementById("turn")?.innerText.replace(/\s+/g, " ").trim() || "");
 const turnKind = (page) => page.evaluate(() => [...(document.getElementById("turn")?.classList || [])].find((c) => /^turn-bar--/.test(c))?.slice(10) || "");
-const tiles = (page) => page.evaluate(() => Object.fromEntries(["stake", "covered", "top", "cost"].map((k) => [k, { value: document.querySelector(`#kpi-${k} .kpi-value`).textContent, note: document.querySelector(`#kpi-${k} .kpi-note`).textContent }])));
+const tiles = (page) => page.evaluate(() => Object.fromEntries(["stake", "covered", "top", "cost"].map((k) => {
+  const note = document.querySelector(`#kpi-${k} .kpi-note`);
+  // The note's own words; At stake's lilac AI line apart.
+  return [k, { value: document.querySelector(`#kpi-${k} .kpi-value`).textContent, note: note.firstChild?.nodeType === 3 ? note.firstChild.textContent : note.textContent, ai: note.querySelector(".kpi-ai")?.textContent || "" }];
+})));
 const waitStopped = (page) => page.waitForFunction(() => document.querySelector("#turn.turn-bar--stopped"), null, { timeout: 30000 });
 
 /** Run it live, then the files in, and the number of ideas. */
@@ -298,9 +305,63 @@ try {
       res.push([!w.hidden && want4.every((x) => w.items.includes(x)), `${lang}: the warning names the e-mail address, the phone number, the IBAN and "confidential" in notes.md (${w.items.length} items)`]);
       res.push([w.items.some((x) => x.includes(d["intake.company"])) && !w.items.some((x) => x.includes("public.md")), `${lang}: it names the Company field for "Internal", and says nothing about the clean file`]);
       res.push([w.pdfs, `${lang}: with a PDF in, it says PDFs can't be searched here`]);
+      // Review B5: at 1280 × 720 with the warning and Advanced open, the acknowledgement's two lines stay
+      // clear of the part under it; the body scrolls instead. Control: the old min-height squeezed it.
+      const overlap = () => page.evaluate(() => {
+        const ack = document.querySelector("#live-dialog .vc-live__ack");
+        const text = ack.querySelector("span:last-child") || ack;
+        const next = ack.nextElementSibling && !ack.nextElementSibling.hidden ? ack.nextElementSibling : document.getElementById("live-estimate");
+        return Math.round(text.getBoundingClientRect().bottom - next.getBoundingClientRect().top);
+      });
+      await page.evaluate(() => { document.querySelector("#live-dialog .vc-live__advanced").open = true; });
+      await page.waitForTimeout(300);
+      const clear = await overlap();
+      await page.evaluate(() => { document.querySelector("#live-dialog .vc-live__ack").style.minHeight = "var(--vc-control-md)"; });
+      await page.waitForTimeout(200);
+      const squeezed = await overlap();
+      res.push([clear <= 0 && squeezed > 0, `${lang}: with the warning and Advanced open at 1280 × 720 the acknowledgement keeps clear of the next part (${clear} px), where the old min-height ran ${squeezed} px into it`]);
       await fillDialog(page, { start: false });
       res.push([!(await page.isDisabled("#live-start")), `${lang}: with the key and the box, Start the live run is ready despite the warning`]);
       res.push([!errors.length, `${lang}: no page error${errors.length ? `: ${errors.join("; ")}` : ""}`]);
+      await context.close();
+    }
+    // Review A4: one challenger's report reads with no request, so the run's first request is the Ideator's.
+    // Its dialog warns about what the report and the fields hold; and a field changed after that request
+    // opens the dialog again before the Writer's.
+    {
+      const d = DICT.en;
+      const [file] = handoffFiles(s1, "en", ["d1"]);
+      const json = JSON.parse(readFileSync(file, "utf8"));
+      json.issues[0].description = `${json.issues[0].description} Confidential: ask ${address} or call +49 30 1234567.`;
+      writeFileSync(file, JSON.stringify(json, null, 2));
+      const ideas = A(s1, "en").ideas.ideas.filter((i) => i.issues.every((id) => id.startsWith("bmc-"))).slice(0, 3);
+      const { context, page, fake, errors } = await open({ script: [{ answer: { ideas } }, { answer: A(s1, "en").recommendation }] });
+      await intake(page, [file], { count: 3 });
+      await page.evaluate(() => { document.querySelector(".intake-more").open = true; });
+      await page.fill("#intake-focus", `quotes, ask ${address}`);
+      await page.click("#btn-cta");
+      await stepIs(page, "read");
+      const noDialog = !(await page.$("#live-dialog[open]"));
+      await page.click("#btn-cta");
+      await page.waitForSelector("#live-dialog[open]");
+      await page.waitForTimeout(200);
+      const w = await page.evaluate(() => ({ hidden: document.getElementById("live-warning").hidden, items: [...document.querySelectorAll("#live-warning-list li")].map((li) => li.textContent) }));
+      const name = path.basename(file);
+      const wanted = [d["ld.warning.email"].replace("{where}", name), d["ld.warning.phone"].replace("{where}", name), d["ld.warning.email"].replace("{where}", d["intake.focus"])];
+      res.push([noDialog && !w.hidden && wanted.every((x) => w.items.includes(x)) && w.items.some((x) => /confidential/i.test(x)), `one challenger's report reads with no dialog; before the Ideator's request the dialog warns: ${w.items.join("; ")}`]);
+      await fillDialog(page);
+      await page.waitForFunction(() => document.querySelector('.step[data-step="ideate"], .step[data-step="score"]'), null, { timeout: 15000 });
+      // Back at Start, a new address in Constraints; Find the shortlist's Write the report asks again.
+      await page.click("#steps .vc-step:first-child .vc-step__button");
+      await page.evaluate(() => { document.querySelector(".intake-more").open = true; });
+      const other = ["sales", "example.net"].join("@");
+      await page.fill("#intake-constraints", `Reply to ${other}`);
+      await page.click("#steps .vc-step:nth-child(5) .vc-step__button");
+      await page.waitForSelector('.step[data-step="shortlist"]');
+      await page.click("#btn-cta");
+      await page.waitForSelector("#live-dialog[open]", { timeout: 5000 }).catch(() => {});
+      const again = await page.evaluate(() => ({ open: !!document.querySelector("#live-dialog[open]"), items: [...document.querySelectorAll("#live-warning-list li")].map((li) => li.textContent) }));
+      res.push([again.open && again.items.some((x) => x === d["ld.warning.email"].replace("{where}", d["intake.constraints"])) && fake.requests.length === 1 && !errors.length, `a field changed after a request opens the dialog before the next one, warning about it: ${again.items.join("; ")} (${fake.requests.length} request sent so far)`]);
       await context.close();
     }
     // Clean files only: no warning.
@@ -490,6 +551,9 @@ try {
     await stepIs(page, "read");
     const titles = await page.$$eval("tr[data-issue] .issue-title", (els) => els.map((e) => e.firstChild.textContent));
     res.push([titles.length === 3 && titles.every((x) => x.startsWith("Second run issue")), `after Start a new run the Read step shows the new run's ${titles.length} issues, not the first run's (${titles.slice(0, 2).join(", ")})`]);
+    // Review A3: the tiles compare with this run as the agents left it, never with the first run's figures.
+    const struck = await page.$$eval(".kpis .vc-stat__was", (els) => els.filter((e) => !e.hidden).map((e) => e.textContent.trim()).filter(Boolean));
+    res.push([!struck.length, `and before any decision its tiles strike nothing through${struck.length ? `: ${struck.join(", ")}` : ""}`]);
     const secondIds = Object.keys(await status());
     await press(secondIds[0], "park");
     res.push([(await status())[secondIds[0]] === "parked", "and its choices take"]);
@@ -622,6 +686,11 @@ try {
       await toReport(page);
       const tag = await page.$$eval(".rep-page--short :not(.unchecked-note) > .unchecked-tag", (els) => els.length);
       res.push([tag === 1 && fake.agents().filter((x) => x === "writer").length === 2 && !errors.length, "the Writer's text refused twice shows Unchecked beside it on the report"]);
+      // Review A10: the ideas file has no field for the marks, so its disclaimer names what is unchecked.
+      const [d] = await Promise.all([page.waitForEvent("download"), page.click('[data-action="download-json"]')]);
+      const file = JSON.parse(readFileSync(await d.path(), "utf8"));
+      const p1 = file.ideas.find((i) => i.id === "P1")?.name || "";
+      res.push([file.disclaimer.includes(EN["json.unchecked"].split(":")[0]) && file.disclaimer.includes(p1) && file.disclaimer.includes(EN["json.unchecked.found"]), `the ideas file's disclaimer names the unchecked texts: "${file.disclaimer.slice(file.disclaimer.indexOf("Unchecked"), file.disclaimer.indexOf("Unchecked") + 110)}…"`]);
       await context.close();
     }
     report("guards", res, "LIVE GUARDS OK");
@@ -704,6 +773,24 @@ try {
       const text = await turn(page);
       const counted = net.some((x) => /count_tokens/.test(x.url));
       res.push([text.includes(EN["live.budget.reader"].replace("{cap}", fmtEur(0.05, "en")).split(":")[0]) && text.includes(fmtEur(0.05, "en")) && counted && !messages(net).length && !errors.length, `a Reader request that can't fit €0.05: the PDF's tokens counted for free, nothing sent, and "${text.slice(text.indexOf("Stopped"), text.indexOf("Stopped") + 60)}…"`]);
+      await context.close();
+    }
+    // Review A2: a 60-page PDF whose pages sit in an object stream, with the free count failing. Its pages are
+    // read, the dialog prices them, and the cap takes them at Anthropic's rule's high end (60 × 4,568 tokens):
+    // on Thorough at €0.50 the run stops before the Reader. Before 1.0.0 the file read as no pages, was priced
+    // at nothing, and the request went out.
+    {
+      const { context, page, net, errors } = await open({ count: null, script: [{ answer: A(s3, "en").reader }] });
+      const dir = mkdtempSync(path.join(tmp, "objstm-"));
+      const pdf = path.join(dir, "compressed-annual-report.pdf");
+      writeFileSync(pdf, objectStreamPdf(60));
+      await intake(page, [pdf]);
+      const row = await page.$$eval(".vc-dropzone__meta", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ")).join(" | "));
+      await startRun(page, { preset: "thorough", cap: 0.5 });
+      await waitStopped(page);
+      const text = await turn(page);
+      const counted = net.some((x) => /count_tokens/.test(x.url));
+      res.push([/60 pages/.test(row) && counted && !messages(net).length && text.includes(EN["live.budget.reader"].replace("{cap}", fmtEur(0.5, "en")).split(":")[0]) && !errors.length, `a 60-page PDF with its pages compressed reads as "${(row.match(/[^|]*60 pages[^|]*/) || [row])[0].trim()}", and with the count failing the cap takes its pages at the rule's high end: nothing sent, "${text.slice(text.indexOf("Stopped"), text.indexOf("Stopped") + 50)}…"`]);
       await context.close();
     }
     // The Reader at its smallest output: a cap between the two worst cases.
@@ -877,6 +964,39 @@ try {
     res.push([scan({ whole: `x${KEY}y`, part: `[${KEY.slice(8, 40)}]`, clean: "sk-ant-[REDACTED]" }).join() === "whole,part", "control: the scan finds the key and a part of it, and passes a redacted one"]);
     res.push([!net.some((x) => !x.url.startsWith("https://api.anthropic.com/")) && !errors.length, "nothing went to another host, and no page error"]);
     await context.close();
+    // Clear everything (brief §5.9, review A5): asked once in place, saying when a result hasn't been
+    // downloaded; then the files, the fields, the run and the key are gone, and the next run asks for a key.
+    {
+      const c = await open({ script: s1Script("en") });
+      await intake(c.page, handoffFiles(s1, "en"), { count: 8 });
+      await c.page.evaluate(() => { document.querySelector(".intake-more").open = true; });
+      await c.page.fill("#intake-company", "Tidewell Lines");
+      await startRun(c.page);
+      await stepIs(c.page, "read");
+      await findIdeas(c.page);
+      await c.page.click("#steps .vc-step:first-child .vc-step__button");
+      await c.page.waitForSelector("#btn-clear");
+      await c.page.click("#btn-clear");
+      const asked = (await c.page.textContent("#btn-clear")).trim();
+      const stillThere = await c.page.$$eval(".vc-dropzone__file", (els) => els.length);
+      await c.page.click("#btn-clear");
+      await c.page.waitForTimeout(300);
+      const after = await c.page.evaluate(() => ({
+        files: document.querySelectorAll(".vc-dropzone__file").length,
+        company: document.getElementById("intake-company")?.value ?? "",
+        reached: document.querySelectorAll("#steps .vc-step--done").length,
+        stake: document.querySelector("#kpi-stake .kpi-value").textContent,
+        guard: (() => { const e = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; })()
+      }));
+      await c.page.setInputFiles("#intake-files", handoffFiles(s1, "en"));
+      await c.page.waitForTimeout(300);
+      await c.page.click("#btn-cta");
+      await c.page.waitForSelector("#live-dialog[open]");
+      const key = await c.page.evaluate(() => ({ value: document.getElementById("live-key").value, masked: !document.getElementById("live-current").hidden }));
+      res.push([asked === EN["live.clear.confirmLose"] && stillThere === 3 && after.files === 0 && after.company === "" && after.reached === 0 && !after.guard && key.value === "" && !key.masked && !c.errors.length,
+        `Clear everything asks once ("${asked}"), then the files (${stillThere} to ${after.files}), the fields, the run and the key are gone: the next run asks for a key, and leaving no longer warns`]);
+      await c.context.close();
+    }
     report("storage", res, "LIVE STORAGE OK");
   }
 
@@ -910,7 +1030,8 @@ try {
     const frozen = { ...saved.reference, cost_cents: saved.reference.cost_cents[saved.language] };
     res.push([JSON.stringify(ref) === JSON.stringify(frozen), `it plays back to the same figures: at stake ${ref.at_stake.eur}, ${ref.ideas} ideas, the order ${ref.order.join(", ")}, the top score ${ref.top.score}`]);
     const leaks = [["the key", text.includes(KEY)], ["a prompt", /You are the (Reader|Ideator|Writer)/.test(text)], ["thinking", /"thinking"/.test(text)], ["the text file's text", text.includes(marker)], ["the PDF", text.includes("JVBER")]].filter(([, x]) => x).map(([k]) => k);
-    res.push([!leaks.length && saved.files && Object.keys(saved.files).length === 1, `no key, no prompt, no thinking and no document text beyond the challenger's file${leaks.length ? `: found ${leaks.join(", ")}` : ""}`]);
+    const quotes = (saved.answers[saved.language]?.reader?.issues || []).flatMap((i) => (i.sources || []).map((x) => String(x.quote || "")));
+    res.push([!leaks.length && saved.files && Object.keys(saved.files).length === 1 && quotes.every((q) => q.length <= 150), `no key, no prompt, no thinking and no document text beyond the challenger's file and the Reader's ${quotes.length} quotes, none over 150 characters (longest ${Math.max(0, ...quotes.map((q) => q.length))})${leaks.length ? `: found ${leaks.join(", ")}` : ""}`]);
     res.push([saved.source === "live" && saved.language === "en" && saved.answers.de === null && saved.run.setting === "balanced" && typeof saved.run.cost_eur === "number" && ids.length > 0 && !errors.length, `marked live, in its one language, with its setting and cost (${saved.run.cost_eur} euros)`]);
     // Each step's use, for setting max_tokens from Victor's runs: the stand-in answers 1,800 in and 900 out.
     const use = saved.run.usage || {};
