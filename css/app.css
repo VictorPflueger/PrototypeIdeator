@@ -455,6 +455,8 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
 .rep-stake { text-align: end; font-variant-numeric: tabular-nums; }
 .rep-stake > strong { white-space: nowrap; }
 .rep-map .rep-total > * { border-top: 2px solid var(--vc-border-strong); }
+/* A head whose figures the Ideator estimated: Vici's sparkle in the AI's lilac beside it. */
+.rep-est__mark { --vc-icon-size: 0.9em; color: var(--vc-feature-text); vertical-align: -0.1em; }
 .rep-map thead th:nth-child(1) { width: 39%; }
 .rep-map thead th:nth-child(2) { width: 22%; }
 .rep-map thead th:nth-child(3) { width: 21%; }

@@ -517,7 +517,7 @@ export default {
   "rep.map.parkedNone": "Keines: Jedes Thema ist behalten.",
   "rep.glance.title": "Die Ideen auf einen Blick",
   "rep.glance.lead": "Nach gewichtetem Wert gereiht; Ihre Auswahl ist im Diagramm gefüllt.",
-  "rep.glance.ai": "Personentage und die Modellaufrufe hinter den Kosten jeder Idee sind Schätzungen des Ideenfinders.",
+  "rep.glance.est": "Schätzung des Ideenfinders",
   "rep.glance.answers": "Beantwortet: {issue}",
   "rep.glance.col.what": "Was sie tut",
   "rep.glance.col.days": "Personen\u00adtage",

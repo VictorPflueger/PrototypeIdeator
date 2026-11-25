@@ -217,13 +217,15 @@ export function reportDoc(run, meta) {
       : h("p", { class: "rep-muted" }, tr("rep.map.parkedNone"))));
 
   // ---- 4 The ideas at a glance ------------------------------------------------------------------------------
+  // The person-days and the model calls behind each cost are the Ideator's estimates (review A8): Vici's
+  // lilac sparkle beside the two heads, and the chart's axis under the table says so in words. A sentence more
+  // in the lead would take the line the German glance needs on A4.
+  const estimated = (text) => h("span", { class: "rep-est" }, text, "\u00a0", h("span", { class: "vc-icon vc-icon--sparkle rep-est__mark", "aria-hidden": "true" }), h("span", { class: "vc-visually-hidden" }, ` (${tr("rep.glance.est")})`));
   const glance = hasIdeas ? page("glance", tr("rep.glance.title"),
-    // The person-days and the model calls behind each cost are the Ideator's estimates (review A8): said in
-    // the lead, with the AI tag, so the page keeps its room on A4.
-    h("p", { class: "rep-lead" }, tr("rep.glance.lead"), " ", ai(), " ", tr("rep.glance.ai")),
+    h("p", { class: "rep-lead" }, tr("rep.glance.lead")),
     // Six columns keep the table on its sheet: the issue an idea answers stands under its name.
     table("rep-glance", tr("rep.glance.title"),
-      [[tr("score.col.rank"), true], [tr("score.col.idea")], [tr("rep.glance.col.what")], [tr("rep.glance.col.days"), true], [tr("rep.glance.col.cost"), true], [tr("rep.glance.col.score"), true]],
+      [[tr("score.col.rank"), true], [tr("score.col.idea")], [tr("rep.glance.col.what")], [estimated(tr("rep.glance.col.days")), true], [estimated(tr("rep.glance.col.cost")), true], [tr("rep.glance.col.score"), true]],
       ranked.map((r) => {
         const idea = ideaOf(r.id);
         const place = picks.indexOf(r.id);

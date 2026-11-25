@@ -517,7 +517,7 @@ export default {
   "rep.map.parkedNone": "None: every issue is kept.",
   "rep.glance.title": "The ideas at a glance",
   "rep.glance.lead": "Ranked by weighted score; your shortlist is filled in the chart.",
-  "rep.glance.ai": "Person-days and the model calls behind each cost are the Ideator's estimates.",
+  "rep.glance.est": "the Ideator's estimate",
   "rep.glance.answers": "Answers: {issue}",
   "rep.glance.col.what": "What it does",
   "rep.glance.col.days": "Person-days",
