@@ -64,16 +64,17 @@ export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = n
 }
 
 /**
- * A chart label's width in the chart's units (its text is 11.5 units): measured in the page's own font where
- * a canvas is at hand, with a little to spare for a font still loading; else about 6.3 units a character.
+ * A chart label's width in the chart's units for text of the given size: measured in the page's own font
+ * where a canvas is at hand, with a little to spare for a font still loading; else about 0.55 of the size a
+ * character.
  */
-function labelWidth() {
+function labelWidth(size = 11.5) {
   let ctx = null;
   try {
     ctx = document.createElement("canvas").getContext("2d");
-    if (ctx) ctx.font = `11.5px ${getComputedStyle(document.body).fontFamily || "sans-serif"}`;
+    if (ctx) ctx.font = `${size}px ${getComputedStyle(document.body).fontFamily || "sans-serif"}`;
   } catch { ctx = null; }
-  return (text) => (ctx ? ctx.measureText(text).width * 1.04 + 1 : text.length * 6.3);
+  return (text) => (ctx ? ctx.measureText(text).width * 1.04 + 1 : text.length * size * 0.55);
 }
 
 /**
@@ -120,24 +121,15 @@ export function scoreChart(rows, { picks = [], lang = getLang(), still = false, 
     s("text", { class: "chart-axis-title", x: (m.left + W - m.right) / 2, y: H - 6, "text-anchor": "middle" }, tr("score.chart.x")),
     s("text", { class: "chart-axis-title", x: 14, y: (m.top + H - m.bottom) / 2, "text-anchor": "middle", transform: `rotate(-90 14 ${(m.top + H - m.bottom) / 2})` }, tr("score.chart.y")));
 
-  // Labels, from the highest score down, each as near its marker as there is room: above or below its range
-  // line on the right, then on the left, then centred over or under the marker, then a line or two further
-  // out on a thin leader; failing all of these, the nearest free place in the plot, on a leader. A label never
-  // covers another label, a marker or a range line (the gaps between its words would show the line through
-  // it), nor leaves the plot, so every idea is named on paper, where no tooltip helps.
-  const LINE = 15;
-  const measure = labelWidth();
-  const boxes = [];
-  const marker = (cx, cy) => ({ x1: cx - 10, x2: cx + 10, y1: cy - 9, y2: cy + 9 });
+  // Labels: each as near its marker as there is room (see near() for where), a line or more further out on a
+  // thin leader where the crowd leaves no room beside it, and failing that the nearest free place in the plot,
+  // on a leader. A label never covers another label, a marker or a range line (the gaps between its words
+  // would show the line through it), nor leaves the plot, so every idea is named on paper, where no tooltip
+  // helps. A crowd that leaves an idea unnamed is laid out again with the names a size smaller, twice at most.
   const base = rows.map((r) => ({ r, cx: x((r.low + r.high) / 2), cy: y(r.value) }));
-  const markers = base.map((b) => marker(b.cx, b.cy));
+  const markers = base.map((b) => ({ x1: b.cx - 10, x2: b.cx + 10, y1: b.cy - 9, y2: b.cy + 9 }));
   const ranges = base.map((b) => ({ x1: x(b.r.low) - 1, x2: x(b.r.high) + 1, y1: b.cy - 2, y2: b.cy + 2 }));
   const hits = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
-  // A label's box for its text's left end lx and its baseline ly.
-  // The text is 11.5 units: its letters reach about 11.5 above the baseline and 3.5 below.
-  const boxAt = (lx, ly, w) => ({ x1: lx - 2, x2: lx + w + 2, y1: ly - 11.5, y2: ly + 3.5 });
-  // The leaders drawn so far: a later label keeps off them, as it keeps off labels, markers and range lines.
-  const leads = [];
   const crosses = (seg, box) => {
     const n = Math.max(2, Math.ceil(Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) / 2));
     for (let i = 0; i <= n; i++) {
@@ -147,57 +139,81 @@ export function scoreChart(rows, { picks = [], lang = getLang(), still = false, 
     }
     return false;
   };
-  const free = (box) => box.x1 >= m.left + 2 && box.x2 <= W - 4 && box.y1 >= 2 && box.y2 <= H - m.bottom - 3
-    && !boxes.some((o) => hits(o, box)) && !markers.some((o) => hits(o, box)) && !ranges.some((o) => hits(o, box))
-    && !leads.some((seg) => crosses(seg, box));
-  // A leader from the marker's edge to the nearest point of its label's box; null when the label is close
-  // enough to need none.
-  const leader = (b, box) => {
-    const px = Math.min(Math.max(b.cx, box.x1), box.x2);
-    const py = Math.min(Math.max(b.cy, box.y1), box.y2);
-    const d = Math.hypot(px - b.cx, py - b.cy);
-    const r1 = (v) => Math.round(v * 10) / 10;
-    return d < 16 ? null : { x1: r1(b.cx + ((px - b.cx) / d) * 12), y1: r1(b.cy + ((py - b.cy) / d) * 12), x2: r1(px), y2: r1(py) };
-  };
-  // A place for a label: its box is free, and its leader, if it needs one, crosses no label and no other marker.
-  const place = (b, own, lx, ly, w, lead) => {
-    const box = boxAt(lx, ly, w);
-    if (!free(box)) return null;
-    const seg = lead ? leader(b, box) : null;
-    if (seg && (boxes.some((o) => crosses(seg, o)) || markers.some((o, i) => i !== own && crosses(seg, o)))) return null;
-    return { box, seg, lx, ly };
-  };
-  const label = new Map();
   const order = [...base].sort((p, q) => q.r.value - p.r.value || p.cx - q.cx);
-  const take = (b, got) => { boxes.push(got.box); if (got.seg) leads.push(got.seg); label.set(b.r.id, { lx: got.lx, ly: got.ly, lead: got.seg }); };
-  // First every idea near its marker, in score order; then the ideas left over, anywhere in the plot.
-  for (const b of order) {
-    const own = base.indexOf(b);
-    const w = measure(b.r.name);
-    let got = null;
-    for (let k = 0; k <= 3 && !got; k++) {
+  const placeAll = (size) => {
+    const measure = labelWidth(size);
+    const LINE = size + 3.5;
+    const boxes = [];
+    const leads = [];
+    const label = new Map();
+    // A label's box for its text's left end lx and its baseline ly: its letters reach about the text's size
+    // above the baseline and a third of it below.
+    const boxAt = (lx, ly, w) => ({ x1: lx - 2, x2: lx + w + 2, y1: ly - size, y2: ly + size * 0.3 });
+    const free = (box) => box.x1 >= m.left + 2 && box.x2 <= W - 4 && box.y1 >= 2 && box.y2 <= H - m.bottom - 3
+      && !boxes.some((o) => hits(o, box)) && !markers.some((o) => hits(o, box)) && !ranges.some((o) => hits(o, box))
+      && !leads.some((seg) => crosses(seg, box));
+    // A leader from the marker's edge to the nearest point of its label's box; none when the label touches it.
+    const leader = (b, box) => {
+      const px = Math.min(Math.max(b.cx, box.x1), box.x2);
+      const py = Math.min(Math.max(b.cy, box.y1), box.y2);
+      const d = Math.hypot(px - b.cx, py - b.cy);
+      const r1 = (v) => Math.round(v * 10) / 10;
+      return d < 16 ? null : { x1: r1(b.cx + ((px - b.cx) / d) * 12), y1: r1(b.cy + ((py - b.cy) / d) * 12), x2: r1(px), y2: r1(py) };
+    };
+    // A place whose box is free and whose leader, if it needs one, crosses no label and no other marker.
+    const place = (b, own, lx, ly, w, lead) => {
+      const box = boxAt(lx, ly, w);
+      if (!free(box)) return null;
+      const seg = lead ? leader(b, box) : null;
+      if (seg && (boxes.some((o) => crosses(seg, o)) || markers.some((o, i) => i !== own && crosses(seg, o)))) return null;
+      return { box, seg, lx, ly };
+    };
+    const take = (b, got) => { boxes.push(got.box); if (got.seg) leads.push(got.seg); label.set(b.r.id, { lx: got.lx, ly: got.ly, lead: got.seg }); };
+    // Where a name may go, k lines out from its marker. Beside the marker (k = 0) it sits above its range line,
+    // to the right, to the left or centred, or centred right under the marker, so it reads as its line's:
+    // below the line and beside the marker it would sit on the next line down and read as that line's, so it
+    // goes there only a line or more further out, on a leader.
+    const near = (b, w, k) => {
       const up = b.cy - 6 - k * LINE;
-      const down = b.cy + 16 + k * LINE;
-      for (const [lx, ly] of [[b.cx + 12, up], [b.cx + 12, down], [b.cx - 12 - w, up], [b.cx - 12 - w, down], [b.cx - w / 2, b.cy - 14 - k * LINE], [b.cx - w / 2, b.cy + 24 + k * LINE]]) {
-        got = place(b, own, lx, ly, w, k > 0);
-        if (got) break;
+      const down = b.cy + size + 4.5 + k * LINE;
+      return k === 0
+        ? [[b.cx + 12, up], [b.cx - 12 - w, up], [b.cx - w / 2, b.cy - 14], [b.cx - w / 2, b.cy + size + 12.5]]
+        : [[b.cx + 12, up], [b.cx - 12 - w, up], [b.cx - w / 2, b.cy - 14 - k * LINE], [b.cx + 12, down], [b.cx - 12 - w, down], [b.cx - w / 2, b.cy + size + 12.5 + k * LINE]];
+    };
+    const tryNear = (b, from, to) => {
+      const own = base.indexOf(b);
+      const w = measure(b.r.name);
+      for (let k = from; k <= to; k++) for (const [lx, ly] of near(b, w, k)) {
+        const got = place(b, own, lx, ly, w, k > 0);
+        if (got) { take(b, got); return true; }
       }
+      return false;
+    };
+    // First every idea beside its marker, in score order; then, in score order, the ideas left a line or more
+    // out on a leader; then any idea still left at the nearest free place in the plot.
+    for (const b of order) tryNear(b, 0, 0);
+    for (const b of order) if (!label.has(b.r.id)) tryNear(b, 1, 3);
+    for (const b of order) {
+      if (label.has(b.r.id)) continue;
+      const own = base.indexOf(b);
+      const w = measure(b.r.name);
+      let best = null;
+      for (let ly = 13; ly <= H - m.bottom - 6; ly += 2) for (let lx = m.left + 4; lx + w <= W - 6; lx += 3) {
+        const d = Math.hypot(Math.max(lx - b.cx, 0, b.cx - lx - w), ly - 4 - b.cy);
+        if (best && d >= best.d) continue;
+        const p = place(b, own, lx, ly, w, true);
+        if (p) best = { d, p };
+      }
+      if (best) take(b, best.p);
     }
-    if (got) take(b, got);
-  }
-  for (const b of order) {
-    if (label.has(b.r.id)) continue;
-    const own = base.indexOf(b);
-    const w = measure(b.r.name);
-    let best = null;
-    for (let ly = 13; ly <= H - m.bottom - 6; ly += 2) for (let lx = m.left + 4; lx + w <= W - 6; lx += 3) {
-      const d = Math.hypot(Math.max(lx - b.cx, 0, b.cx - lx - w), ly - 4 - b.cy);
-      if (best && d >= best.d) continue;
-      const p = place(b, own, lx, ly, w, true);
-      if (p) best = { d, p };
-    }
-    // A plot with no room left keeps the marker, its tooltip on screen and its row in the table.
-    if (best) take(b, best.p);
+    return label;
+  };
+  let size = 11.5;
+  let label = placeAll(size);
+  for (const smaller of [10.5, 9.5]) {
+    if (label.size === base.length) break;
+    const again = placeAll(smaller);
+    if (again.size > label.size) { label = again; size = smaller; }
   }
   const points = base.map((b) => ({ ...b, label: label.get(b.r.id) || null, place: picks.indexOf(b.r.id) }));
 
@@ -238,7 +254,7 @@ export function scoreChart(rows, { picks = [], lang = getLang(), still = false, 
 
   // The names over every marker and range line, so a later point never paints over an earlier name; the
   // markers carry the names for screen readers, so the labels are for the eye only.
-  const names = s("g", { class: "chart-labels", "aria-hidden": "true" }, points.filter((p) => p.label).map((p) => [
+  const names = s("g", { class: ["chart-labels", size < 11.5 ? `chart-labels--${size === 10.5 ? "small" : "smaller"}` : ""].join(" ").trim(), "aria-hidden": "true" }, points.filter((p) => p.label).map((p) => [
     p.label.lead ? s("line", { class: "chart-leader", ...p.label.lead }) : null,
     s("text", { class: "chart-label", x: Math.round(p.label.lx * 10) / 10, y: Math.round(p.label.ly * 10) / 10, "data-idea": p.r.id }, p.r.name)
   ]));

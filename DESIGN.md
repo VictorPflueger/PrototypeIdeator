@@ -42,8 +42,8 @@ A live run uses the same steps: the Start step becomes Vici's drop zone under th
 notice, with the number of ideas and the optional company, sector, focus and constraints; then Vici's
 live-run dialog. While an agent works, its step names the agent and what it does, with the time, the
 spend so far and Stop; the Session cost tile shows the spend against the cap. A stop says why, keeps
-what is done and offers the report so far. After the report, Save run as
-simulation stands with the two files.
+what is done and offers the report so far. After the report, Save run as simulation stands with the two
+files.
 
 ## 4. Colour
 
@@ -62,8 +62,8 @@ visitor chooses dark: rooms are lit.
 ## 5. Two languages
 
 English opens every first visit; German switches every word in place and has its own guide. The agents
-of a live run write in the language the run started in, and its report follows them. "KI‑Agenten" and
-"Live‑Lauf" use non-breaking hyphens.
+of a live run write in the language the run started in, and its report follows them. German's long words
+break at their hyphens and, in the report's tables, between syllables.
 
 ## 6. The shape of the report
 

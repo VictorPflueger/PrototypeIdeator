@@ -315,6 +315,9 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .chart-place { fill: var(--vc-neutral-0); font-size: 10px; font-weight: var(--vc-weight-bold); pointer-events: none; }
 .chart-label { fill: var(--vc-text); font-size: 11.5px; pointer-events: none; paint-order: stroke; stroke: var(--vc-surface); stroke-width: 3px; stroke-linejoin: round; }
 .chart-leader { stroke: var(--vc-text-muted); stroke-width: 1; }
+/* A crowd that leaves no room for every name at the usual size sets them a size or two smaller. */
+.chart-labels--small .chart-label { font-size: 10.5px; }
+.chart-labels--smaller .chart-label { font-size: 9.5px; }
 .chart-point:focus-visible .chart-hex, .chart-point:hover .chart-hex { stroke: var(--vc-focus); stroke-width: 3; }
 .chart-tip { position: absolute; z-index: 2; transform: translate(12px, -50%); padding: 6px 10px; border: 1px solid var(--vc-border); border-radius: var(--vc-radius-sm); background: var(--vc-surface-raised); box-shadow: var(--vc-shadow-md); font-size: var(--vc-font-size-xs); line-height: 1.35; pointer-events: none; white-space: nowrap; }
 .chart-tip[data-side="left"] { transform: translate(calc(-100% - 12px), -50%); }

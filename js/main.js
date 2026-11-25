@@ -32,6 +32,9 @@ async function boot() {
     throw new Error(t("p.boot.module", { error: String(err?.message || err) }));
   }
   await presenter.start();
+  // The chart measures its names in the page's font: if the fonts load after a chart was drawn, the step is
+  // drawn once more with their real widths.
+  document.fonts?.ready?.then(() => { if (document.querySelector("#stage svg.score-chart")) presenter.presenter?.render(); }).catch(() => {});
   installLeaveWarning(window);
   document.documentElement.dataset.boot = "ready";
   const el = document.getElementById("boot");

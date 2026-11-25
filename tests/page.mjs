@@ -406,7 +406,9 @@ try {
     let labelled = 0;
     for (const c of cases) {
       const { context, page, errors } = await open(c.query, { width: 1280, height: 720, locale: "en-GB" });
+      // The page draws its step again once the fonts have loaded; the measure waits for that.
       await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(150);
       if (c.draw) await page.evaluate(DRAW, c.draw);
       const m = await page.evaluate(MEASURE_CHART, c.sel);
       leaders += m.leaders || 0;
