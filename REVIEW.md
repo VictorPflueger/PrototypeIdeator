@@ -77,7 +77,7 @@ The sisters' agent loops, tools, simulations and domain modules are not taken (P
 
 ## Part 2. Independent review
 
-The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes (below).
+The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes on `d611b4e`: all of them held but one low (B7), and it found one new medium (C1) and six lows and observations, all fixed in `7040db7`. In look 4 a fourth fresh agent confirmed those (below).
 
 ### Look 1: the code
 
@@ -113,7 +113,7 @@ The release candidate `66b8743` was reviewed on 25 November 2026 against the bri
 | B4 | medium | Vici's slider script wrote the bare value into the weights' read-outs | `js/views/score.js`, `js/report_doc.js` | Fixed: the read-outs keep % and shares; the report shows the shares when the weights don't add up to 100 %. `tests/presenter.mjs weights` |
 | B5 | low | The dialog's acknowledgement ran into the part below at 1280 × 720 | `css/app.css` | Fixed: the app's min-height let the grid shrink it. `tests/live.mjs privacy`, with the old rule as its control |
 | B6 | low | The merge target's title was cut mid-word | `js/views/read.js` | Fixed: cut at a word, the whole title as the tooltip |
-| B7 | low | Long words broke without a hyphen in the comb | `js/charts.js`, `css/app.css` | Fixed: the cell's name steps down for a long word |
+| B7 | low | Long words broke without a hyphen in the comb | `js/charts.js`, `css/app.css` | Fixed: a name takes the size at which its widest piece fills the cell, measured in the page's font, and breaks only at spaces and hyphens (look 3 found the first fix held in English only). `tests/page.mjs comb`, with long German names, fails on the old rule |
 | B8 | low | S1's issue map added up to €10.9m beside €10.8m | `js/report_doc.js` | Fixed: a total row, worked out from the unrounded amounts |
 | B9 | low | The report didn't say its challenger reports are stand-ins | `js/report_doc.js` | Fixed: its sources say so |
 | B10 | low | Titles can't be edited, as the brief's 6.2 allows | TECH_NOTES.md | Recorded in section 9 as a cut for 1.0.0 |
@@ -127,6 +127,20 @@ The release candidate `66b8743` was reviewed on 25 November 2026 against the bri
 | B18 | observation | The report didn't carry the shortlist's share of the money at stake | `js/report_doc.js` | Fixed: a line under What we recommend |
 | B19 | observation | The header grew when a tile's note wrapped | `css/app.css` | Declined: reserving two lines in every note took the 3 px the Start step needs at 1280 × 720 in German (`tests/page.mjs layout`) |
 | B20 | observation | The build brief is written for Victor | brief | None needed: the brief's 6.6 asks for it |
+
+### Look 3: the fixes
+
+A fresh agent checked every fix of looks 1 and 2 on `d611b4e` against `66b8743`, showing each fault on the old commit and gone on the new, ran the whole suite (28 of 28) and the access suite twice more (3 of 3 each), and read the S1 English and S3 German PDFs page by page. Every high and medium fix held; B7 held only in English. Its verdict: not ready, with one new medium finding.
+
+| ID | Severity | What | Where | State |
+|---|---|---|---|---|
+| C1 | medium | Play moved on while a keyboard user tabbed through the comb or the chart, and the focus fell to the page's body | `js/presenter.js` | Fixed: the keyboard's focus landing on a control of the step pauses Play, as a press does; the step's own action doesn't, and a step that moves on with the focus in it puts the focus on the next step's title. `tests/presenter.mjs play` (Tab on Ideate, Space on a chart point) fails on the old code |
+| C2 | low | Clear everything left the last idea's page in the closed drawers | `js/presenter.js` | Fixed: both drawers close and empty. `tests/live.mjs storage` fails on the old code |
+| C3 | low | The report's shortlist share repeated At stake without its AI mark | `js/report_doc.js` | Fixed: the line carries "partly AI estimates" where the sum does. `tests/report.mjs structure` fails on the old code for S3 |
+| C4 | low | An agent that cited an idea's cost a run wrote whole cents, so €0.00 could stand beside the tables' €0.005 | `js/engine.js`, `js/facts.js` | Fixed: the fact is written as the tables write it. `tests/facts.mjs`, with whole cents as its control |
+| C5 | observation | With the free count failing, the cautious ratio took a character past ASCII as one token, and Chinese at an assumed 1.43 tokens each passed the cap at Haiku's price step | `js/pipeline.js`, `js/config.js` | Fixed: such a character counts at its UTF-8 bytes, a request near the step is priced at the long-prompt tier, and a stop says the count didn't answer, with Try again first. `tests/pipeline.mjs`, with the old rule as its control |
+| C6 | observation | Merge targets cut to the same words read alike | `js/views/read.js` | Fixed: titles that would read alike start where they part ("… the cost of every voyage"). `tests/unit.mjs` |
+| C7 | observation | With the count failing, the German busy line squeezed the live Start step's file list | `js/i18n/de.js`, `js/i18n/en.js` | Fixed: shorter in both languages; the bar is 176 px tall in either, was 218 |
 
 ## Part 3. Steve Jobs review and partner review
 

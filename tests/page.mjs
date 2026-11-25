@@ -311,8 +311,9 @@ try {
         el.append(probe);
         const widest = Math.max(...pieces.map((p) => { probe.textContent = p; return probe.getBoundingClientRect().width; }));
         probe.remove();
+        el.dataset.fit = `${widest.toFixed(1)} > ${room.toFixed(1)} px at ${parseFloat(getComputedStyle(el).fontSize).toFixed(1)} px`;
         return widest > room + 0.5;
-      }).map((el) => el.textContent);
+      }).map((el) => `${el.textContent} (${el.dataset.fit})`);
       // The columns the app gives the comb: one row up to six ideas, then four or six columns.
       const cols = getComputedStyle(ul).gridTemplateColumns.split(" ").filter(Boolean).length;
       const want = n <= 6 ? n : n <= 8 ? 4 : 6;
