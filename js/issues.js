@@ -8,15 +8,21 @@ import { normalise } from "./facts.js";
 /** The prefix of an issue the Reader found in a document. */
 export const DOC_PREFIX = "doc-";
 
+/** The shortest quote whose finding in a file proves anything: a few words can stand anywhere (review A18). */
+export const QUOTE_MIN_CHARS = 20;
+
 /**
  * A quote checked against its file's text: word for word for text files, "not-checked" for a PDF, whose
- * text code doesn't read (D9). content(file) gives a text file's content, or null when there is none.
+ * text code doesn't read (D9), and for a quote too short to prove where it stands. content(file) gives a
+ * text file's content, or null when there is none.
  */
 export function checkQuote(quote, { file, content = () => null, kind = () => "text" } = {}) {
   if (kind(file) === "pdf") return "not-checked";
   const text = content(file);
   if (typeof text !== "string") return "not-checked";
-  return normalise(text).includes(normalise(quote)) ? "word-for-word" : "failed";
+  const q = normalise(quote);
+  if (!normalise(text).includes(q)) return "failed";
+  return q.length >= QUOTE_MIN_CHARS ? "word-for-word" : "not-checked";
 }
 
 /**

@@ -1,6 +1,6 @@
 // The agents' prompts (brief §5.2, PLAN.md §8.4): the Ideator's prompt carries the shared rules, the
-// rubric, the seven criteria and the number of ideas asked for, in either language, and stays at about
-// 700 tokens (four characters a token, the estimate rule); its input is the state as compact JSON, with
+// rubric, the seven criteria and the number of ideas asked for, in either language, and stays under 3,040
+// characters, about 1,100 tokens at the estimate's 2.7 characters a token; its input is the state as compact JSON, with
 // kept issues only, a merged issue at its largest member's value (D15) and only the facts it may cite.
 // The stock words match Vici's list when a ViciDesign checkout is there.
 // Prints PROMPTS OK.
@@ -17,16 +17,18 @@ const P = await import(path.join(ROOT, "js", "probe.js"));
 const E = await import(path.join(ROOT, "js", "engine.js"));
 const r = createReport("prompts");
 
-const TOKEN_LIMIT = 760; // "about 700": the estimate rule's four characters a token, with a little room
-const tokens = (s) => Math.ceil(s.length / 4);
+// The limit is in characters, which don't depend on a ratio: 3,040 is about 1,100 tokens at the estimate's
+// 2.7 characters a token (js/config.js ESTIMATE, from Anthropic's glossary), short enough for Haiku 5.5.
+const CHAR_LIMIT = 3040;
+const chars = (s) => s.length;
 
 // ---- the Ideator's prompt -----------------------------------------------------------------------------------
 let largest = 0;
 for (const lang of ["en", "de"]) {
-  for (let n = 1; n <= 10; n += 1) largest = Math.max(largest, tokens(M.ideatorPrompt({ lang, count: n })));
+  for (let n = 1; n <= 10; n += 1) largest = Math.max(largest, chars(M.ideatorPrompt({ lang, count: n })));
 }
-r.check(largest <= TOKEN_LIMIT, `the Ideator's prompt stays at about 700 tokens in both languages and for 1 to 10 ideas (at most ${largest}, limit ${TOKEN_LIMIT})`);
-r.control(tokens(M.ideatorPrompt({ count: 8 }) + "x".repeat(400)) > TOKEN_LIMIT, "four hundred more characters would pass the limit");
+r.check(largest <= CHAR_LIMIT, `the Ideator's prompt stays under 3,040 characters, about 1,100 tokens, in both languages and for 1 to 10 ideas (at most ${largest})`);
+r.control(chars(M.ideatorPrompt({ count: 8 }) + "x".repeat(400)) > CHAR_LIMIT, "four hundred more characters would pass the limit");
 
 const en = M.ideatorPrompt({ lang: "en", count: 8 });
 const de = M.ideatorPrompt({ lang: "de", count: 8 });

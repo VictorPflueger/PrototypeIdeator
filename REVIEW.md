@@ -1,8 +1,14 @@
-# Review: files taken from other tools
+# Review
 
-Every file this repository took from a sister prototype or a sibling tool, as of version 0.1.0, with what changed and why. "Copied" means byte for byte. The sources, as read on 23 November 2026: the Sovereignty Assessment 2.0.0 (35c0dea), the Data Quality Agent 2.2.0 (831f050), the Timetable Translator (through the Sovereignty Assessment), the SWOT Challenger 0.1.0 (a52fd6f, merged as 617b122) and Vici (6580c06).
+Part 1 lists every file taken from a sister prototype or a sibling tool. Part 2 is the independent review
+of the release by fresh agents that did not build the tool, and part 3 the design review and Vici's
+partner review on the running tool.
 
-## Shared with the sibling tools
+## Part 1. Files taken from other tools
+
+Every file this repository took from a sister prototype or a sibling tool, as of version 0.1.0 and with the files added since, with what changed and why. "Copied" means byte for byte. The sources, as read on 23 November 2026: the Sovereignty Assessment 2.0.0 (35c0dea), the Data Quality Agent 2.2.0 (831f050), the Timetable Translator (through the Sovereignty Assessment), the SWOT Challenger 0.1.0 (a52fd6f, merged as 617b122) and Vici (6580c06); for 1.0.0, the PESTEL Challenger 1.0.0.
+
+### Shared with the sibling tools
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -13,7 +19,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `tools/schema-module.mjs` | SWOT Challenger | Copied | Writes the twin above, so every tool writes the same bytes |
 | `tests/kpis.mjs` | SWOT Challenger | Copied | Checks the shared library the same way in every tool |
 
-## Live client, key and session
+### Live client, key and session
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -22,13 +28,13 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `js/cost.js` | Sovereignty Assessment | Copied | Usage times price, Haiku's tier above 100,000 tokens, $0.01 a search, 0.894 euros a dollar |
 | `js/schema.js` | Sovereignty Assessment | Copied | The JSON Schema validator the brief names |
 | `js/keystore.js` | Sovereignty Assessment (the same file in the Data Quality Agent) | Adapted | One module variable instead of session storage: the brief keeps the key in memory only. `looksLikeKey`, `maskKey` and `redactSecrets` stay |
-| `js/session.js` | none | New | Everything a person enters and a run makes, held in memory, with Clear everything and the leave-page warning |
+| `js/session.js` | none | New | The tab's session record, held in memory: the run's events and whether a result is unsaved, for the leave-page warning. Clear everything, on the live Start step, empties it with the presenter's run and the key |
 | `js/live_dialog.js` | Data Quality Agent | Adapted | Its key check with the free model list and its refusal inside a frame; Vici's live-run dialog with this tool's presets, Advanced, budget cap, warning and estimate; the key in memory only |
 | `js/api_messages.js` | Sovereignty Assessment | Adapted | Each API answer and each stop of a step as a plain message with the one thing to do next, with this tool's credit, model, browser and budget cases |
 | `js/watch.js` | none | New | A problem on screen until closed, once per message; a hidden modal dialog closed by the next press; a press caught by a layer the page didn't draw, named |
 | `js/pipeline.js`, `js/live_agents.js`, `js/live_run.js`, `js/count.js`, `js/privacy.js` | none | New | One structured request a step under the budget cap with one repair; the four agents' requests and checks; a live run in the scenarios' format and Save run as simulation; the free token count; what looks private |
 
-## Page, languages and settings
+### Page, languages and settings
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -47,7 +53,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `js/report_doc.js`, `js/exports.js` | none, on Vici's report pattern (ViciDesign `64044bd`) | New | The report built from a run as Vici's report pattern sets it out, printed in the SWOT and PESTEL Challengers' format (9.5 pt, heads in sentence case, the model and setting on the cover); the file names, Save as PDF and Ctrl+P under the report's file name, the HTML file through `Vici.report.html` and the ideas file `prototype-ideas/1`, checked against its schema |
 | `js/brief.js` | none | New | The build brief's template in English and German, the idea's part composed from its page, the two blocks, and the checks on the Brief writer's answer |
 
-## Tests and tools
+### Tests and tools
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -55,6 +61,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `tests/lib/prototype.mjs` | Sovereignty Assessment | Adapted | This page's name, colour pairs, hexagon tour and page icon |
 | `tests/lib/fake-claude.mjs` | Sovereignty Assessment | Adapted | Single structured requests instead of a tool loop: it streams each answer, plays errors with retry-after, and checks every request's model, effort, thinking, format and headers |
 | `tests/report.mjs` | none, after the PESTEL Challenger's report suite | New | The report, its PDF, its tables on screen and paper, the challengers' print format, its HTML and ideas files, a stopped run's notice, the downloads and the build brief, with Vici's report rule and PDF reader |
+| `tests/access.mjs` | PESTEL Challenger 1.0.0 | Adapted | Its Tab rounds, its pixel test of the focus and its motion sampler, for this tool's six steps, its drawers and a live run against the stand-in that starts at the drop zone's file chooser (AC-14) |
 | `tests/lib/live-route.mjs`, `tests/live.mjs`, `tests/pipeline.mjs`, `tests/privacy.mjs` | none | New | The stand-in on a browser context; the live run in Chromium; the pipeline in Node; the private-data scan |
 | `tests/hygiene.mjs` | Sovereignty Assessment (from the Timetable Translator) | Copied | The private term list comes from `HYGIENE_TERMS` |
 | `tests/hexagon.mjs`, `tests/page-icon.mjs` | Sovereignty Assessment | Copied | The page's values sit in `tests/lib/prototype.mjs` |
@@ -64,6 +71,119 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `.github/workflows/tests.yml`, `live-site.yml` | Sovereignty Assessment, with the Data Quality Agent's step for Victor's website | Adapted | Also clones the three challengers for the parity suite |
 | `tools/update-vici.mjs` | none | New | Copies the files this page uses from a ViciDesign checkout, `dist/vici-theme.js` included, and names the commit in `vici/README.md` and the workflow |
 
-## Not taken
+### Not taken
 
 The sisters' agent loops, tools, simulations and domain modules are not taken (PLAN.md, section 7.2): the Ideator sends single structured requests. The page's own theme script went once Vici published `vici/dist/vici-theme.js`, and the Data Quality Agent's vici-files suite is folded into `tests/vici.mjs`.
+
+## Part 2. Independent review
+
+The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes on `d611b4e`: all of them held but one low (B7), and it found one new medium (C1) and six lows and observations, all fixed in `7040db7` and `fbd147c`. In look 4 a fourth fresh agent checked those fixes on `de76478`: every fix holds; no high or medium finding open. Its five new lows and observations are fixed after it (below).
+
+### Look 1: the code
+
+| ID | Severity | What | Where | State |
+|---|---|---|---|---|
+| A1 | high | The budget cap took every text at four characters a token, a third too few on the 5.5 models, so a large file could take a run past its cap | `js/pipeline.js`, `js/config.js` | Fixed: every request's input is counted with the free endpoint, with a margin; a cautious ratio when the count fails; the estimate assumes 2.7 characters a token. `tests/pipeline.mjs` (a stand-in tokenizer; a 650,000-character report and German and Chinese text, with the count and without; controls on the old rule) |
+| A2 | high | A PDF whose page objects sit in compressed object streams read as no pages: no page limit, priced at nothing | `js/documents.js`, `js/live_agents.js` | Fixed: the intake inflates object streams; a PDF whose pages can't be counted is refused; the cap takes PDFs at the rule's high end when the count fails. `tests/intake.mjs` (object-stream PDFs made by `tests/lib/objstm-pdf.mjs`), `tests/live.mjs cap` |
+| A3 | medium | A second live run showed the first run's figure struck through | `js/presenter.js` | Fixed: the live preview is keyed by the run's id and the caches clear on a new run. `tests/live.mjs decide` fails on the old key |
+| A4 | medium | The private-data warning never ran when the run started from one challenger's report, or for fields edited later | `js/presenter.js` | Fixed: the first request of a run, whatever its step, and any request after the files or fields changed, opens the dialog with the warning. `tests/live.mjs privacy` |
+| A5 | medium | No Clear everything control | `js/views/intake.js`, `js/presenter.js` | Fixed: on the live Start step, asked once in place (saying when a result isn't downloaded); it empties the run, the run set aside, the caches, the session record and the key. `tests/live.mjs storage` |
+| A6 | medium | At stake mixed the Reader's AI estimates with stated amounts without saying so | `js/engine.js`, `js/kpis.js`, `js/facts.js` | Fixed: the tile, the fact in the report's text and the issue map's total say "partly AI estimates" in lilac; the guide says so |
+| A7 | low | Every document source was tagged PDF | `js/views/read.js` | Fixed: tagged by the file's kind |
+| A8 | low | The Ideator's person-days and the Reader's amounts and KPIs showed without the AI mark | `js/views/score.js`, `js/report_doc.js` | Fixed: the chart's axis says "(the Ideator's estimate)", a lilac note stands under the score table and the issue map, and the report's glance marks its two estimated columns with the AI's sparkle |
+| A9 | low | Each idea's live-run cost is priced at Haiku 5.5's prices | `js/engine.js` | Recorded in TECH_NOTES.md, section 9 |
+| A10 | low | The ideas file dropped the Unchecked marks | `js/exports.js` | Fixed within `prototype-ideas/1`: its disclaimer names the unchecked texts. `tests/live.mjs guards` |
+| A11 | low | Counted PDF tokens were never shown with their price | `js/presenter.js` | Fixed: the busy bar shows each request's counted input and its worst case |
+| A12 | low | Save as PDF cleared the leave-page warning even when cancelled; a paid reading set none | `js/exports.js`, `js/presenter.js` | Fixed |
+| A13 | low | The saved-run test claimed no document text, though the Reader's quotes are in it | `tests/live.mjs`, `js/live_run.js` | Fixed: the claim says quotes of up to 150 characters, and the test checks their length |
+| A14 | observation | No record of Victor's live run on each preset | TECH_NOTES.md, section 8 | Open: Victor's runs (AC-15) |
+| A15 | observation | A retry after a broken stream wasn't checked against the cap | `js/pipeline.js` | Fixed: the cap holds the broken attempt's worst case and stops when a second doesn't fit. `tests/pipeline.mjs` |
+| A16 | observation | A key checked after its dialog closed was still kept | `js/live_dialog.js` | Fixed |
+| A17 | observation | Dates were UTC | `js/presenter.js`, `js/exports.js` | Fixed: the local date |
+| A18 | observation | Any substring passed the quote check | `js/issues.js` | Fixed: under 20 characters is "not checked by code". `tests/unit.mjs` |
+| A19 | observation | A cap check restated its own rule | `tests/pipeline.mjs` | Fixed: a concrete stop that fits an empty meter |
+
+### Look 2: the running tool
+
+| ID | Severity | What | Where | State |
+|---|---|---|---|---|
+| B1 | high | Start turned Play on, and Play moved on while the person worked the weights; the keyboard test failed 2 of 3 runs | `js/presenter.js` | Fixed: Play stops wherever the person acts in the story or its evidence, but for the step's own action. `tests/presenter.mjs play`; DEMO_SCRIPT says Start starts Play |
+| B2 | medium | S3's heat-plan issue showed "not stated" while its merged member's €1.4m counted | `js/views/read.js`, `js/report_doc.js` | Fixed: a kept issue shows its group's value. `tests/presenter.mjs figures` checks every kept row in S1 to S3 against its fact |
+| B3 | medium | One live run read €0.00 beside €0.09 for twenty | `js/format.js` | Fixed: a tenth of a cent below €0.10 ("€0.004"), and twenty runs multiply the figure shown. `tests/unit.mjs` |
+| B4 | medium | Vici's slider script wrote the bare value into the weights' read-outs | `js/views/score.js`, `js/report_doc.js` | Fixed: the read-outs keep % and shares; the report shows the shares when the weights don't add up to 100 %. `tests/presenter.mjs weights` |
+| B5 | low | The dialog's acknowledgement ran into the part below at 1280 × 720 | `css/app.css` | Fixed: the app's min-height let the grid shrink it. `tests/live.mjs privacy`, with the old rule as its control |
+| B6 | low | The merge target's title was cut mid-word | `js/views/read.js` | Fixed: cut at a word, the whole title as the tooltip |
+| B7 | low | Long words broke without a hyphen in the comb | `js/charts.js`, `css/app.css` | Fixed: a name takes the size at which its widest piece fills the cell, measured in the page's font, and breaks only at spaces and hyphens (look 3 found the first fix held in English only). `tests/page.mjs comb`, with long German names, fails on the old rule |
+| B8 | low | S1's issue map added up to €10.9m beside €10.8m | `js/report_doc.js` | Fixed: a total row, worked out from the unrounded amounts |
+| B9 | low | The report didn't say its challenger reports are stand-ins | `js/report_doc.js` | Fixed: its sources say so |
+| B10 | low | Titles can't be edited, as the brief's 6.2 allows | TECH_NOTES.md | Recorded in section 9 as a cut for 1.0.0 |
+| B11 | low | The Reader's titles, descriptions and KPIs read as fact | `js/views/read.js`, `js/report_doc.js` | Fixed: a lilac note under the issue map, on screen and in the report |
+| B12 | low | DEMO_SCRIPT's opening didn't match the page | DEMO_SCRIPT.md, .de.md | Fixed |
+| B13 | low | English percentages had no space before % | `js/format.js` | Fixed: a no-break space, as Vici's writing rule asks |
+| B14 | low | Three wording slips | report, German guide | Fixed |
+| B15 | low | TECH_NOTES, section 8, and this file lagged the release | documents | Fixed here; section 8 waits for Victor's runs (A14) |
+| B16 | observation | Two checks waited a fixed time | `tests/report.mjs` | Fixed: the copy check waits for the page's announcement |
+| B17 | observation | The guide's figures stay on Tidewell Lines | guide | None needed: captioned "for Tidewell Lines" |
+| B18 | observation | The report didn't carry the shortlist's share of the money at stake | `js/report_doc.js` | Fixed: a line under What we recommend |
+| B19 | observation | The header grew when a tile's note wrapped | `css/app.css` | Declined: reserving two lines in every note took the 3 px the Start step needs at 1280 × 720 in German (`tests/page.mjs layout`) |
+| B20 | observation | The build brief is written for Victor | brief | None needed: the brief's 6.6 asks for it |
+
+### Look 3: the fixes
+
+A fresh agent checked every fix of looks 1 and 2 on `d611b4e` against `66b8743`, showing each fault on the old commit and gone on the new, ran the whole suite (28 of 28) and the access suite twice more (3 of 3 each), and read the S1 English and S3 German PDFs page by page. Every high and medium fix held; B7 held only in English. Its verdict: not ready, with one new medium finding.
+
+| ID | Severity | What | Where | State |
+|---|---|---|---|---|
+| C1 | medium | Play moved on while a keyboard user tabbed through the comb or the chart, and the focus fell to the page's body | `js/presenter.js` | Fixed: the keyboard's focus landing on a control of the step pauses Play, as a press does; the step's own action doesn't, and a step that moves on with the focus in it puts the focus on the next step's title. `tests/presenter.mjs play` (Tab on Ideate, Space on a chart point) fails on the old code |
+| C2 | low | Clear everything left the last idea's page in the closed drawers | `js/presenter.js` | Fixed: both drawers close and empty. `tests/live.mjs storage` fails on the old code |
+| C3 | low | The report's shortlist share repeated At stake without its AI mark | `js/report_doc.js` | Fixed: the line carries "partly AI estimates" where the sum does. `tests/report.mjs structure` fails on the old code for S3 |
+| C4 | low | An agent that cited an idea's cost a run wrote whole cents, so €0.00 could stand beside the tables' €0.005 | `js/engine.js`, `js/facts.js` | Fixed: the fact is written as the tables write it. `tests/facts.mjs`, with whole cents as its control |
+| C5 | observation | With the free count failing, the cautious ratio took a character past ASCII as one token, and Chinese at an assumed 1.43 tokens each passed the cap at Haiku's price step | `js/pipeline.js`, `js/config.js` | Fixed: such a character counts at its UTF-8 bytes, a request near the step is priced at the long-prompt tier, and a stop says the count didn't answer, with Try again first. `tests/pipeline.mjs`, with the old rule as its control |
+| C6 | observation | Merge targets cut to the same words read alike | `js/views/read.js` | Fixed: titles that would read alike start where they part ("… the cost of every voyage"). `tests/unit.mjs` |
+| C7 | observation | With the count failing, the German busy line squeezed the live Start step's file list | `js/i18n/de.js`, `js/i18n/en.js` | Fixed: shorter in both languages; the bar is 176 px tall in either, was 218 |
+
+### Look 4: look 3's fixes
+
+A fresh agent checked C1 to C7 and B7 on `de76478` against `d611b4e`, showing each fault on the old commit and gone on the head. It worked Play by keyboard alone on every step Play leaves by itself, ran 88 cases of the cap with the count failing, laid out the comb with 1 to 10 ideas on screen, in a 673 px print window and in five PDFs, with the fonts held back as well, looked at 64 views and the live bars, and ran the whole suite (28 of 28). Every fix holds; B7 holds within the two limits TECH_NOTES, section 9, records. Its verdict line: every fix holds; no high or medium finding open. The five findings it added are fixed after it, each with a check that fails on the old code:
+
+| ID | Severity | What | Where | State |
+|---|---|---|---|---|
+| D1 | low | A cap stop on the cautious count left the build brief's drawer with Try again alone, so no way to a higher cap there | `js/presenter.js` | Fixed: Change settings stands beside Try again, as in the step's bar. `tests/report.mjs brief` |
+| D2 | low | With the keyboard on Next, Play reaching the furthest step disabled Next and dropped the focus to the page's body | `js/presenter.js` | Fixed: the focus goes to the step's title. `tests/presenter.mjs play` |
+| D3 | observation | With the count failing, a table of figures, about a token a character, still passed the cap at two ASCII characters a token | `js/pipeline.js`, `js/config.js` | Fixed: a digit, a space or a mark counts as a token of its own. `tests/pipeline.mjs`, a CSV of 120,000 characters, with the old rule as its control |
+| D4 | observation | A saved run's free count added the counts of requests the cap stopped | `js/pipeline.js` | Fixed: only a request that goes out adds its count. `tests/pipeline.mjs` |
+| D5 | observation | On paper the glance's sparkle had no words, and nothing said the model calls behind a run's cost are the Ideator's | `js/report_doc.js`, both languages | Fixed: the cost note and the estimate rule's assumption say so. `tests/report.mjs structure` |
+
+## Part 3. Steve Jobs review and partner review
+
+Both reviews ran on 25 November 2026 on the running tool after the independent review's fixes, cold in a new tab at 1280 × 720 and 1920 × 1080, light and dark, English and German (the screenshots of S1 and S3 at each size, theme and language, taken again after look 3's fixes), and once along DEMO_SCRIPT with a timer, Play on.
+
+### Design review: Prototype Ideator 1.0.0
+
+**Verdict:** INSANELY GREAT (score 9/10)
+
+**The One Thing:** a company's documents become a ranked shortlist of agentic-AI prototypes, each tied to the money at stake: for Tidewell Lines, €10.8m a year on 7 of 8 kept issues, with Allowance Gap Agent first in 9 of 9 rankings.
+
+**Keeps its promise?** Yes. The four tiles answer before anything runs, Start and Find prototype ideas reach the eight ideas in two clicks, a weight moves the order while the title keeps its 9 of 9, and the report prints for the room with the footer on every page. Six of the seven diagnostic rows pass; the open one is row 4: the live run has run end to end only against the stand-in, so Victor's three runs on the real API are what takes it to 10.
+
+**Cut list:** nothing more for 1.0.0. This cycle cut a note under the chart (its axis says it), the glance's separate AI paragraph (one sentence in the lead), the two reserved note lines in every tile (they cost the Start step its room at 1280 × 720) and the title edit of the brief's 6.2 (recorded for 1.1.0).
+
+**Fix list:**
+1. Victor's live run on Fast, Balanced and Thorough, each within its cap, with the saved runs in TECH_NOTES, section 8: the counted input beside the billed, the cost against the cap, the largest answer.
+2. The stand-in challenger reports give way to the challengers' own exports in 1.1.0 (labelled stand-ins until then).
+
+**Back of the fence:** the boot screen of the page opened from a file, an empty drop zone, a refused file's row, a rejected key, the cap stop, a step that failed its checks twice, the cleared state and the stopped run's report all hold the hero screens' standard in both themes. Left as they are: the merge target's title is cut at a word even at 1920 × 1080, where the select has room (its tooltip holds the whole, and two titles that would read alike start where they part); and in German the comb's longest compounds set a size or two below their neighbours to stay whole, Zertifikatslücken-Agent at about 10 px at 1280 × 720, which the idea's own page names in full.
+
+### Partner review: Prototype Ideator 1.0.0
+
+**Verdict:** ready.
+
+**The One Thing:** from a company's documents to a ranked shortlist of agentic-AI prototypes tied to the money at stake: Tidewell Lines puts €10.8m a year at stake, and Allowance Gap Agent leads in 9 of 9 rankings.
+
+**Keeps its promise:** yes. Cold at 1280 × 720 the guide opens by itself and says in its first lines what goes in and what comes out; closed, the first screen names the company, its three reports (marked stand-ins) and the four figures with what each measures. At every step the page says what it does (the lilac line), what it is worth (At stake, Issues covered, Top score) and which figure moved (struck through beside the new value): a key figure first moves at step 2, when an issue is parked. Every figure is the engine's from the scenario's own data, its evidence one click away (the issue's source, the idea's page, the stability view), and the fictional companies, the stand-in reports and the AI's estimates say so. Timed along DEMO_SCRIPT, Play on, in both languages: the guide, Start, the Read step waiting for the presenter, eight ideas, an idea open for 30 s with Play paused, the weights at 30 % for 20 s (top score 4.73, still 9 of 9), the shortlist and the report ("your shortlist answers 63 %") in 70 s of clicks, with the talk in between fitting the script's five minutes.
+
+**Cut list:** none. Each of the six steps moves the story or a figure; the stability view is the evidence for the title's "9 of 9", and the ideas file is the handoff the brief asks for.
+
+**Fix list:** none open. Found and fixed during the review: at 1280 × 720 in German the score table ran 78 px wider than its box, so the score column needed sideways scrolling; the rating columns now take less room, and `tests/page.mjs layout` checks the table at four sizes in both languages.
+
+**Keep list:** the byline with Victor's portrait, LinkedIn and website; the guide that opens on start, ends with the timed talk track and explains each of the four key figures; the four tiles at the top right, which answer before anything runs; Play that stops wherever you act; "You are interacting with an AI system" beside every control that starts a live run; the lilac marks on what the AI wrote or estimated; the stand-in and fictional-company labels; the public-information notice; Clear everything; the report's footer and vote sheet.

@@ -8,23 +8,37 @@ import { h } from "../dom.js";
 import { t, tn } from "../i18n/index.js";
 import { fmtDate } from "../format.js";
 import { fmtEurCompact, fmtEurRange } from "../format.js";
-import { heading, agentLine, turnBar, storyPanel, evidencePanel, tag, toolShort, uncheckedTag } from "./common.js";
+import { heading, agentLine, aiNote, turnBar, storyPanel, evidencePanel, tag, toolShort, uncheckedTag } from "./common.js";
+import { kindOf } from "../documents.js";
 
 export const PARK_REASONS = ["scope", "handled", "notIssue", "uncertain"];
 
-/** An issue's euros a year as a cell: the expected value, its range, and the AI tag for an estimate. */
-function stakeCell(issue, groupValue, lang) {
-  if (typeof issue.eur_year_expected !== "number") {
+/**
+ * An issue's euros a year as a cell: the expected value, its range, and the AI tag for an estimate. A kept
+ * issue counts at its group's value (D15), also when that is a merged member's and it states none itself
+ * (review B2); counted is the issue whose value that is.
+ */
+function stakeCell(issue, groupValue, lang, counted = issue) {
+  const own = typeof issue.eur_year_expected === "number";
+  if (!own && groupValue === null) {
     return h("td", { class: "vc-num stake-cell stake-cell--none" }, h("span", { class: "muted" }, t("read.notStated")), issue.money_as_stated ? h("span", { class: "stake-stated" }, issue.money_as_stated) : null);
   }
   // A group counts once, at its largest value; the range shown is the issue's own, so it goes when the
   // group's value is another issue's.
   const fromGroup = groupValue !== null && groupValue !== issue.eur_year_expected;
+  const from = fromGroup ? counted : issue;
   return h("td", { class: "vc-num stake-cell" },
     h("strong", {}, fmtEurCompact(groupValue ?? issue.eur_year_expected, lang)),
     fromGroup ? h("span", { class: "stake-sub" }, t("read.largest")) : null,
     !fromGroup && typeof issue.eur_year_low === "number" ? h("span", { class: "stake-sub" }, fmtEurRange(issue.eur_year_low, issue.eur_year_high, lang)) : null,
-    issue.estimate ? h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag", title: issue.eur_basis || "" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), t("read.aiEstimate")) : null);
+    !own && issue.money_as_stated ? h("span", { class: "stake-stated" }, issue.money_as_stated) : null,
+    from.estimate ? h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag", title: from.eur_basis || "" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), t("read.aiEstimate")) : null);
+}
+
+/** The issue whose expected euros a kept issue's group counts at: the largest among it and its members. */
+function countedIn(issue, issues) {
+  const members = [issue, ...issues.filter((x) => x.status === "merged" && x.merged_into === issue.id)];
+  return members.filter((m) => typeof m.eur_year_expected === "number").sort((a, b) => b.eur_year_expected - a.eur_year_expected)[0] || issue;
 }
 
 /** Where an issue was found: the challenger, or the document and page with the quote. */
@@ -35,11 +49,47 @@ function foundCell(issue) {
     return h("span", { class: "found" }, h("span", { class: "vc-tag vc-tag--sm", title: name }, toolShort(issue.source.tool.type), h("span", { class: "vc-visually-hidden" }, `, ${name}`)));
   }
   const q = issue.quotes?.[0];
+  // The document's own kind, from its name: a Markdown or CSV file is not a PDF (review A7).
+  const kind = kindOf(q?.file || issue.source?.file || "", "");
   return h("span", { class: "found" },
-    tag(t("doc.kind.pdf")),
+    kind !== "unknown" ? tag(t(`doc.kind.${kind}`)) : null,
     q ? h("span", { class: "found-text" }, q.where) : null,
     q ? h("q", { class: "found-quote" }, q.text) : null,
     q && q.checked === "not-checked" ? h("span", { class: "found-check" }, t("read.notChecked")) : null);
+}
+
+/**
+ * A title short enough for the merge target's select, which can't wrap: cut at a word, with an ellipsis,
+ * rather than mid-word by the select's edge (review B6). The option's title holds the whole.
+ */
+export function shortTitle(text, max = 26) {
+  const s = String(text ?? "").trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max + 1).replace(/\s+\S*$/u, "").replace(/[\s,;:.\u2013\u2014-]+$/u, "");
+  return `${cut || s.slice(0, max)}\u2026`;
+}
+
+/**
+ * The options' short titles, told apart: where two would read alike, each starts after an ellipsis at the
+ * first word where it parts from the titles it would read like (review C6). The option's title holds the whole.
+ */
+export function shortTitles(titles, max = 26) {
+  const out = titles.map((x) => shortTitle(x, max));
+  const words = titles.map((x) => String(x ?? "").trim().split(/\s+/u));
+  return out.map((x, i) => {
+    const alike = out.flatMap((y, j) => (j !== i && y === x ? [j] : []));
+    if (!alike.length) return x;
+    let from = 0;
+    for (const j of alike) {
+      let n = 0;
+      while (n < words[i].length && n < words[j].length && words[i][n] === words[j][n]) n += 1;
+      from = Math.max(from, n);
+    }
+    if (from === 0 || from >= words[i].length) return x;
+    // As many words before that one as still fit, so a short end keeps its context.
+    while (from > 0 && words[i].slice(from - 1).join(" ").length <= max - 2) from -= 1;
+    return `\u2026 ${shortTitle(words[i].slice(from).join(" "), max - 2)}`;
+  });
 }
 
 /** Keep, Merge or Park, with the issue to merge into or the reason for parking. */
@@ -64,11 +114,13 @@ function decisionCell(issue, { kept, onDecide, label }) {
   }, t(key)));
   let detail = null;
   if (status === "merged") {
+    const into = kept.filter((k) => k.id !== issue.id);
+    const shown = shortTitles(into.map((k) => k.title));
     detail = h("label", { class: "decide-detail" }, h("span", { class: "vc-visually-hidden" }, t("read.into")), h("select", {
       class: "vc-select vc-select--sm",
       dataset: { action: "decide-into" },
       on: { change: (e) => onDecide(issue.id, "merge", { into: e.target.value }) }
-    }, kept.filter((k) => k.id !== issue.id).map((k) => h("option", { value: k.id, selected: k.id === issue.merged_into ? true : undefined }, k.title))));
+    }, into.map((k, n) => h("option", { value: k.id, title: k.title, selected: k.id === issue.merged_into ? true : undefined }, shown[n]))));
   } else if (status === "parked") {
     const current = PARK_REASONS.find((r) => t(`read.reason.${r}`) === issue.park_reason) || PARK_REASONS[0];
     detail = h("label", { class: "decide-detail" }, h("span", { class: "vc-visually-hidden" }, t("read.why")), h("select", {
@@ -107,7 +159,7 @@ export function issueTable({ issues, proposals, groupValueOf, onDecide, lang, un
         issue.status === "merged" && into && !member ? h("span", { class: "issue-status" }, t("read.mergedInto", { title: into.title })) : null,
         issue.status === "merged" && proposed && proposed.keep === issue.merged_into ? h("span", { class: "issue-why" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), t("ai.tag")), proposed.why) : null,
         issue.status === "parked" ? h("span", { class: "issue-status" }, t("read.parkedBecause", { reason: issue.park_reason || t("read.reason.scope") })) : null),
-      issue.status === "kept" ? stakeCell(issue, groupValueOf(issue.id), lang) : stakeCell(issue, null, lang),
+      issue.status === "kept" ? stakeCell(issue, groupValueOf(issue.id), lang, countedIn(issue, issues)) : stakeCell(issue, null, lang),
       decisionCell(issue, { kept, onDecide, label: t("read.decisionFor", { title: issue.title }) }));
   }
   return h("div", { class: "vc-table-wrap issue-wrap" },
@@ -155,5 +207,7 @@ export function renderRead(ctx) {
         : turnBar({ kind: "turn", text: t("read.turn"), action })),
     evidencePanel(t("read.panel"),
       issueTable({ issues: run.issues, proposals: run.proposals, groupValueOf: ctx.groupValueOf, onDecide: ctx.onDecide, lang, unchecked: ctx.unchecked }),
+      // Where the Reader wrote issues from documents, their words are the AI's too (review B11).
+      run.issues.some((i) => i.type === "document") ? aiNote(t("read.aiNote")) : null,
       sourceList(run.issues, lang)));
 }

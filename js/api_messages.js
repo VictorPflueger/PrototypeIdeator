@@ -32,7 +32,8 @@ export function isSpendLimit(e) {
 export function messageOf(e, { model = "" } = {}) {
   if (!e) return { key: "api.unknown", vars: { status: "", message: "" }, next: "retry", problems: [] };
   if (e.name === "AbortError") return { key: "live.stopped", vars: null, next: "retry", problems: [] };
-  if (e.name === "BudgetStop") return { key: BUDGET[e.agent] || BUDGET.ideator, vars: { agent: e.agent }, next: "settings", problems: [] };
+  // On the cautious count, since the free count didn't answer, Try again comes first: it may count (review C5).
+  if (e.name === "BudgetStop") return { key: BUDGET[e.agent] || BUDGET.ideator, vars: { agent: e.agent, uncounted: e.uncounted === true }, next: e.uncounted ? "retry" : "settings", problems: [] };
   if (e.name === "StepFailed") {
     const map = e.reason === "refusal" ? DECLINED : e.reason === "cut" ? CUT : FAILED;
     // A failed check or a refusal may pass on a second try; an answer cut off twice needs other settings.

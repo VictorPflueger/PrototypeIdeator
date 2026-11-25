@@ -28,7 +28,7 @@ import { decide, choiceTook } from "./issues.js";
 import { tileModel, renderTiles, costText } from "./kpis.js";
 import { DEFAULT_WEIGHTS, weightProblems } from "./engine.js";
 import { readFile, checkIntake } from "./documents.js";
-import { addDocument, removeDocument, addEvent, markResult } from "./session.js";
+import { addDocument, removeDocument, addEvent, markResult, clearEverything, hasUnsavedResult } from "./session.js";
 import { renderStart } from "./views/start.js";
 import { renderIntake } from "./views/intake.js";
 import { renderRead } from "./views/read.js";
@@ -40,8 +40,9 @@ import { reportDoc, stopReason } from "./report_doc.js";
 import { fileName, saveText, printReport, printWithKeys, reportHtml, ideasFile, ideasProblems } from "./exports.js";
 import { briefBlocks, briefMarkdown, composedPart } from "./brief.js";
 import { turnBar, uncheckedNote } from "./views/common.js";
+import { fitNames } from "./charts.js";
 import { clear, h, copyText } from "./dom.js";
-import { fmtScore, fmtEur, fmtEurSpend } from "./format.js";
+import { fmtScore, fmtEur, fmtEurSpend, fmtInt } from "./format.js";
 import { LIMITS, BUDGET, MODELS, PRESETS, DEFAULT_PRESET } from "./config.js";
 import { openLiveDialog } from "./live_dialog.js";
 import { readStep, ideasStep, writerStep, briefStep } from "./live_agents.js";
@@ -57,7 +58,11 @@ const LANGS = ["en", "de"];
 export const STEPS = ["start", "read", "ideate", "score", "shortlist", "report"];
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  // The local date, not UTC: a report made in Berlin just after midnight is dated that day (review A17).
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 /** The page's state: plain values, so every render can build the run from them. */
 const S = {
@@ -95,7 +100,7 @@ function blankLive() {
     capEur: BUDGET.defaultEur,
     runLang: null,              // the language the agents write in, set when the run starts
     meter: null,                // js/pipeline.js createMeter: the run's spend
-    busy: null,                 // { phase, agent, step, startedAt, retryUntil, repairing, counting } while a request runs
+    busy: null,                 // { phase, agent, step, startedAt, retryUntil, repairing, counting, cap } while a request runs
     stop: null,                 // { key, vars, next, problems, phase, agent, step } once a step stopped
     ctrl: null,                 // the AbortController of the running step
     unchecked: { reader: [], merges: [], ideator: [], writer: [] },
@@ -104,6 +109,7 @@ function blankLive() {
     briefs: {},                 // idea id → { part, unchecked, repaired }: the Brief writer's answers
     ms: { reader: 0, merges: 0, ideator: 0, writer: 0, brief: 0 },
     requests: 0,
+    scanned: null,              // what the privacy scan read when the person last started a request
     last: null,                 // the last finished run in this tab: { eur, seconds }, for the dialog
     setAside: null              // after Start a new run: the run as it was, for Undo
   };
@@ -150,7 +156,8 @@ function previewRun(id = S.scenarioId, lang = getLang()) {
   return runCache.get(key);
 }
 function livePreview(lang = getLang()) {
-  const key = `preview|live${S.live.version}|${lang}`;
+  // Keyed by the run's id as well: a second run in the tab starts again at version 0 (review A3).
+  const key = `preview|live${S.live.id}.${S.live.version}|${lang}`;
   if (!runCache.has(key)) runCache.set(key, buildRun(liveSc(), lang, {}));
   return runCache.get(key);
 }
@@ -177,6 +184,9 @@ export async function start() {
   });
   document.addEventListener("keydown", onKey);
   for (const type of ["pointerdown", "keydown", "wheel"]) document.addEventListener(type, () => { if (!P.on) armAttention(); }, { capture: true, passive: true });
+  // Play stops wherever the person acts in the story or its evidence (review B1), the keyboard's focus on
+  // one of its controls included (review C1).
+  for (const type of ["click", "input", "change", "focusin"]) stage.addEventListener(type, onAct, { capture: true });
   // The guide's Start, on a guide opened during a replay, plays on from where the page is.
   for (const g of $$(".vc-guide")) g.addEventListener("vc:guideclose", (e) => { if (e.detail?.returnValue === "done" && S.mode === "simulation" && S.reached > 0) play(); });
 
@@ -188,6 +198,11 @@ export async function start() {
   const step = Number(params.get("step"));
   if (Number.isInteger(step) && step >= 2 && step <= 6) deepLink(step);
   else render();
+  // A comb drawn before the page's fonts were in sizes its names by their length; once they are in, by
+  // their measured width (review B7). Fonts that load later, a weight first used on a later step, refit it.
+  const refit = () => fitNames(stage);
+  document.fonts?.ready.then(refit);
+  document.fonts?.addEventListener?.("loadingdone", refit);
   armAttention();
 }
 
@@ -387,6 +402,31 @@ function play() {
   if (!P.raf) P.raf = requestAnimationFrame(playFrame);
 }
 
+// What counts as acting: a press, a choice or a slider. Scrolling or selecting text is reading.
+const ACTS = "button, a[href], summary, select, input, textarea, label, [role=button], [role=tab], [role=radio], [role=switch], [role=slider], [data-action]";
+
+/**
+ * Play stops wherever a person acts (Vici's Presenting step by step; review B1): a weight, a view, an idea
+ * opened, an issue kept or parked pauses it, and so does the keyboard's focus arriving on anything in the
+ * step's tab order, a chart point included (review C1), so the page never moves on under the person's hand
+ * or focus. The step's own action (#btn-cta) does not: it is what Play waits for, or the Next it would press
+ * itself. A pointer's focus is left to its click, and the step title, which the page focuses itself, is out
+ * of the tab order.
+ */
+function onAct(e) {
+  if (!P.on || S.mode !== "simulation") return;
+  const tgt = e.target instanceof Element ? e.target : null;
+  if (!tgt || tgt.closest("#btn-cta")) return;
+  if (e.type === "focusin" && !(tgt.tabIndex >= 0 && fromKeyboard(tgt))) return;
+  if (e.type === "click" && !tgt.closest(ACTS)) return;
+  pause();
+}
+
+/** The focus came from the keyboard: the browser shows its focus ring (:focus-visible), as after Tab. */
+function fromKeyboard(el) {
+  try { return el.matches(":focus-visible"); } catch { return false; }
+}
+
 function pause() {
   if (!P.on) return;
   P.on = false;
@@ -548,6 +588,24 @@ const secondsWords = (s) => {
   return n < 60 ? t("time.s", { s: n }) : t("time.min", { m: Math.floor(n / 60), s: n % 60 });
 };
 
+/** What the privacy scan reads before a request: the text files, the challengers' reports and the fields. */
+function scanSources() {
+  const labels = { company: t("intake.company"), focus: t("intake.focus"), constraints: t("intake.constraints") };
+  return privateSources({ files: acceptedFiles(S.live.entries), form: S.live.form, labels });
+}
+const scanKey = (sources) => sources.map((x) => `${x.where}\u0000${x.text}`).join("\u0001");
+
+/**
+ * What looks private in what the next request would send and the person hasn't been warned about: the
+ * first request of a run, whatever its step (one challenger's report reads with no request, so its first
+ * request is the Ideator's), and any request after the files or fields changed (review A4). Empty once the
+ * person started a request on the same texts.
+ */
+function unwarnedFindings() {
+  const sources = scanSources();
+  return S.live.scanned === scanKey(sources) ? [] : privateFindings(sources);
+}
+
 /**
  * Opens the live-run dialog for what is left to do: from the start (phase read), or to go on after a stop
  * (the stopped phase). On Start the live run, the key has passed the free check and the run goes on.
@@ -555,7 +613,7 @@ const secondsWords = (s) => {
 async function openDialog(phase = "read", { forgetFirst = false } = {}) {
   const files = acceptedFiles(S.live.entries);
   const size = readingSize({ files, form: S.live.form });
-  const labels = { company: t("intake.company"), focus: t("intake.focus"), constraints: t("intake.constraints") };
+  const firstScan = S.live.scanned === null;
   const result = await openLiveDialog({
     settings: S.live.settings,
     capEur: S.live.capEur,
@@ -564,12 +622,13 @@ async function openDialog(phase = "read", { forgetFirst = false } = {}) {
       ? estimateBrief({ settings, inputText: briefInputText(), lang: S.live.runLang || getLang() })
       : estimateLive({ ...size, count: S.live.form.count, settings, sizes: sizesOf(), lang: S.live.runLang || getLang(), from: phase })),
     words: { cost: costWords, time: (sec) => timeWords(sec, t) },
-    findings: phase === "read" ? privateFindings(privateSources({ files, form: S.live.form, labels })) : [],
-    pdfs: phase === "read" && files.some((f) => f.kind === "pdf"),
+    findings: unwarnedFindings(),
+    pdfs: firstScan && files.some((f) => f.kind === "pdf"),
     last: S.live.last,
     forgetFirst
   });
   if (!result) { $("#btn-cta")?.focus({ preventScroll: true }); return; }
+  S.live.scanned = scanKey(scanSources());
   S.live.settings = result.settings;
   S.live.capEur = result.capEur;
   if (!S.live.meter) S.live.meter = createMeter(result.settings.model, result.capEur);
@@ -588,13 +647,14 @@ const needsDialog = () => !hasKey() || !S.live.settings || !S.live.meter;
  */
 function askLive(phase) {
   const free = phase === "read" && readingSize({ files: acceptedFiles(S.live.entries), form: S.live.form }).reading === "none";
-  if (!free && needsDialog()) { openDialog(phase); return; }
+  // A field edited since the last request shows its warning in the dialog before anything is sent.
+  if (!free && (needsDialog() || unwarnedFindings().length)) { openDialog(phase); return; }
   runLive(phase);
 }
 
 /** Try again: the stopped step once more with the same key and settings; without a key, the dialog first. */
 function tryAgain(phase) {
-  if (needsDialog()) { openDialog(phase); return; }
+  if (needsDialog() || unwarnedFindings().length) { openDialog(phase); return; }
   runLive(phase);
 }
 
@@ -618,7 +678,9 @@ function busyWords() {
   const spent = S.live.meter ? S.live.meter.spentEur() : 0;
   const meta = t("live.busy.meta", { time: secondsWords(seconds), amount: fmtEurSpend(spent) });
   const wait = b.retryUntil ? Math.max(0, Math.ceil((b.retryUntil - performance.now()) / 1000)) : 0;
-  const note = b.counting ? t("live.busy.counting") : wait ? t("live.retrying", { s: wait }) : b.repairing ? t("live.repairing") : "";
+  // After the free count, the line says what the cap reckoned with for this request (brief §6.2).
+  const cap = b.cap ? t(b.cap.counted ? "live.busy.counted" : "live.busy.cautious", { tokens: fmtInt(b.cap.tokens), amount: fmtEurSpend(b.cap.worstEur) }) : "";
+  const note = b.counting ? t("live.busy.counting") : wait ? t("live.retrying", { s: wait }) : b.repairing ? t("live.repairing") : cap;
   return { text, meta, note };
 }
 
@@ -637,8 +699,8 @@ function tick() {
 function onLiveEvent(e) {
   const b = S.live.busy;
   if (!b) return;
-  if (e.type === "counting") b.counting = true;
-  if (e.type === "request") { b.agent = e.agent; b.counting = false; b.retryUntil = 0; b.repairing = !!e.repair; }
+  if (e.type === "counting") { b.counting = !!e.pdf; b.cap = null; }
+  if (e.type === "request") { b.agent = e.agent; b.counting = false; b.retryUntil = 0; b.repairing = !!e.repair; b.cap = { tokens: e.inputTokens, counted: !!e.counted, worstEur: e.worstEur }; }
   if (e.type === "retry") b.retryUntil = performance.now() + e.waitMs;
   if (e.type === "answer") { b.retryUntil = 0; S.live.requests += 1; renderKpis(); }
   if (e.type === "repair") b.repairing = true;
@@ -657,7 +719,7 @@ async function runLive(phase) {
   const agent = phase === "read" ? (size.reading === "none" ? null : size.reading) : AGENT_OF[phase];
   S.live.ctrl = ctrl;
   S.live.stop = null;
-  S.live.busy = { phase, agent, step: S.step, startedAt: performance.now(), retryUntil: 0, repairing: false, counting: false };
+  S.live.busy = { phase, agent, step: S.step, startedAt: performance.now(), retryUntil: 0, repairing: false, counting: false, cap: null };
   const started = performance.now();
   if (agent) {
     render();
@@ -676,6 +738,8 @@ async function runLive(phase) {
       Object.assign(S, { decisions: null, weights: null, draft: null, picks: null, decided: false, ideated: false });
       liveChanged();
       S.reached = 1;
+      // An issue map a model wrote cost money: leaving the page asks first (review A12).
+      if (out.reading !== "none") markResult();
       log("issue_map", "read", { reading: out.reading, issues: currentRun().issues.length });
       next = 1;
     } else if (phase === "ideas") {
@@ -755,7 +819,8 @@ function named(problem) {
 
 /** A stop in words, with the cap and the model filled in. */
 function stopText(st) {
-  return redactSecrets(t(st.key, { ...(st.vars || {}), cap: fmtEur(S.live.capEur), model: modelLabel(S.live.settings?.model) }));
+  const text = t(st.key, { ...(st.vars || {}), cap: fmtEur(S.live.capEur), model: modelLabel(S.live.settings?.model) });
+  return redactSecrets(st.vars?.uncounted ? `${text} ${t("live.budget.uncounted")}` : text);
 }
 
 /** The bar a live step shows while its agent works or after it stopped, in place of the step's own. */
@@ -814,6 +879,7 @@ function newLiveRun() {
   const keep = { settings: S.live.settings, capEur: S.live.capEur, last: S.live.last };
   S.live = { ...blankLive(), ...keep, setAside: aside };
   Object.assign(S, blankRun());
+  runCache.clear();
   render();
   announce(t("intake.new.undo"));
   $("#intake-files")?.focus();
@@ -825,10 +891,53 @@ function undoNewRun() {
   if (!aside) return;
   S.live = { ...aside.live, setAside: null };
   Object.assign(S, aside.run);
+  runCache.clear();
   liveChanged();
   render();
   announce(t("intake.new.done"));
   ($("#step-title") || stage).focus({ preventScroll: true });
+}
+
+/**
+ * Clear everything (brief §5.9): the key, the files, the fields, the run, the run set aside and the cached
+ * figures go from the tab; the simulation stays. Asked once in place, since it can't be undone: the first
+ * press turns the button into "Clear now" (saying when a result hasn't been downloaded), and any render
+ * turns it back.
+ */
+function clearAll() {
+  const btn = $("#btn-clear");
+  if (btn && btn.dataset.confirm !== "yes") {
+    btn.dataset.confirm = "yes";
+    btn.classList.add("vc-button--danger");
+    btn.lastChild.textContent = t(hasUnsavedResult() ? "live.clear.confirmLose" : "live.clear.confirm");
+    announce(t("live.clear.ask"));
+    return;
+  }
+  S.live.ctrl?.abort();
+  clearInterval(ticker);
+  S.live = blankLive();
+  Object.assign(S, blankRun());
+  S.brief = { idea: null, repo: "" };
+  stash.live = null;
+  runCache.clear();
+  liveScCache = { id: 0, version: -1, lang: null, sc: null };
+  clearEverything();
+  emptyDrawers();
+  render();
+  announce(t("p.announce.cleared"));
+  $("#intake-files")?.focus({ preventScroll: true });
+}
+
+/** The idea's and the brief's drawers closed and empty, so nothing of a cleared run stays in the page (review C2). */
+function emptyDrawers() {
+  for (const dlg of [$("#idea-drawer"), $("#brief-drawer")]) {
+    if (!dlg) continue;
+    if (dlg.open) dlg.close();
+    delete dlg.dataset.idea;
+  }
+  for (const el of [$("#idea-title"), $("#idea-body"), $("#brief-title"), $("#brief-body"), $("#brief-footer")]) if (el) clear(el);
+  const foot = $("#brief-footer");
+  if (foot) foot.hidden = true;
 }
 
 /** Save run as simulation: the run in the scenarios' format, downloaded; nothing is stored. */
@@ -940,7 +1049,7 @@ function saveJson() {
   const run = currentRun(lang);
   const live = S.mode === "live";
   const stopped = S.reached < 5 && stoppedReportable() ? stopOf() : null;
-  const data = ideasFile(run, { lang, mode: live ? "live" : "simulation", model: live ? S.live.settings?.model : null, setting: live ? S.live.settings?.preset : null, stopped });
+  const data = ideasFile(run, { lang, mode: live ? "live" : "simulation", model: live ? S.live.settings?.model : null, setting: live ? S.live.settings?.preset : null, stopped, unchecked: live ? liveMarks() : null });
   const problems = ideasProblems(data);
   if (problems.length) { problem(t("report.jsonInvalid"), problems.slice(0, 3).join("; ")); return; }
   const name = fileName(run.company?.name, lang, ".json");
@@ -1042,7 +1151,11 @@ function drawBrief() {
         h("p", { class: "vc-callout__title" }, t("turn.stopped")),
         h("p", { class: "turn-text" }, stopText(stop)),
         stop.problems?.length ? h("ul", { class: "brief-problems", lang: "en" }, stop.problems.slice(0, 6).map((x) => h("li", {}, named(redactSecrets(x))))) : null,
-        h("button", { type: "button", class: "vc-button", id: "brief-retry", on: { click: go2 } }, label)));
+        // Beside Try again, Change settings, as the step's bar offers it: a stop on the cautious count may
+        // need a higher cap if the count keeps failing (review D1).
+        h("div", { class: "brief-stop-actions" },
+          h("button", { type: "button", class: "vc-button", id: "brief-retry", on: { click: go2 } }, label),
+          stop.next === "retry" ? h("button", { type: "button", class: "vc-button vc-button--secondary", id: "brief-settings", on: { click: () => openDialog("brief") } }, t("live.settings")) : null)));
   } else {
     const st = S.live.settings;
     const est = st && hasKey() ? estimateBrief({ settings: st, inputText: briefInputText(), lang: docLang() }) : null;
@@ -1140,6 +1253,8 @@ function render() {
   const lang = getLang();
   const active = document.activeElement;
   const focusKey = keyOf(active);
+  // Focus that the redraw takes from the step goes to the step's title, never to the page's body (review C1).
+  const focusInStage = !!active && active !== stage && stage.contains(active);
   const sameStep = lastStep === S.step;
   const scrolls = sameStep ? [...stage.querySelectorAll(".panel, .vc-table-wrap")].map((el) => el.scrollTop) : [];
   const open = new Set([...stage.querySelectorAll("details[open]")].map((d) => d.className));
@@ -1171,11 +1286,9 @@ function render() {
   const stopBar = stage.querySelector("#turn.turn-bar--stopped");
   if (stopBar && shownStop !== S.live.stop) { const story = stopBar.closest(".panel"); if (story) story.scrollTop = story.scrollHeight; }
   shownStop = stopBar ? S.live.stop : null;
-  if (focusKey) {
-    const target = findByKey(focusKey);
-    if (target && !target.disabled) target.focus({ preventScroll: true });
-    else if (!stage.contains(document.activeElement)) ($("#step-title") || stage).focus({ preventScroll: true });
-  }
+  const target = focusKey ? findByKey(focusKey) : null;
+  if (target && !target.disabled) target.focus({ preventScroll: true });
+  else if ((focusKey || focusInStage) && !stage.contains(document.activeElement)) ($("#step-title") || stage).focus({ preventScroll: true });
   lastStep = S.step;
   window.Vici?.init?.(stage);
   renderBar();
@@ -1288,12 +1401,14 @@ function intakeView(lang) {
     onStart: () => askLive("read"),
     onNext: () => go(1, { keep: true }),
     onNew: newLiveRun,
-    onBack: toSimulation
+    onBack: toSimulation,
+    onClear: clearAll
   });
 }
 
 /** The step bar: the current step, the steps done, those not reached yet, and whose turn it is. */
 function renderBar() {
+  const had = document.activeElement;
   const live = S.mode === "live";
   // While an agent works, the page stays on its step: the steps, Back, Next and the way back to the
   // simulation wait for the answer or for Stop.
@@ -1316,6 +1431,9 @@ function renderBar() {
   });
   $("#btn-back").disabled = S.step === 0 || busy;
   $("#btn-next").disabled = busy || !(S.step < S.reached || (S.step === 0 && S.reached === 0 && !live));
+  // Next, Back or a step that the keyboard is on and the page has just disabled, as when Play reaches the
+  // furthest step, hands the focus to the step's title rather than the page's body (review D2).
+  if (had && had.disabled && had.closest?.("#btn-back, #btn-next, #steps")) ($("#step-title") || stage).focus({ preventScroll: true });
   const tagEl = $("#mode-tag");
   tagEl.dataset.mode = live ? "live" : "simulation";
   // LIVE wears Vici's solid tag, so nobody takes a live run for the replay.

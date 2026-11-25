@@ -16,7 +16,7 @@ const SVG = "http://www.w3.org/2000/svg";
 const s = (tag, attrs = {}, ...children) => {
   const el = document.createElementNS(SVG, tag);
   for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined && v !== false) el.setAttribute(k, String(v));
-  for (const c of children.flat()) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  for (const c of children.flat(Infinity)) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
   return el;
 };
 
@@ -28,6 +28,52 @@ export function hexPoints(x, y, r) {
     pts.push(`${(x + r * Math.cos(a)).toFixed(2)},${(y + r * Math.sin(a)).toFixed(2)}`);
   }
   return pts.join(" ");
+}
+
+/**
+ * The longest word of a name, split at spaces and hyphens: a cell steps its font down for a long one, so
+ * "Vulnerability" or "Leercontainer" stays whole where no hyphenation dictionary breaks it (review B7).
+ * The rule for a name the page can't measure yet (nameFit).
+ */
+const longWord = (name) => Math.max(0, ...String(name ?? "").split(/[\s\-\u2010\u2011]+/u).map((w) => w.length));
+const lengthClass = (name) => (longWord(name) >= 15 ? "comb-name--longer" : longWord(name) >= 12 ? "comb-name--long" : "");
+
+// The widths css/app.css has a size for, in ems of the tile's type: a name whose widest piece is up to that
+// wide takes the size at which that width fills the cell (100cqi), so the piece stays whole (review B7).
+const FIT_EMS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 10, 11, 12];
+let ruler = null;
+
+/**
+ * A name's class for its size: its widest piece (between spaces, or up to and with a hyphen) measured on a
+ * canvas in the tile's type, semibold in the page's family, as comb-name--em-<tenths> of the next width
+ * css/app.css knows; "" when every piece fits at the tile's own size. Measured at 12 px, since Inter's
+ * letters widen at small sizes (its optical size): at 100 px a German compound came out 6 % narrower than
+ * in the cell. null until the page's fonts are in, or where there is no page: the length rule stands in.
+ */
+export function nameFit(name) {
+  if (typeof document === "undefined" || !document.body) return null;
+  try {
+    const root = getComputedStyle(document.documentElement);
+    const font = `${root.getPropertyValue("--vc-weight-semibold").trim() || "600"} 12px ${getComputedStyle(document.body).fontFamily}`;
+    if (document.fonts && !document.fonts.check(font)) return null;
+    ruler ||= document.createElement("canvas").getContext("2d");
+    if (!ruler) return null;
+    ruler.font = font;
+    const pieces = String(name ?? "").split(/\s+/u).flatMap((w) => w.split(/(?<=[-\u2010\u2011])/u)).filter(Boolean);
+    const em = pieces.length ? Math.max(...pieces.map((p) => ruler.measureText(p).width)) / 12 : 0;
+    if (em <= 5.5) return "";
+    const step = FIT_EMS.find((w) => em <= w) ?? FIT_EMS[FIT_EMS.length - 1];
+    return `comb-name--em-${Math.round(step * 10)}`;
+  } catch { return null; }
+}
+
+/** The size class of each comb name in root, once the page's fonts are in: run after they load. */
+export function fitNames(root) {
+  for (const el of root?.querySelectorAll?.(".comb-name") || []) {
+    const fit = nameFit(el.textContent);
+    if (fit === null) continue;
+    el.className = ["comb-name", fit].filter(Boolean).join(" ");
+  }
 }
 
 /**
@@ -47,7 +93,7 @@ export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = n
       const place = picks.indexOf(idea.id);
       const inner = [
         place >= 0 ? h("span", { class: "comb-place" }, t("short.place", { n: place + 1 }, lang)) : null,
-        h("span", { class: "comb-name" }, idea.name),
+        h("span", { class: ["comb-name", nameFit(idea.name) ?? lengthClass(idea.name)] }, idea.name),
         scores && scores[idea.id] ? h("span", { class: "comb-score" }, scores[idea.id]) : null
       ];
       const tone = ["vc-tile", place >= 0 ? "vc-tile--merlot comb-tile--pick" : "vc-tile--lilac", "comb-tile"];
@@ -63,12 +109,30 @@ export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = n
     })));
 }
 
-/** Round numbers for an axis from lo to hi: about `count` ticks on a step of 1, 2 or 5 times a power of ten. */
-function ticks(lo, hi, count = 5) {
+/**
+ * A chart label's width in the chart's units for text of the given size: measured in the page's own font
+ * where a canvas is at hand, with a little to spare for a font still loading; else about 0.55 of the size a
+ * character.
+ */
+function labelWidth(size = 11.5) {
+  let ctx = null;
+  try {
+    ctx = document.createElement("canvas").getContext("2d");
+    if (ctx) ctx.font = `${size}px ${getComputedStyle(document.body).fontFamily || "sans-serif"}`;
+  } catch { ctx = null; }
+  return (text) => (ctx ? ctx.measureText(text).width * 1.04 + 1 : text.length * size * 0.55);
+}
+
+/**
+ * Round numbers for an axis from lo to hi: about `count` ticks on a step of 1, 2, 2.5 or 5 times a power of
+ * ten. A whole-number axis (person-days) never steps by 2.5 below 10, since its labels show no decimals.
+ */
+function ticks(lo, hi, count = 5, { whole = false } = {}) {
   const span = Math.max(hi - lo, 1e-9);
   const raw = span / count;
   const p = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * p).find((x) => x >= raw) || 10 * p;
+  const steps = whole && p < 10 ? [1, 2, 5, 10] : [1, 2, 2.5, 5, 10];
+  const step = steps.map((m) => m * p).find((x) => x >= raw && (!whole || Number.isInteger(x))) || 10 * p;
   const out = [];
   for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-6; v += step) out.push(Math.round(v * 1000) / 1000);
   return { values: out, step };
@@ -91,7 +155,7 @@ export function scoreChart(rows, { picks = [], lang = getLang(), still = false, 
   const yDomain = [yLo, 5];
   const x = (v) => m.left + ((v - xDomain[0]) / (xDomain[1] - xDomain[0])) * (W - m.left - m.right);
   const y = (v) => H - m.bottom - ((v - yDomain[0]) / (yDomain[1] - yDomain[0])) * (H - m.top - m.bottom);
-  const xt = ticks(xDomain[0], xDomain[1], 6).values;
+  const xt = ticks(xDomain[0], xDomain[1], 6, { whole: true }).values;
   const yt = ticks(yDomain[0], yDomain[1], 4).values;
 
   const grid = s("g", { class: "chart-grid", "aria-hidden": "true" },
@@ -103,32 +167,99 @@ export function scoreChart(rows, { picks = [], lang = getLang(), still = false, 
     s("text", { class: "chart-axis-title", x: (m.left + W - m.right) / 2, y: H - 6, "text-anchor": "middle" }, tr("score.chart.x")),
     s("text", { class: "chart-axis-title", x: 14, y: (m.top + H - m.bottom) / 2, "text-anchor": "middle", transform: `rotate(-90 14 ${(m.top + H - m.bottom) / 2})` }, tr("score.chart.y")));
 
-  // Labels, greedily from the highest score down: beside the marker on the right, else on the left, else a
-  // line or two above or below; a label is never drawn over another label, another marker or the plot's
-  // edge. An idea whose label finds no room keeps its marker, its tooltip and its row in the table.
-  const CHAR = 6.3;
-  const LINE = 13;
-  const boxes = [];
-  const marker = (cx, cy) => ({ x1: cx - 10, x2: cx + 10, y1: cy - 9, y2: cy + 9 });
+  // Labels: each as near its marker as there is room (see near() for where), a line or more further out on a
+  // thin leader where the crowd leaves no room beside it, and failing that the nearest free place in the plot,
+  // on a leader. A label never covers another label, a marker or a range line (the gaps between its words
+  // would show the line through it), nor leaves the plot, so every idea is named on paper, where no tooltip
+  // helps. A crowd that leaves an idea unnamed is laid out again with the names a size smaller, twice at most.
   const base = rows.map((r) => ({ r, cx: x((r.low + r.high) / 2), cy: y(r.value) }));
-  const markers = base.map((b) => marker(b.cx, b.cy));
+  const markers = base.map((b) => ({ x1: b.cx - 10, x2: b.cx + 10, y1: b.cy - 9, y2: b.cy + 9 }));
+  const ranges = base.map((b) => ({ x1: x(b.r.low) - 1, x2: x(b.r.high) + 1, y1: b.cy - 2, y2: b.cy + 2 }));
   const hits = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
-  const label = new Map();
-  for (const b of [...base].sort((p, q) => q.r.value - p.r.value || p.cx - q.cx)) {
-    const w = b.r.name.length * CHAR + 4;
-    const own = markers[base.indexOf(b)];
-    const tries = [];
-    for (const dy of [0, -LINE, LINE, -2 * LINE, 2 * LINE]) for (const right of [true, false]) tries.push({ right, dy });
-    for (const { right, dy } of tries) {
-      const lx = right ? b.cx + 14 : b.cx - 14;
-      const ly = b.cy + 4 + dy;
-      const box = { x1: right ? lx : lx - w, x2: right ? lx + w : lx, y1: ly - 10, y2: ly + 3 };
-      const inside = box.x1 >= m.left && box.x2 <= W - 4 && box.y1 >= 2 && box.y2 <= H - m.bottom - 2;
-      if (!inside || boxes.some((o) => hits(o, box)) || markers.some((o) => o !== own && hits(o, box))) continue;
-      boxes.push(box);
-      label.set(b.r.id, { lx, ly, right });
-      break;
+  const crosses = (seg, box) => {
+    const n = Math.max(2, Math.ceil(Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) / 2));
+    for (let i = 0; i <= n; i++) {
+      const px = seg.x1 + ((seg.x2 - seg.x1) * i) / n;
+      const py = seg.y1 + ((seg.y2 - seg.y1) * i) / n;
+      if (px > box.x1 + 0.5 && px < box.x2 - 0.5 && py > box.y1 + 0.5 && py < box.y2 - 0.5) return true;
     }
+    return false;
+  };
+  const order = [...base].sort((p, q) => q.r.value - p.r.value || p.cx - q.cx);
+  const placeAll = (size) => {
+    const measure = labelWidth(size);
+    const LINE = size + 3.5;
+    const boxes = [];
+    const leads = [];
+    const label = new Map();
+    // A label's box for its text's left end lx and its baseline ly: its letters reach about the text's size
+    // above the baseline and a third of it below.
+    const boxAt = (lx, ly, w) => ({ x1: lx - 2, x2: lx + w + 2, y1: ly - size, y2: ly + size * 0.3 });
+    const free = (box) => box.x1 >= m.left + 2 && box.x2 <= W - 4 && box.y1 >= 2 && box.y2 <= H - m.bottom - 3
+      && !boxes.some((o) => hits(o, box)) && !markers.some((o) => hits(o, box)) && !ranges.some((o) => hits(o, box))
+      && !leads.some((seg) => crosses(seg, box));
+    // A leader from the marker's edge to the nearest point of its label's box; none when the label touches it.
+    const leader = (b, box) => {
+      const px = Math.min(Math.max(b.cx, box.x1), box.x2);
+      const py = Math.min(Math.max(b.cy, box.y1), box.y2);
+      const d = Math.hypot(px - b.cx, py - b.cy);
+      const r1 = (v) => Math.round(v * 10) / 10;
+      return d < 16 ? null : { x1: r1(b.cx + ((px - b.cx) / d) * 12), y1: r1(b.cy + ((py - b.cy) / d) * 12), x2: r1(px), y2: r1(py) };
+    };
+    // A place whose box is free and whose leader, if it needs one, crosses no label and no other marker.
+    const place = (b, own, lx, ly, w, lead) => {
+      const box = boxAt(lx, ly, w);
+      if (!free(box)) return null;
+      const seg = lead ? leader(b, box) : null;
+      if (seg && (boxes.some((o) => crosses(seg, o)) || markers.some((o, i) => i !== own && crosses(seg, o)))) return null;
+      return { box, seg, lx, ly };
+    };
+    const take = (b, got) => { boxes.push(got.box); if (got.seg) leads.push(got.seg); label.set(b.r.id, { lx: got.lx, ly: got.ly, lead: got.seg }); };
+    // Where a name may go, k lines out from its marker. Beside the marker (k = 0) it sits above its range line,
+    // to the right, to the left or centred, or centred right under the marker, so it reads as its line's:
+    // below the line and beside the marker it would sit on the next line down and read as that line's, so it
+    // goes there only a line or more further out, on a leader.
+    const near = (b, w, k) => {
+      const up = b.cy - 6 - k * LINE;
+      const down = b.cy + size + 4.5 + k * LINE;
+      return k === 0
+        ? [[b.cx + 12, up], [b.cx - 12 - w, up], [b.cx - w / 2, b.cy - 14], [b.cx - w / 2, b.cy + size + 12.5]]
+        : [[b.cx + 12, up], [b.cx - 12 - w, up], [b.cx - w / 2, b.cy - 14 - k * LINE], [b.cx + 12, down], [b.cx - 12 - w, down], [b.cx - w / 2, b.cy + size + 12.5 + k * LINE]];
+    };
+    const tryNear = (b, from, to) => {
+      const own = base.indexOf(b);
+      const w = measure(b.r.name);
+      for (let k = from; k <= to; k++) for (const [lx, ly] of near(b, w, k)) {
+        const got = place(b, own, lx, ly, w, k > 0);
+        if (got) { take(b, got); return true; }
+      }
+      return false;
+    };
+    // First every idea beside its marker, in score order; then, in score order, the ideas left a line or more
+    // out on a leader; then any idea still left at the nearest free place in the plot.
+    for (const b of order) tryNear(b, 0, 0);
+    for (const b of order) if (!label.has(b.r.id)) tryNear(b, 1, 3);
+    for (const b of order) {
+      if (label.has(b.r.id)) continue;
+      const own = base.indexOf(b);
+      const w = measure(b.r.name);
+      let best = null;
+      for (let ly = 13; ly <= H - m.bottom - 6; ly += 2) for (let lx = m.left + 4; lx + w <= W - 6; lx += 3) {
+        const d = Math.hypot(Math.max(lx - b.cx, 0, b.cx - lx - w), ly - 4 - b.cy);
+        if (best && d >= best.d) continue;
+        const p = place(b, own, lx, ly, w, true);
+        if (p) best = { d, p };
+      }
+      if (best) take(b, best.p);
+    }
+    return label;
+  };
+  let size = 11.5;
+  let label = placeAll(size);
+  for (const smaller of [10.5, 9.5]) {
+    if (label.size === base.length) break;
+    const again = placeAll(smaller);
+    if (again.size > label.size) { label = again; size = smaller; }
   }
   const points = base.map((b) => ({ ...b, label: label.get(b.r.id) || null, place: picks.indexOf(b.r.id) }));
 
@@ -162,13 +293,18 @@ export function scoreChart(rows, { picks = [], lang = getLang(), still = false, 
     s("line", { class: "chart-whisker", x1: x(p.r.low), x2: x(p.r.high), y1: p.cy, y2: p.cy }),
     s("polygon", { class: "chart-hit", points: hexPoints(p.cx, p.cy, 17) }),
     s("polygon", { class: "chart-hex", points: hexPoints(p.cx, p.cy, 9) }),
-    pick ? s("text", { class: "chart-place", x: p.cx, y: p.cy + 3.5, "text-anchor": "middle" }, String(p.place + 1)) : null,
-    p.label ? s("text", { class: "chart-label", x: p.label.lx, y: p.label.ly, "text-anchor": p.label.right ? "start" : "end" }, p.r.name) : null);
+    pick ? s("text", { class: "chart-place", x: p.cx, y: p.cy + 3.5, "text-anchor": "middle" }, String(p.place + 1)) : null);
     if (!still) for (const [ev, on] of [["pointerenter", true], ["pointerleave", false], ["focus", true], ["blur", false]]) g.addEventListener(ev, () => show(p, on));
     return g;
   }));
 
-  const svg = s("svg", { class: "score-chart", viewBox: `0 0 ${W} ${H}`, role: still ? "img" : "group", "aria-labelledby": `${idPrefix}-title` }, grid, axes, marks);
+  // The names over every marker and range line, so a later point never paints over an earlier name; the
+  // markers carry the names for screen readers, so the labels are for the eye only.
+  const names = s("g", { class: ["chart-labels", size < 11.5 ? `chart-labels--${size === 10.5 ? "small" : "smaller"}` : ""].join(" ").trim(), "aria-hidden": "true" }, points.filter((p) => p.label).map((p) => [
+    p.label.lead ? s("line", { class: "chart-leader", ...p.label.lead }) : null,
+    s("text", { class: "chart-label", x: Math.round(p.label.lx * 10) / 10, y: Math.round(p.label.ly * 10) / 10, "data-idea": p.r.id }, p.r.name)
+  ]));
+  const svg = s("svg", { class: "score-chart", viewBox: `0 0 ${W} ${H}`, role: still ? "img" : "group", "aria-labelledby": `${idPrefix}-title` }, grid, axes, marks, names);
   // One series needs no legend; once there is a shortlist, the legend tells its filled markers from the rest.
   const legend = picks.length === 0 ? null : h("ul", { class: "vc-legend chart-legend" },
     h("li", {}, h("span", { class: "legend-hex legend-hex--pick", "aria-hidden": "true" }), tr("score.chart.picks")),

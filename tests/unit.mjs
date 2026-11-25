@@ -180,6 +180,25 @@ for (const [v, en, de] of CASES) r.check(F.fmtEurCompact(v, "en") === en && F.fm
 r.check(F.fmtEurRange(600000, 1200000, "en") === "€600k–€1.2m" && F.fmtEurRange(600000, 1200000, "de") === "600 Tsd. € – 1,2 Mio. €", "a range across scales repeats each unit");
 r.check(F.fmtScore(null, "en") === "no figure" && F.fmtScore(null, "de") === "keine Angabe" && F.fmtEurCompact(null, "en") === "no figure", "a missing value says so, never 0");
 r.check(F.fmtDate("2026-11-19", "en") === "19 November 2026" && F.fmtDate("2026-11-19", "de") === "19. November 2026", "dates with the month written out");
-r.check(F.fmtShare(0.74, "en") === "74%" && F.fmtShare(0.74, "de") === "74 %", "shares as whole percentages");
+r.check(F.fmtShare(0.74, "en") === "74\u00a0%" && F.fmtShare(0.74, "de") === "74\u00a0%", "shares as whole percentages, a no-break space before the sign in both languages (Vici's writing rule)");
+r.check(F.fmtEurRun(0.0044, "en") === "€0.004" && F.fmtEurRun(0.02485, "en") === "€0.025" && F.fmtEurRun(0.02485, "de") === "0,025\u00a0€" && F.fmtEurRun(0.12, "en") === "€0.12" && F.fmtEurRun(0.0003, "en") === "under €0.001" && F.runShown(0.02485) === 0.025, "one live run: a tenth of a cent below €0.10, then cents, never €0.00");
 
+// The quote check (review A18): a quote found in its text file proves where it stands only when it is long
+// enough; a few words could stand anywhere.
+{
+  const I = await import(path.join(ROOT, "js", "issues.js"));
+  const file = { file: "notes.md", kind: () => "markdown", content: () => "# Notes\n\nCustomers wait two days for a quote because the desk checks every surcharge by hand." };
+  r.check(I.checkQuote("Customers wait two days for a quote", file) === "word-for-word" && I.checkQuote("two days", file) === "not-checked" && I.checkQuote("Customers wait three days", file) === "failed", `a quote of ${I.QUOTE_MIN_CHARS} characters or more is checked word for word; "two days" is found but too short to prove it; a quote not in the file fails`);
+}
+// Review C6: the merge target's options tell apart titles that a short cut would make read alike.
+{
+  const V = await import(path.join(ROOT, "js", "views", "read.js"));
+  const en = ["Emission allowances raise the cost of every voyage", "Emission allowances raise the price of spot quotes", "The heat plan decides the route"];
+  const de = ["Kraftstoffzuschläge werden bei jedem Angebot von Hand geprüft", "Kraftstoffzuschläge werden bei jeder Buchung von Hand geprüft"];
+  const a = V.shortTitles(en);
+  const b = V.shortTitles(de);
+  r.check(new Set(a).size === 3 && new Set(b).size === 2 && [...a, ...b].every((x) => x.length <= 26) && a[2] === V.shortTitle(en[2]),
+    `titles that a cut would make alike part where they differ, within 26 characters: ${[...a.slice(0, 2), ...b].map((x) => `"${x}"`).join(", ")}; a title that stands apart keeps its start ("${a[2]}")`);
+  r.control(V.shortTitle(en[0]) === V.shortTitle(en[1]) && V.shortTitle(de[0]) === V.shortTitle(de[1]), `cut at 26 characters alone, both pairs read alike ("${V.shortTitle(en[0])}", "${V.shortTitle(de[0])}")`);
+}
 r.finish("UNIT OK");

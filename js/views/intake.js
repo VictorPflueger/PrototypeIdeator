@@ -35,7 +35,7 @@ function fileRow(f, { lang, onRemove, locked }) {
  * form ({ count, company, sector, focus, constraints }), reading (none, merges or reader: what reading the
  * files takes, js/live_run.js readingOf), read (the files have been read), undo
  * ({ text, onUndo } after a new run set the last one aside), onFiles(FileList), onRemove(id),
- * onForm(field, value), onStart(), onNext(), onNew(), onBack() }.
+ * onForm(field, value), onStart(), onNext(), onNew(), onBack(), onClear() }.
  */
 export function renderIntake(ctx) {
   const { lang, intake, form } = ctx;
@@ -98,6 +98,14 @@ export function renderIntake(ctx) {
 
   // At 1280 x 720 the drop zone and its files take the story's height and the list scrolls inside it, so
   // the Your turn bar never covers a file; the run's settings sit on the right.
+  // Clear everything (brief §5.9): the key, the files, the fields and the run go from the tab. Asked once in
+  // place, since it can't be undone, and saying so when a result hasn't been downloaded.
+  const clear = h("div", { class: "intake-clear" },
+    h("button", { type: "button", class: "vc-button vc-button--ghost vc-button--sm live-clear", id: "btn-clear", dataset: { action: "clear-everything" }, on: { click: ctx.onClear } },
+      h("span", { class: "vc-icon vc-icon--trash", "aria-hidden": "true" }),
+      h("span", {}, t("live.clear"))),
+    h("p", { class: "vc-help" }, t("live.clear.help")));
+
   return h("div", { class: "step", dataset: { step: "start", mode: "live" } },
     storyPanel(
       ...heading(t("intake.title")),
@@ -105,5 +113,5 @@ export function renderIntake(ctx) {
       zone,
       problems.length && !locked ? h("div", { class: "vc-alert vc-alert--danger intake-problems", role: "alert" }, h("span", { class: "vc-icon vc-icon--error", "aria-hidden": "true" }), h("ul", {}, problems.map((p) => h("li", {}, p)))) : null,
       bar),
-    evidencePanel(t("intake.run"), count, optional, challengersBlock()));
+    evidencePanel(t("intake.run"), count, optional, challengersBlock(), clear));
 }

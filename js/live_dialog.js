@@ -152,6 +152,8 @@ export function openLiveDialog(ctx) {
       const r = await checkKey(raw);
       checking = false;
       busyText = "";
+      // Closed while the check ran: the person left, so the key is not kept (review A16).
+      if (!dlg.open) return;
       if (r.ok && !(r.missing || []).includes(settings.model)) {
         setKey(raw);
         input.value = "";

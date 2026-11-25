@@ -27,6 +27,33 @@ export function sseFor({ id = "msg_1", model, text, stop = "end_turn", usage = {
   return ev.join("");
 }
 
+/**
+ * The stand-in's own token count of a request, as a stand-in for Anthropic's tokenizer: plain ASCII at 2.7
+ * characters a token (Anthropic's glossary for the 5.5 models, read 25 November 2026; asciiChars for a case
+ * that asks for denser text, such as a table of figures), every other character otherTokens tokens (one,
+ * unless a case asks for a script that takes more), 8 tokens a message, and docTokens for each document
+ * block. withFormat adds the output schema at the same ratio, for the format prompt structured outputs add
+ * to what is billed. The free count answers without it, as the page's count is sent without the schema.
+ */
+export function standInTokens(req, { docTokens = 0, withFormat = false, otherTokens = 1, asciiChars = 2.7 } = {}) {
+  const tok = (text) => {
+    const s = String(text ?? "");
+    let ascii = 0;
+    for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) < 0x80) ascii += 1;
+    return Math.ceil(ascii / asciiChars) + Math.ceil((s.length - ascii) * otherTokens);
+  };
+  let n = tok(req?.system);
+  for (const m of req?.messages || []) {
+    n += 8;
+    for (const b of Array.isArray(m.content) ? m.content : [{ type: "text", text: m.content }]) {
+      if (b.type === "text") n += tok(b.text);
+      else if (b.type === "document") n += docTokens;
+    }
+  }
+  if (withFormat && req?.output_config?.format?.schema) n += tok(JSON.stringify(req.output_config.format.schema));
+  return n;
+}
+
 /** The agent a request is for, from its system prompt. */
 export function agentOf(req) {
   const s = String(req?.system || "");
@@ -41,11 +68,15 @@ export function agentOf(req) {
  * script: a list of steps, or a function (n, req) giving the step for the n-th request (1-based). A step is
  * { answer } (an object, sent as JSON), { text } (sent as it is), with stop and usage, or { error: { status,
  * type, message, retryAfter } }; expect(req, check) adds its own checks. expectSetting: { model, effort,
- * thinking } the requests must carry (thinking null means the field left out).
+ * thinking } the requests must carry (thinking null means the field left out). The free token count
+ * (count()) answers standInTokens with docTokens a document, or fails with a 500 when countFails; with
+ * realUsage, each answer's usage reports the same tokens plus the format prompt as its input, unless the
+ * step sets its own usage.
  */
-export function createFakeClaude(script, { expectSetting = null } = {}) {
+export function createFakeClaude(script, { expectSetting = null, docTokens = 0, countFails = false, realUsage = false } = {}) {
   const violations = [];
   const requests = [];
+  const counts = [];
   let i = 0;
   const check = (cond, msg) => { if (!cond) violations.push(`request ${requests.length} (${agentOf(requests[requests.length - 1]?.req)}): ${msg}`); };
 
@@ -71,9 +102,19 @@ export function createFakeClaude(script, { expectSetting = null } = {}) {
   }
 
   return {
-    violations, requests,
+    violations, requests, counts,
     remaining: () => (typeof script === "function" ? Infinity : script.length - i),
     agents: () => requests.map((r) => agentOf(r.req)),
+    /** One free token count: (raw body, headers) to { status, headers, body }. */
+    count(raw, headers = {}) {
+      const req = JSON.parse(raw);
+      const input_tokens = standInTokens(req, { docTokens });
+      counts.push({ req, headers: { ...headers }, input_tokens, at: Date.now() });
+      if (!(typeof headers["x-api-key"] === "string" && headers["x-api-key"].startsWith("sk-ant-"))) violations.push(`count ${counts.length}: x-api-key missing`);
+      if ("output_config" in req || "max_tokens" in req || "stream" in req) violations.push(`count ${counts.length}: the count takes no output_config, max_tokens or stream`);
+      if (countFails) return { status: 500, headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "error", error: { type: "api_error", message: "count failed" } }) };
+      return { status: 200, headers: { "content-type": "application/json" }, body: JSON.stringify({ input_tokens }) };
+    },
     /** One request: (raw body, headers) to { status, headers, body }. */
     handle(raw, headers) {
       const req = JSON.parse(raw);
@@ -92,7 +133,9 @@ export function createFakeClaude(script, { expectSetting = null } = {}) {
         return { status: step.error.status, headers: h, body: JSON.stringify({ type: "error", error: { type: step.error.type, message: step.error.message, ...(step.error.details ? { details: step.error.details } : {}) } }) };
       }
       const text = step.text !== undefined ? step.text : JSON.stringify(step.answer);
-      return { status: 200, headers: { "content-type": "text/event-stream", "request-id": `req_${requests.length}` }, body: sseFor({ id: `msg_${requests.length}`, model: req.model, text, stop: step.stop || "end_turn", usage: step.usage || {}, cutAfter: step.cutAfter ?? null }) };
+      const usage = step.usage || (realUsage ? { input_tokens: standInTokens(req, { docTokens, withFormat: true }) } : {});
+      entry.billedInput = usage.input_tokens ?? 1800;
+      return { status: 200, headers: { "content-type": "text/event-stream", "request-id": `req_${requests.length}` }, body: sseFor({ id: `msg_${requests.length}`, model: req.model, text, stop: step.stop || "end_turn", usage, cutAfter: step.cutAfter ?? null }) };
     }
   };
 }

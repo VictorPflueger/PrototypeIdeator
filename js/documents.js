@@ -33,19 +33,83 @@ export function kindOf(name = "", type = "") {
 /** The accept attribute of the drop zone's input. */
 export const ACCEPT = ".pdf,.md,.markdown,.txt,.csv,.json,application/pdf,text/markdown,text/plain,text/csv,application/json";
 
-/**
- * A PDF's page count from its bytes, without a library: the page objects ("/Type /Page"), or the page
- * tree's largest /Count when the objects are compressed. null when neither shows.
- */
-export function pdfPageCount(bytes) {
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+/** Bytes as a string, one character a byte, so a PDF's keywords can be found with a regular expression. */
+function latin1(u8) {
   let text = "";
   const CHUNK = 0x8000;
   for (let i = 0; i < u8.length; i += CHUNK) text += String.fromCharCode.apply(null, u8.subarray(i, i + CHUNK));
-  const pages = (text.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
+  return text;
+}
+
+/** The pages a PDF's text shows: its page objects, else the page tree's largest /Count, else null. */
+function pagesIn(texts) {
+  const pages = texts.reduce((n, text) => n + (text.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length, 0);
   if (pages) return pages;
-  const counts = [...text.matchAll(/\/Type\s*\/Pages\b[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages\b/g)].map((m) => Number(m[1] || m[2]));
+  const counts = texts.flatMap((text) => [...text.matchAll(/\/Type\s*\/Pages\b[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages\b/g)].map((m) => Number(m[1] || m[2])));
   return counts.length ? Math.max(...counts) : null;
+}
+
+/**
+ * A PDF's page count from its bytes, without a library: the page objects ("/Type /Page"), or the page
+ * tree's largest /Count, or a linearized file's page count (/N). null when none shows, as when the page
+ * objects sit in compressed object streams (PDF 1.5); pdfPages() reads those too.
+ */
+export function pdfPageCount(bytes) {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const text = latin1(u8);
+  const found = pagesIn([text]);
+  if (found !== null) return found;
+  const linearized = text.slice(0, 2048).match(/\/Linearized\b[^>]*?\/N\s+(\d+)/);
+  return linearized ? Number(linearized[1]) : null;
+}
+
+/** A Flate stream's bytes inflated as text, or null when they don't inflate. */
+async function inflate(u8) {
+  if (typeof DecompressionStream !== "function") return null;
+  try {
+    const stream = new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate"));
+    return latin1(new Uint8Array(await new Response(stream).arrayBuffer()));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The texts of a PDF's object streams (/Type /ObjStm), inflated: where PDF 1.5 and later keep the page
+ * objects compressed. Only Flate streams are read, at their direct /Length or up to "endstream".
+ */
+async function objectStreams(u8, text) {
+  const out = [];
+  for (const m of text.matchAll(/\/Type\s*\/ObjStm\b/g)) {
+    const kw = text.indexOf("stream", m.index);
+    if (kw < 0) continue;
+    const dict = text.slice(Math.max(0, text.lastIndexOf(" obj", m.index)), kw);
+    if (!/\/Filter\s*(\[\s*)?\/FlateDecode\b/.test(dict) || /\/DecodeParms/.test(dict)) continue;
+    let start = kw + 6;
+    if (text[start] === "\r") start += 1;
+    if (text[start] === "\n") start += 1;
+    const end = text.indexOf("endstream", start);
+    if (end < 0) continue;
+    const length = dict.match(/\/Length\s+(\d+)(?![\d\s]*R)/);
+    let stop = length && start + Number(length[1]) <= end ? start + Number(length[1]) : end;
+    if (!length) while (stop > start && (u8[stop - 1] === 0x0a || u8[stop - 1] === 0x0d)) stop -= 1;
+    const inflated = await inflate(u8.subarray(start, stop));
+    if (inflated !== null) out.push(inflated);
+  }
+  return out;
+}
+
+/**
+ * A PDF's page count as the intake reads it (AC-18): the plain scan, and the compressed object streams of
+ * PDF 1.5 and later when the file has them, so a long report saved that way can't skip the 100-page limit
+ * (review A2). null when neither shows the pages, as in an encrypted PDF: the intake refuses that file.
+ */
+export async function pdfPages(bytes) {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const text = latin1(u8);
+  if (!/\/Type\s*\/ObjStm\b/.test(text)) return pdfPageCount(u8);
+  const found = pagesIn([text, ...(await objectStreams(u8, text))]);
+  return found !== null ? found : pdfPageCount(u8);
 }
 
 /** Megabytes in words for the limits' messages, one decimal. */
@@ -87,7 +151,8 @@ function refusalOf(e) {
   if (e.kind === "office") return { code: "office" };
   if (e.kind === "unknown") return { code: "unknown" };
   if (e.kind === "json" && e.json === undefined) return { code: "badJson" };
-  if (e.kind === "pdf" && e.pages === null) return null;
+  // A PDF whose pages can't be counted can't be held to the page limit or priced before the run (review A2).
+  if (e.kind === "pdf" && !(Number.isInteger(e.pages) && e.pages > 0)) return { code: "pdfPages" };
   return null;
 }
 
@@ -98,7 +163,7 @@ export async function readFile(file, id) {
   if (kind === "office" || kind === "unknown") return entry;
   if (kind === "pdf") {
     const buf = new Uint8Array(await file.arrayBuffer());
-    entry.pages = pdfPageCount(buf);
+    entry.pages = await pdfPages(buf);
     entry.content = buf;
     return entry;
   }

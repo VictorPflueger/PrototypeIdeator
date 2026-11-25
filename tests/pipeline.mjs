@@ -5,7 +5,9 @@
 //   repair     a failing answer goes back exactly once with its problems listed; a second failure stops the
 //              step; a text the fact audit refuses twice comes back marked unchecked (AC-08, AC-19)
 //   cap        a request whose worst case passes the cap drops to its step's smallest max_tokens; when even
-//              that passes the cap, no request is sent and the run stops naming the step (AC-09)
+//              that passes the cap, no request is sent and the run stops naming the step (AC-09); every
+//              request's input is counted for free first, and taken at a cautious ratio when the count
+//              fails, so a large file or another script never takes a run past its cap (review A1)
 //   meter      the meter equals usage times price plus $0.01 a search at 0.894, to within 1e-9, Haiku's
 //              long-prompt prices included (AC-09)
 //   retries    529 and 429 are retried after 1.5 s and 4 s or after retry-after; a credit error and a 401
@@ -18,10 +20,10 @@
 import path from "node:path";
 import { APP_ROOT } from "./lib/harness.mjs";
 import { createReport } from "./lib/report.mjs";
-import { createFakeClaude, KEY } from "./lib/fake-claude.mjs";
+import { createFakeClaude, KEY, standInTokens } from "./lib/fake-claude.mjs";
 
 const imp = (p) => import(path.join(APP_ROOT, p));
-const { settingsOf, runStep, createMeter, fitToCap, worstCaseEur, requestOf, inputTokensOf, BudgetStop, StepFailed } = await imp("js/pipeline.js");
+const { settingsOf, runStep, createMeter, fitToCap, worstCaseEur, longTierOf, cautiousTokensOf, requestOf, inputTokensOf, checkedInputTokens, BudgetStop, StepFailed } = await imp("js/pipeline.js");
 const { messageOf } = await imp("js/api_messages.js");
 const { usageCostUsd } = await imp("js/cost.js");
 const { AGENT_TOKENS, FX_USD_EUR, MODELS } = await imp("js/config.js");
@@ -35,7 +37,8 @@ const r = createReport("pipeline");
 function stub(fake, { holdMs = 0 } = {}) {
   const calls = [];
   globalThis.fetch = async (url, init = {}) => {
-    calls.push({ url: String(url), at: Date.now() });
+    // calls: the Messages requests only; the free counts are in fake.counts.
+    if (!String(url).includes("/v1/messages/count_tokens")) calls.push({ url: String(url), at: Date.now() });
     if (holdMs) {
       await new Promise((resolve, reject) => {
         const t = setTimeout(resolve, holdMs);
@@ -43,7 +46,8 @@ function stub(fake, { holdMs = 0 } = {}) {
       });
     }
     if (init.signal?.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const out = fake.handle(init.body, Object.fromEntries(Object.entries(init.headers || {}).map(([k, v]) => [k.toLowerCase(), v])));
+    const headers = Object.fromEntries(Object.entries(init.headers || {}).map(([k, v]) => [k.toLowerCase(), v]));
+    const out = String(url).includes("/v1/messages/count_tokens") ? fake.count(init.body, headers) : fake.handle(init.body, headers);
     return new Response(out.body, { status: out.status, headers: out.headers });
   };
   return calls;
@@ -169,7 +173,7 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
 {
   const settings = sets.thorough;
   const probe = requestOf({ settings, system: "You are the Writer of Prototype Ideator. Test.", content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
-  const input = inputTokensOf(probe);
+  const input = checkedInputTokens(probe, standInTokens(probe));
   const atMax = worstCaseEur(settings.model, input, AGENT_TOKENS.writer.max);
   const atMin = worstCaseEur(settings.model, input, AGENT_TOKENS.writer.min);
   // A cap between the two: the request drops to the step's smallest max_tokens.
@@ -184,12 +188,161 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
   const calls = stub(none);
   let err = null;
   try { await runStep({ agent: "writer", key: KEY, settings, system: "You are the Writer of Prototype Ideator. Test.", content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter: createMeter(settings.model, atMin * 0.9) }); } catch (e) { err = e; }
-  r.check(err instanceof BudgetStop && err.agent === "writer" && calls.length === 0, `with the cap under the smallest worst case, nothing is sent and the run stops before the Writer (${err?.name})`);
-  // Spend so far counts: a meter already near its cap stops the next request.
-  const spent = createMeter(settings.model, 0.5);
-  spent.add({ input_tokens: 200000, output_tokens: 1000 });
-  const fit = fitToCap({ model: settings.model, inputTokens: input, limits: AGENT_TOKENS.writer, spentEur: spent.spentEur(), capEur: spent.capEur });
-  r.check(spent.spentEur() > 0.35 && (fit.maxTokens === null || spent.spentEur() + fit.worstEur <= 0.5), `the spend so far (€${spent.spentEur().toFixed(4)}) counts against the cap`);
+  r.check(err instanceof BudgetStop && err.agent === "writer" && calls.length === 0 && none.counts.length === 1, `with the cap under the smallest worst case, nothing is sent but the free count and the run stops before the Writer (${err?.name})`);
+  // Spend so far counts (review A19): the same request fits an empty meter at this cap, and a meter that has
+  // spent all but less than its smallest worst case stops it before anything is sent.
+  const cap = atMin * 1.2;
+  const empty = fitToCap({ model: settings.model, inputTokens: input, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: cap });
+  const spent = createMeter(settings.model, cap);
+  spent.add({ input_tokens: Math.round(((cap - atMin * 0.5) / FX_USD_EUR) / (MODELS.find((m) => m.id === settings.model).price.input / 1e6)), output_tokens: 0 });
+  const late = createFakeClaude([{ answer: writerAnswer }]);
+  const lateCalls = stub(late);
+  let lateErr = null;
+  try { await runStep({ agent: "writer", key: KEY, settings, system: "You are the Writer of Prototype Ideator. Test.", content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter: spent }); } catch (e) { lateErr = e; }
+  r.check(empty.maxTokens !== null && lateErr instanceof BudgetStop && lateCalls.length === 0, `the spend so far counts: at a cap of €${cap.toFixed(4)} the request fits an empty meter (max_tokens ${empty.maxTokens}), but after €${spent.spentEur().toFixed(4)} spent it stops before anything is sent (${lateErr?.name})`);
+}
+
+// ---- the cap's input ---------------------------------------------------------------------------------------
+// Review A1: the check took every text at four characters a token, a third less than Anthropic's glossary
+// gives for the 5.5 models, so a large file could take a run past its cap. Now every request is counted for
+// free first, and taken at a cautious ratio when the count fails. The stand-in bills each request at its own
+// tokenizer (2.7 characters a token for ASCII, a token for every other character, the format prompt on top)
+// and answers at the request's full max_tokens: the run's spend may never pass its cap.
+{
+  const para = "Customers wait two days for a quote because the desk checks every surcharge by hand, and the margin on spot freight falls while the board asks for growth. ";
+  const big = para.repeat(Math.ceil(650000 / para.length)).slice(0, 650000);
+  const mixed = `${"Die Kunden warten zwei Tage auf ein Angebot, weil der Vertrieb jeden Zuschlag prüft. Größere Häfen zahlen höhere Gebühren. ".repeat(900)}${"\u6E2F\u53E3\u8CBB\u7528\u4E0A\u5347".repeat(4000)}`;
+  const worstUsage = (req) => ({ answer: writerAnswer, usage: { input_tokens: standInTokens(req, { withFormat: true }), output_tokens: req.max_tokens } });
+  for (const [label, text, preset, cap] of [["a 650,000-character report on Thorough at €0.40", big, "thorough", 0.4], ["German and Chinese text on Balanced at €0.05", mixed, "balanced", 0.05]]) {
+    for (const countFails of [false, true]) {
+      const settings = sets[preset];
+      const fake = createFakeClaude((n, req) => worstUsage(req), { countFails });
+      stub(fake);
+      const meter = createMeter(settings.model, cap);
+      const events = [];
+      let err = null;
+      try { await runStep({ agent: "writer", key: KEY, settings, system: "You are the Writer of Prototype Ideator. Test.", content: [{ type: "text", text }], schema: recommendationSchema(), check: writerCheck, meter, onEvent: (e) => events.push(e) }); } catch (e) { err = e; }
+      const sent = events.filter((e) => e.type === "request");
+      const billed = fake.requests.map((q) => q.billedInput);
+      const covered = sent.every((e, k) => billed[k] === undefined || e.inputTokens >= billed[k]);
+      const how = countFails ? "the count failing, the cautious ratio" : "the free count";
+      r.check((err === null || err instanceof BudgetStop) && covered && meter.spentEur() <= cap + 1e-9 && fake.counts.length >= 1 && sent.every((e) => e.counted === !countFails),
+        `${label}, ${how}: ${sent.length ? `the check reckons with ${sent.map((e) => e.inputTokens.toLocaleString("en")).join(", ")} input tokens against ${billed.map((b) => b.toLocaleString("en")).join(", ")} billed, and the run spends €${meter.spentEur().toFixed(4)} of €${cap.toFixed(2)}` : `the run stops at the cap before the request, having spent €${meter.spentEur().toFixed(4)}`}`);
+    }
+  }
+  // Control: the old rule saw a third less than the stand-in bills, so the check above can fail.
+  const probe = requestOf({ settings: sets.thorough, system: "You are the Writer of Prototype Ideator. Test.", content: [{ type: "text", text: big }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
+  const old = Math.ceil((probe.system.length + JSON.stringify(probe.output_config.format.schema).length + big.length) / 4);
+  r.control(old < standInTokens(probe, { withFormat: true }) * 0.75, `the old rule of four characters a token saw ${old.toLocaleString("en")} input tokens where the stand-in bills ${standInTokens(probe, { withFormat: true }).toLocaleString("en")}`);
+  // Control: with the old rule, the 650,000 characters on Thorough fit €0.40 at full output and passed it when billed.
+  const oldFit = fitToCap({ model: sets.thorough.model, inputTokens: old, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: 0.4 });
+  const billedEur = worstCaseEur(sets.thorough.model, standInTokens(probe, { withFormat: true }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
+  r.control(oldFit.maxTokens !== null && billedEur > 0.4, `under the old rule the request went out (max_tokens ${oldFit.maxTokens}) and would have cost €${billedEur.toFixed(4)}, past €0.40`);
+}
+
+// Review C5: with the count failing, the cautious ratio took every character past ASCII as one token, which
+// no source says holds for every script, and Haiku's price steps up fivefold past 100,000 tokens. Now such a
+// character counts at its UTF-8 bytes, and a cautious count whose 1.5 times passes the step is priced at the
+// long-prompt tier; a stop on it says the count didn't answer, with Try again first. The case: 90,000
+// Chinese characters at an assumed 1.43 tokens a character (no source gives the 5.5 models' figure).
+{
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const zh = "\u6E2F\u53E3\u8CBB\u7528\u4E0A\u5347".repeat(15000);
+  const ratio = 1.43;
+  const settings = sets.balanced;
+  const fake = createFakeClaude((n, req) => ({ answer: writerAnswer, usage: { input_tokens: standInTokens(req, { withFormat: true, otherTokens: ratio }), output_tokens: req.max_tokens } }), { countFails: true });
+  stub(fake);
+  const meter = createMeter(settings.model, 0.05);
+  let err = null;
+  try { await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: zh }], schema: recommendationSchema(), check: writerCheck, meter }); } catch (e) { err = e; }
+  const msg = messageOf(err);
+  r.check(meter.spentEur() <= 0.05 + 1e-9 && err instanceof BudgetStop && err.uncounted === true && msg.vars?.uncounted === true && msg.next === "retry" && fake.requests.length === 0,
+    `90,000 Chinese characters at ${ratio} tokens each, the count failing, Balanced at €0.05: the run spends €${meter.spentEur().toFixed(4)} and stops before the request (${err?.name}), saying the count didn't answer, with Try again first (${msg.next})`);
+  // Control: the old cautious count saw fewer tokens than the step, let the request out, and its bill passed the cap.
+  const probe = requestOf({ settings, system: sys, content: [{ type: "text", text: zh }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
+  const oldTok = (text) => { let a = 0; for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) < 0x80) a += 1; return Math.ceil(a / 2 + (text.length - a)); };
+  const oldInput = oldTok(probe.system) + oldTok(JSON.stringify(probe.output_config.format.schema)) + 16 + oldTok(zh);
+  const oldFit = fitToCap({ model: settings.model, inputTokens: oldInput, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: 0.05 });
+  const billed = worstCaseEur(settings.model, standInTokens(probe, { withFormat: true, otherTokens: ratio }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
+  r.control(oldFit.maxTokens !== null && oldInput < 100000 && billed > 0.05, `the old cautious count saw ${oldInput.toLocaleString("en")} tokens, under the step, let the request out (max_tokens ${oldFit.maxTokens}), and its bill would have been €${billed.toFixed(4)}`);
+  // The counts: two letters a token, a digit, a space or a mark a token each, an accented letter 2 bytes, a
+  // Chinese character 3, an emoji 4.
+  r.check(cautiousTokensOf("ab") === 1 && cautiousTokensOf("12,") === 3 && cautiousTokensOf("a b") === 2 && cautiousTokensOf("\u00e4") === 2 && cautiousTokensOf("\u6E2F") === 3 && cautiousTokensOf("\u{1F600}") === 4 && cautiousTokensOf("Gr\u00f6\u00dfe") === 6,
+    `the cautious count takes two letters a token, every other ASCII character a token and every other character at its UTF-8 bytes ("ab" ${cautiousTokensOf("ab")}, "12," ${cautiousTokensOf("12,")}, "a b" ${cautiousTokensOf("a b")}, "\u00e4" ${cautiousTokensOf("\u00e4")}, "\u6E2F" ${cautiousTokensOf("\u6E2F")}, an emoji ${cautiousTokensOf("\u{1F600}")}, "Gr\u00f6\u00dfe" ${cautiousTokensOf("Gr\u00f6\u00dfe")})`);
+  // The tier: Haiku's long-prompt prices when 1.5 times the cautious count passes the step, on that count only; Sonnet has no step.
+  const haiku = "claude-haiku-5-5";
+  r.check(longTierOf(haiku, 70000, null) && !longTierOf(haiku, 60000, null) && !longTierOf(haiku, 70000, 70000) && !longTierOf("claude-sonnet-5-5", 99000, null)
+    && worstCaseEur(haiku, 70000, 2000, { longTier: true }) > worstCaseEur(haiku, 70000, 2000) * 4.9,
+    `the cap takes Haiku's long-prompt prices for a cautious count of 70,000 tokens (€${worstCaseEur(haiku, 70000, 2000, { longTier: true }).toFixed(4)} against €${worstCaseEur(haiku, 70000, 2000).toFixed(4)}), not for 60,000, not for a count that answered, and never for Sonnet`);
+  const long = MODELS.find((m) => m.id === haiku).price.longPrompt;
+  r.check(Math.abs(worstCaseEur(haiku, 70000, 2000, { longTier: true }) - ((70000 * long.input + 2000 * long.output) / 1e6) * FX_USD_EUR) < 1e-12 && usageCostUsd(haiku, { input_tokens: 70000, output_tokens: 2000 }) * FX_USD_EUR === worstCaseEur(haiku, 70000, 2000),
+    "the long-prompt worst case is Haiku's long-prompt prices on input and output, and a bill below the step is still priced at the base tier: the cautious tier is the cap's alone");
+}
+
+// Review D3: with the count failing, a table of figures, which takes about a token a character, passed the cap
+// at two ASCII characters a token. Now a digit, a space or a mark counts as a token. The case: a CSV of
+// 120,000 characters at a token a character, on Balanced at €0.05 and on Thorough at €0.15.
+{
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const csv = "2024,17,3.5,880,0.42\n".repeat(Math.ceil(120000 / 21)).slice(0, 120000);
+  for (const [preset, cap] of [["balanced", 0.05], ["thorough", 0.15]]) {
+    const settings = sets[preset];
+    const fake = createFakeClaude((n, req) => ({ answer: writerAnswer, usage: { input_tokens: standInTokens(req, { withFormat: true, asciiChars: 1 }), output_tokens: req.max_tokens } }), { countFails: true });
+    stub(fake);
+    const meter = createMeter(settings.model, cap);
+    let err = null;
+    try { await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: csv }], schema: recommendationSchema(), check: writerCheck, meter }); } catch (e) { err = e; }
+    r.check((err === null || err instanceof BudgetStop) && meter.spentEur() <= cap + 1e-9,
+      `a CSV of 120,000 characters at a token a character, the count failing, ${preset} at €${cap.toFixed(2)}: the run spends €${meter.spentEur().toFixed(4)}${err ? ` and stops before the request (${err.name})` : ""}`);
+    // Control: at two ASCII characters a token the request went out, and its bill passed the cap.
+    const probe = requestOf({ settings, system: sys, content: [{ type: "text", text: csv }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
+    const oldTok = (text) => { let a = 0; for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) < 0x80) a += 1; return Math.ceil(a / 2 + (text.length - a)); };
+    const oldInput = oldTok(probe.system) + oldTok(JSON.stringify(probe.output_config.format.schema)) + 16 + oldTok(csv);
+    const oldFit = fitToCap({ model: settings.model, inputTokens: oldInput, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: cap, longTier: longTierOf(settings.model, oldInput, null) });
+    const billed = worstCaseEur(settings.model, standInTokens(probe, { withFormat: true, asciiChars: 1 }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
+    r.control(oldFit.maxTokens !== null && billed > cap, `${preset}: at two ASCII characters a token the check saw ${oldInput.toLocaleString("en")} tokens, let the request out (max_tokens ${oldFit.maxTokens}), and its bill would have been €${billed.toFixed(4)}`);
+  }
+}
+
+// Review D4: a saved run sets each step's free count beside its billed input, so the count of a request the
+// cap stopped must not add to it. The writer stops at a cap too small, then goes out at a larger one.
+{
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const settings = sets.balanced;
+  const fake = createFakeClaude([{ answer: writerAnswer }]);
+  stub(fake);
+  const meter = createMeter(settings.model, 0.0001);
+  let err = null;
+  try { await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter }); } catch (e) { err = e; }
+  const afterStop = meter.snapshot().byAgent?.writer?.counted_input_tokens ?? 0;
+  meter.set({ capEur: 1 });
+  await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter });
+  const w = meter.snapshot().byAgent.writer;
+  r.check(err instanceof BudgetStop && afterStop === 0 && fake.counts.length === 2 && w.requests === 1 && w.counted_input_tokens === fake.counts[1].input_tokens,
+    `a request the cap stopped adds no count: ${afterStop} after the stop, then ${w.counted_input_tokens} for the one request that went out (${fake.counts.length} counts asked, ${w.requests} request billed)`);
+}
+
+// ---- a broken stream ---------------------------------------------------------------------------------------
+// Review A15: a stream that breaks off may have been billed, and Anthropic's pages don't say. The cap holds its
+// worst case as spent and sends the request again only if a second worst case still fits beside it.
+{
+  const settings = sets.balanced;
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const probe = requestOf({ settings, system: sys, content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
+  const w = worstCaseEur(settings.model, checkedInputTokens(probe, standInTokens(probe)), AGENT_TOKENS.writer.max);
+  const run = (cap) => {
+    const fake = createFakeClaude([{ answer: writerAnswer, cutAfter: 1 }, { answer: writerAnswer }]);
+    stub(fake);
+    const meter = createMeter(settings.model, cap);
+    return { fake, meter, go: runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter }) };
+  };
+  const tight = run(w * 1.5);
+  let err = null;
+  try { await tight.go; } catch (e) { err = e; }
+  r.check(err instanceof BudgetStop && tight.fake.requests.length === 1 && Math.abs(tight.meter.heldEur() - w) < 1e-12, `a stream that breaks off with the cap under two worst cases: its worst case (€${w.toFixed(4)}) is held, and the run stops instead of sending it again (${err?.name}, ${tight.fake.requests.length} request)`);
+  const roomy = run(w * 2.5);
+  const out = await roomy.go;
+  r.check(out.answer && roomy.fake.requests.length === 2 && Math.abs(roomy.meter.heldEur() - w) < 1e-12 && roomy.meter.snapshot().eur < roomy.meter.reservedEur(), `with room for both, it goes again and the answer comes; the hold counts for the cap (€${roomy.meter.reservedEur().toFixed(4)}), the meter shows what was billed (€${roomy.meter.snapshot().eur.toFixed(4)})`);
 }
 
 // ---- meter -------------------------------------------------------------------------------------------------

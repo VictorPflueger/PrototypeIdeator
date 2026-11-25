@@ -21,7 +21,7 @@ const SUITES = [
   { id: "simulation", what: "the simulation model: frozen figures in both languages, and another path that agrees with the engine", file: "tests/simulation.mjs", browser: false },
   { id: "kpis", what: "the shared KPI library: sectors, ids, names in both languages, no benchmark value", file: "tests/kpis.mjs", browser: false },
   { id: "guards", what: "the agents' guards: every refusal, the fact audit and the notes on a broken copy of a good answer", file: "tests/guards.mjs", browser: false },
-  { id: "prompts", what: "the Ideator's prompt and input: rules, rubric, criteria, the cap, about 700 tokens", file: "tests/prompts.mjs", browser: false },
+  { id: "prompts", what: "the Ideator's prompt and input: rules, rubric, criteria, the cap, under 3,040 characters", file: "tests/prompts.mjs", browser: false },
   { id: "probe", what: "the Ideator probe against a scripted stand-in: requests, checks, ranking, cost, errors, the key", file: "tests/probe.mjs", browser: false },
   { id: "pipeline", what: "the live pipeline against the stand-in: settings, one repair, the budget cap, the meter to 1e-9, retries, Stop, every error's message", file: "tests/pipeline.mjs", browser: false },
   { id: "privacy", what: "what looks private: e-mail addresses, phone numbers, IBANs and keywords found, clean text left alone", file: "tests/privacy.mjs", browser: false },
@@ -34,7 +34,8 @@ const SUITES = [
   { id: "intake", what: "the live run's intake: what the drop zone reads, refuses and limits, with no request", file: "tests/intake.mjs", browser: true },
   { id: "live", what: "a live run in Chromium against the stand-in: the dialog, presets, the flow, repairs, guards, Stop, the cap, cost, errors, storage, Save run", file: "tests/live.mjs", browser: true },
   { id: "report", what: "the report in Chromium: its sections, the PDF's footer on every page, its tables and the challengers' print format, a stopped run's notice, the HTML and ideas files, the downloads and the build brief", file: "tests/report.mjs", browser: true },
-  { id: "page", what: "the page in Chromium: languages, key figures, storage, the comb of 1 to 10 ideas, layout at both projector sizes, the probe line", file: "tests/page.mjs", browser: true }
+  { id: "page", what: "the page in Chromium: languages, key figures, storage, the comb of 1 to 10 ideas on screen and paper, the chart's labels, layout from 1920 x 1080 to 1280 x 720, the probe line", file: "tests/page.mjs", browser: true },
+  { id: "access", what: "accessibility in Chromium: a scenario and a live run by keyboard alone, the focus seen at every stop, reduced motion, every control named", file: "tests/access.mjs", browser: true }
 ];
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith("--"));

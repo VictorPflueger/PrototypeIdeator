@@ -7,7 +7,7 @@
 
 import { h } from "./dom.js";
 import { t, tn } from "./i18n/index.js";
-import { fmtScore, fmtEur, fmtEurCompact, fmtEurRange, fmtInt, fmtDate } from "./format.js";
+import { fmtScore, fmtEur, fmtEurRun, runShown, fmtEurCompact, fmtEurRange, fmtInt, fmtDate, fmtShare } from "./format.js";
 import { renderFacts } from "./facts.js";
 import { CRITERIA, DEFAULT_WEIGHTS } from "./engine.js";
 import { honeycomb, scoreChart } from "./charts.js";
@@ -46,6 +46,10 @@ export function reportDoc(run, meta) {
   const fill = (text) => renderFacts(text, run.facts, lang);
   const marks = meta.unchecked || { issues: new Set(), ideas: new Set(), report: new Set() };
   const ai = () => h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr("ai.tag"));
+  // A sum of money at stake that holds the Reader's AI estimates says so: partly or all (review A6).
+  const estimatesTag = (s, before = null) => (s?.estimated > 0
+    ? [before, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr(s.estimated < s.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll"))]
+    : null);
   const kept = run.issues.filter((i) => i.status === "kept");
   const merged = run.issues.filter((i) => i.status === "merged");
   const parked = run.issues.filter((i) => i.status === "parked");
@@ -54,6 +58,8 @@ export function reportDoc(run, meta) {
   const company = run.company?.name || "";
   const ideaOf = (id) => ideas.find((i) => i.id === id);
   const cost = (id) => run.facts[`idea.${id}.cost`]?.value;
+  // Twenty runs from the per-run figure as shown, so the two columns multiply (review B3).
+  const twenty = (v) => (Number.isFinite(v) ? (runShown(v) || v) * 20 : v);
 
   /** A page: its heading one level below the title, then what it holds. */
   const page = (key, title, ...children) => h("section", { class: ["vc-report__page", "rep-page", `rep-page--${key}`], "aria-labelledby": `${P}-${key}` },
@@ -117,7 +123,12 @@ export function reportDoc(run, meta) {
   const recommendation = () => h("ol", { class: "rep-picks" }, (run.recommended || []).map((p) => h("li", {},
     h("p", { class: "rep-pick__head" }, h("strong", {}, p.name), " ", h("span", { class: "rep-muted" }, tr("report.pickLine", { score: fmtScore(p.value, lang), rank: p.rank }))),
     h("p", {}, fill(p.why), " ", ai()),
-    h("p", { class: "rep-muted" }, tr("report.pickCost", { cost: fmtEur(p.cost, lang) }), " ", ref(ruleRef)))));
+    h("p", { class: "rep-muted" }, tr("report.pickCost", { cost: fmtEurRun(p.cost, lang) }), " ", ref(ruleRef)))));
+  // What the shortlist answers of the money at stake, as the tile says after the decision (review B18), with
+  // the AI mark the sum carries wherever it holds the Reader's estimates (reviews A6 and C3).
+  const shareLine = () => (run.shortlist?.decided && typeof run.figures?.share === "number"
+    ? h("p", {}, tr("report.share", { share: fmtShare(run.figures.share, lang), amount: fmtEurCompact(run.figures.shareEur, lang), total: fmtEurCompact(run.figures.atStake.eur, lang) }), estimatesTag(run.figures.atStake, " "))
+    : null);
   const where = [
     tr("rep.map.title"),
     hasIdeas ? tr("rep.glance.title") : null,
@@ -139,23 +150,46 @@ export function reportDoc(run, meta) {
       stat(tr("report.stat.top"), hasIdeas ? fmtScore(ranked[0].value, lang) : "…")),
     ...part(tr("report.lookedAt"), written("looked_at")),
     ...part(tr("report.found"), written("found")),
-    ...(hasIdeas ? part(tr("report.recommend"), h("p", { class: "rep-muted" }, tr("report.byCode")), recommendation()) : []),
+    ...(hasIdeas ? part(tr("report.recommend"), h("p", { class: "rep-muted" }, tr("report.byCode")), recommendation(), shareLine()) : []),
     ...part(tr("report.needed"), written("needed")),
     ...part(tr("rep.where"), h("ol", { class: "rep-where" }, where.map((x) => h("li", {}, x)))));
 
   // ---- 3 Issue map ------------------------------------------------------------------------------------------
+  // A kept issue at its group's value (D15), also when that is a merged member's and it states none itself
+  // (review B2): the member whose value counts carries the AI tag when the Reader estimated it.
+  const countedIn = (issue) => [issue, ...run.issues.filter((x) => x.status === "merged" && x.merged_into === issue.id)]
+    .filter((m) => typeof m.eur_year_expected === "number").sort((a, b) => b.eur_year_expected - a.eur_year_expected)[0] || issue;
   const stake = (issue) => {
-    if (typeof issue.eur_year_expected !== "number") {
+    const own = typeof issue.eur_year_expected === "number";
+    const group = run.facts[`issue.${issue.id}.eur`]?.value ?? null;
+    if (!own && group === null) {
       return [h("span", { class: "rep-muted" }, tr("read.notStated")), issue.money_as_stated ? h("span", { class: "rep-sub" }, issue.money_as_stated) : null];
     }
-    const group = run.facts[`issue.${issue.id}.eur`]?.value ?? null;
     const fromGroup = group !== null && group !== issue.eur_year_expected;
+    const from = fromGroup ? countedIn(issue) : issue;
     return [
       h("strong", {}, fmtEurCompact(group ?? issue.eur_year_expected, lang)),
       fromGroup ? h("span", { class: "rep-sub" }, tr("read.largest"), " ", ref(mergedRef)) : null,
       !fromGroup && typeof issue.eur_year_low === "number" ? h("span", { class: "rep-sub" }, fmtEurRange(issue.eur_year_low, issue.eur_year_high, lang)) : null,
-      issue.estimate ? h("span", { class: "rep-sub" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr("read.aiEstimate")), " ", ref(estimateRef.get(issue.id))) : null
+      !own && issue.money_as_stated ? h("span", { class: "rep-sub" }, issue.money_as_stated) : null,
+      from.estimate ? h("span", { class: "rep-sub" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr("read.aiEstimate")), " ", ref(estimateRef.get(from.id))) : null
     ];
+  };
+  // The map's last row: what is at stake in all, worked out by code from the unrounded amounts, so a sum of
+  // the rounded amounts above may differ from it by a rounding (review B8).
+  const totalRow = () => {
+    const total = run.facts.at_stake;
+    if (!total || total.value === null || total.value === undefined) return [];
+    // The amount alone in its narrow column; on how many issues it rests, and that it holds AI estimates,
+    // under the row's title, where there is room.
+    const on = total.stated < total.of ? `${tr("kpi.atStake.notePart", { stated: total.stated, of: total.of })}. ` : "";
+    return [h("tr", { class: "rep-total" },
+      h("th", { scope: "row" },
+        h("span", { class: "rep-issue" }, tr("rep.map.total")),
+        h("span", { class: "rep-sub" }, on, tr("rep.map.rounded")),
+        total.estimated > 0 ? h("span", { class: "rep-sub" }, estimatesTag(total)) : null),
+      h("td", { class: "rep-stake" }, h("strong", {}, fmtEurCompact(total.value, lang))),
+      h("td", {}), h("td", {}))];
   };
   const found = (issue) => {
     if (issue.source?.kind === "handoff") return issue.source.tool?.name || "";
@@ -164,6 +198,8 @@ export function reportDoc(run, meta) {
   };
   const mapPage = page("map", tr("rep.map.title"),
     h("p", { class: "rep-lead" }, tn("rep.map.lead", kept.length, {}, lang)),
+    // Issues the Reader wrote from documents are the AI's words, amounts and KPIs included (review B11).
+    run.issues.some((i) => i.type === "document") ? h("p", { class: "rep-note" }, ai(), " ", tr("read.aiNote")) : null,
     // Four columns keep the map on its sheet, on screen too: where an issue was found stands under its title.
     table("rep-map", tr("rep.map.title"),
       [[tr("rep.map.col.issue")], [tr("rep.map.col.stake"), true], [tr("rep.map.col.kpis")], [tr("rep.map.col.ideas")]],
@@ -180,17 +216,21 @@ export function reportDoc(run, meta) {
           h("td", { class: "rep-stake" }, stake(issue)),
           h("td", {}, kpis),
           h("td", {}, answered.length ? answered.join(", ") : h("span", { class: "rep-muted" }, tr("rep.map.noIdea"))));
-      })),
+      }).concat(totalRow())),
     ...part(tr("rep.map.parked"), parked.length
       ? h("ul", { class: "rep-parked" }, parked.map((i) => h("li", {}, h("strong", {}, i.title), `: ${i.park_reason || tr("read.reason.scope")}`)))
       : h("p", { class: "rep-muted" }, tr("rep.map.parkedNone"))));
 
   // ---- 4 The ideas at a glance ------------------------------------------------------------------------------
+  // The person-days and the model calls behind each cost are the Ideator's estimates (review A8): Vici's
+  // lilac sparkle beside the two heads, and the chart's axis under the table says so in words. A sentence more
+  // in the lead would take the line the German glance needs on A4.
+  const estimated = (text) => h("span", { class: "rep-est" }, text, "\u00a0", h("span", { class: "vc-icon vc-icon--sparkle rep-est__mark", "aria-hidden": "true" }), h("span", { class: "vc-visually-hidden" }, ` (${tr("rep.glance.est")})`));
   const glance = hasIdeas ? page("glance", tr("rep.glance.title"),
     h("p", { class: "rep-lead" }, tr("rep.glance.lead")),
     // Six columns keep the table on its sheet: the issue an idea answers stands under its name.
     table("rep-glance", tr("rep.glance.title"),
-      [[tr("score.col.rank"), true], [tr("score.col.idea")], [tr("rep.glance.col.what")], [tr("rep.glance.col.days"), true], [tr("rep.glance.col.cost"), true], [tr("rep.glance.col.score"), true]],
+      [[tr("score.col.rank"), true], [tr("score.col.idea")], [tr("rep.glance.col.what")], [estimated(tr("rep.glance.col.days")), true], [estimated(tr("rep.glance.col.cost")), true], [tr("rep.glance.col.score"), true]],
       ranked.map((r) => {
         const idea = ideaOf(r.id);
         const place = picks.indexOf(r.id);
@@ -202,13 +242,14 @@ export function reportDoc(run, meta) {
             place >= 0 ? h("span", { class: "rep-sub rep-place-line" }, tr("rep.idea.place", { n: place + 1 })) : null),
           h("td", {}, fill(idea.what_it_does)),
           h("td", { class: "vc-num" }, tr("rep.glance.days", { low: fmtInt(idea.effort_days.low, lang), high: fmtInt(idea.effort_days.high, lang) })),
-          h("td", { class: "vc-num" }, fmtEur(cost(r.id), lang)),
+          h("td", { class: "vc-num" }, fmtEurRun(cost(r.id), lang)),
           h("td", { class: "vc-num" }, h("strong", {}, fmtScore(r.value, lang))));
       })),
     h("div", { class: "rep-chart vc-report__keep" }, scoreChart(ranked.map((r) => {
       const idea = ideaOf(r.id);
       return { id: r.id, name: r.name, value: r.value, low: idea.effort_days.low, high: idea.effort_days.high };
-    }), { picks, lang, still: true, idPrefix: `${P}-chart`, height: 220 }))) : null;
+    }), { picks, lang, still: true, idPrefix: `${P}-chart`, height: 220 })),
+) : null;
 
   // ---- 5 One page per idea ----------------------------------------------------------------------------------
   const ideaPages = hasIdeas ? ranked.map((r) => {
@@ -222,13 +263,19 @@ export function reportDoc(run, meta) {
 
   // ---- 6 How they were scored -------------------------------------------------------------------------------
   const weights = run.weights || DEFAULT_WEIGHTS;
+  const weightTotal = CRITERIA.reduce((sum, c) => sum + (Number(weights[c]) || 0), 0);
   const stLabel = (l) => (l === "current" ? tr("score.st.current") : l === "equal" ? tr("score.st.equal") : tr("score.st.without", { criterion: tr(`crit.${l.split(":")[1]}`) }));
   const st = run.stability;
   const scored = hasIdeas ? page("scored", tr("rep.scored.title"),
     h("p", { class: "rep-lead" }, tr("rep.scored.lead")),
     ...part(tr("rep.scored.criteria"), table("rep-criteria", tr("rep.scored.criteria"),
       [[tr("rep.scored.col.criterion")], [tr("rep.scored.col.weight"), true], [tr("rep.scored.col.question")]],
-      CRITERIA.map((c) => h("tr", {}, h("th", { scope: "row" }, tr(`crit.${c}`)), h("td", { class: "vc-num" }, `${weights[c]} %`), h("td", {}, tr(`crit.q.${c}`)))))),
+      // Weights that don't add up to 100 % count at their shares; the table says so, with each share
+      // beside its weight (review B4).
+      CRITERIA.map((c) => h("tr", {}, h("th", { scope: "row" }, tr(`crit.${c}`)),
+        h("td", { class: "vc-num" }, `${weights[c]}\u00a0%`, weightTotal !== 100 ? h("span", { class: "rep-sub" }, tr("score.share", { share: fmtShare(weights[c] / weightTotal, lang) })) : null),
+        h("td", {}, tr(`crit.q.${c}`)))))),
+    weightTotal !== 100 ? h("p", { class: "rep-note" }, tr("score.weights.rescaled", { total: weightTotal })) : null,
     ...part(tr("rep.scored.scores"),
       table("rep-scores", tr("rep.scored.scores"),
         [[tr("score.col.rank"), true], [tr("score.col.idea")], ...CRITERIA.map((c) => [tr(`crit.short.${c}`), true]), [tr("rep.glance.col.score"), true]],
@@ -238,7 +285,9 @@ export function reportDoc(run, meta) {
           CRITERIA.map((c) => h("td", { class: "vc-num" }, String(ideaOf(r.id).ratings[c].score))),
           h("td", { class: "vc-num" }, h("strong", {}, fmtScore(r.value, lang)))))),
       h("p", { class: "rep-note" }, CRITERIA.map((c) => `${tr(`crit.short.${c}`)}: ${tr(`crit.${c}`)}`).join(" · "))),
-    ...part(tr("rep.scored.stability"),
+    // The stability check and the recommendation each print whole: a table split before its last row left
+    // that row alone on the next sheet.
+    h("div", { class: "rep-keep" }, ...part(tr("rep.scored.stability"),
       h("p", {}, run.sentence),
       h("div", { class: "rep-two" },
         table("rep-stability", tr("score.st.caption", { of: st.of }),
@@ -248,8 +297,8 @@ export function reportDoc(run, meta) {
           [[tr("score.col.idea")], [tr("score.st.firsts"), true], [tr("score.st.top3"), true]],
           st.order.map((id) => h("tr", {}, h("th", { scope: "row" }, names.ideaName(id)),
             h("td", { class: "vc-num" }, tr("score.st.of", { n: st.counts[id].firsts, of: st.of })),
-            h("td", { class: "vc-num" }, tr("score.st.of", { n: st.counts[id].top3, of: st.of }))))))),
-    ...part(tr("rep.scored.recommend"), recommendation())) : null;
+            h("td", { class: "vc-num" }, tr("score.st.of", { n: st.counts[id].top3, of: st.of })))))))),
+    h("div", { class: "rep-keep" }, ...part(tr("rep.scored.recommend"), recommendation()))) : null;
 
   // ---- 7 How they would be built ----------------------------------------------------------------------------
   const built = hasIdeas ? page("built", tr("rep.built.title"),
@@ -264,10 +313,11 @@ export function reportDoc(run, meta) {
             h("th", { scope: "row" }, idea.name),
             h("td", { class: "vc-num" }, fmtInt(idea.live_inputs.model_calls, lang)),
             h("td", { class: "vc-num" }, fmtInt(idea.live_inputs.web_searches, lang)),
-            h("td", { class: "vc-num" }, fmtEur(cost(r.id), lang)),
-            h("td", { class: "vc-num" }, fmtEur(cost(r.id) * 20, lang)));
+            h("td", { class: "vc-num" }, fmtEurRun(cost(r.id), lang)),
+            h("td", { class: "vc-num" }, fmtEur(twenty(cost(r.id)), lang)));
         })),
-      h("p", { class: "rep-note" }, tr("rep.built.basis"), " ", ref(ruleRef)))) : null;
+      // The calls and searches are the Ideator's: on paper the glance's sparkle has no words, so they stand here (review D5).
+      h("p", { class: "rep-note" }, tr("rep.built.estimated"), " ", tr("rep.built.basis"), " ", ref(ruleRef)))) : null;
 
   // ---- 8 Vote sheet -----------------------------------------------------------------------------------------
   // Boxes to write in by hand: a report holds no field, and Chromium keeps none in the PDF it saves.
@@ -290,7 +340,9 @@ export function reportDoc(run, meta) {
   for (const i of run.issues) for (const e of i.evidence || []) if (e.url && !evidence.has(e.url)) evidence.set(e.url, e);
   const docs = new Map();
   for (const i of run.issues) {
-    if (i.source?.kind === "handoff" && i.source.file) docs.set(`report|${i.source.file}`, [tr("rep.src.report", { file: i.source.file })]);
+    // A challenger's report written for the scenario says so here too, as it does at the drop zone (review B9).
+    const standIn = (run.documents || []).some((d) => d.name === i.source?.file && d.stand_in);
+    if (i.source?.kind === "handoff" && i.source.file) docs.set(`report|${i.source.file}`, [tr(standIn ? "rep.src.reportStandIn" : "rep.src.report", { file: i.source.file })]);
     for (const q of i.quotes || []) {
       docs.set(`${q.file}|${q.where}|${q.text}`, [tr("rep.src.quote", { file: q.file, where: q.where, text: q.text }), q.checked === "not-checked" ? h("span", { class: "rep-muted" }, ` (${tr("read.notChecked")})`) : null]);
     }

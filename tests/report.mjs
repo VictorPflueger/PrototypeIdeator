@@ -8,12 +8,14 @@
 //              four parts once each, "page x of y" counting up to the page count, in the report's language
 //              (AC-13); the print copy goes again afterwards
 //   tables     no table of the report cuts a heading or runs past its sheet, for S1 to S3 in both
-//              languages, on screen at 1920 x 1080 and 1280 x 720 and on paper
+//              languages, on screen at 1920 x 1080 and 1280 x 720 and on paper, with the media as wide as
+//              a print dialog reports A4's page area (673 px) and as page.pdf() does (794 px)
 //   format     the printed report in the SWOT and PESTEL Challengers' format: text at 9.5 pt, an idea's
 //              fact sheet at 9 pt, table heads in sentence case that wrap, each idea on a sheet of its own
-//              and the glance's chart beside its table, each with 9 mm in hand; the cover names the model and setting in a
-//              simulation too; Save as PDF and Ctrl+P offer prototype-ideator-<company>-<date>-<lang> as the
-//              PDF's name and give the page its title back
+//              and the glance's chart beside its table, each with 9 mm in hand at both media widths; the
+//              stability check prints whole, moving to the next sheet when it doesn't fit; the
+//              cover names the model and setting in a simulation too; Save as PDF and Ctrl+P offer
+//              prototype-ideator-<company>-<date>-<lang> as the PDF's name and give the page its title back
 //   stopped    a live run stopped at its budget cap offers what is done, and every page of its report
 //              says where it stopped; its ideas file says so too (AC-09)
 //   html       the HTML file asks for nothing when opened, holds no script, carries its own policy, its
@@ -36,7 +38,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, viciDir, REQUIRE_VICI } from "./lib/harness.mjs";
-import { createFakeClaude, KEY } from "./lib/fake-claude.mjs";
+import { createFakeClaude, KEY, standInTokens } from "./lib/fake-claude.mjs";
 import { routeStandIn } from "./lib/live-route.mjs";
 
 const parts = process.argv.slice(2).filter((a) => !a.startsWith("--"));
@@ -101,12 +103,12 @@ function footerProblems(bytes, lang, { notice = null } = {}) {
 }
 
 /** A page with no outside host but the stand-in's. */
-async function open({ lang = "en", query = "", width = 1280, height = 720, script = [], theme = null, clipboard = false } = {}) {
+async function open({ lang = "en", query = "", width = 1280, height = 720, script = [], theme = null, clipboard = false, count = undefined } = {}) {
   const fake = createFakeClaude(script);
   const context = await browser.newContext({ viewport: { width, height }, acceptDownloads: true });
   if (clipboard) await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.base.replace(/\/$/, "") });
   if (theme) await context.addInitScript((t) => { try { localStorage.setItem("vc-theme", t); } catch { /* none */ } }, theme);
-  const net = await routeStandIn(context, fake);
+  const net = await routeStandIn(context, fake, count === undefined ? {} : { count });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message || e)));
@@ -133,6 +135,17 @@ async function pressPrint(page, selector) {
 async function download(page, selector) {
   const [d] = await Promise.all([page.waitForEvent("download"), page.click(selector)]);
   return { name: d.suggestedFilename(), text: readFileSync(await d.path(), "utf8") };
+}
+
+/**
+ * The sheets of a printed report (texts squeezed of white space) that hold the stability check's heading and
+ * its last row, which leaves out low risk: { head, last }, -1 where not found.
+ */
+function stabilitySheets(texts, w) {
+  const head = texts.findIndex((t) => t.includes(squeeze(w["rep.scored.stability"])));
+  const lastRow = squeeze(w["score.st.without"].replace("{criterion}", w["crit.risk"]));
+  const last = texts.findIndex((t, k) => k >= head && t.includes(lastRow));
+  return { head, last };
 }
 
 // ---- live runs against the stand-in ----------------------------------------------------------------------
@@ -256,6 +269,15 @@ try {
       res.push([!cover.length && rep.lang === (lang === "de" ? "de" : "en-GB"), `${where}: the cover and the last page say what brief 9 asks, in the report's language${cover.length ? `: ${cover.join("; ")}` : ""}`]);
       const votes = rep.voteRows.length === run.ideas.length && rep.voteRows.every((v) => v.rank && v.why) && rep.voteName && rep.voteRoom;
       res.push([votes, `${where}: the vote sheet has a rank box and a comment box for each of the ${rep.voteRows.length} ideas, the name and who will be in the room`]);
+      // Review D5: on paper the glance's sparkle has no words, so the cost note and the rule's assumption say
+      // whose the model calls are.
+      const said = await page.evaluate((words) => ({ note: [...document.querySelectorAll("#report-doc .rep-note")].some((p) => p.textContent.startsWith(words.estimated)), rule: [...document.querySelectorAll("#report-doc .rep-assumptions li")].some((li) => li.textContent.includes(words.rule)) }), { estimated: T[lang]["rep.built.estimated"], rule: T[lang]["rep.src.rule"].split(":")[0] });
+      res.push([said.note && said.rule, `${where}: the cost note and the rule's assumption say the model calls are the Ideator's estimates (${said.note ? "note" : "no note"}, ${said.rule ? "assumption" : "no assumption"})`]);
+      // Review C3: the shortlist's share of At stake carries the AI mark when the sum holds the Reader's estimates.
+      const share = await page.evaluate((start) => { const p = [...document.querySelectorAll("#report-doc p")].find((x) => x.textContent.startsWith(start)); return p ? { ai: p.querySelector(".ai-tag")?.textContent.trim() || "" } : null; }, T[lang]["report.share"].split("{share}")[0]);
+      const est = run.figures.atStake;
+      const mark = est.estimated > 0 ? T[lang][est.estimated < est.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll"] : "";
+      res.push([!!share && share.ai === mark, `${where}: the shortlist's share of At stake ${mark ? `says "${share?.ai}", as the sum does with ${est.estimated} AI estimates` : "carries no AI mark, as no amount is an AI estimate"}${share ? "" : " (no share line found)"}`]);
       const ids = [...run.issues.map((i) => i.id), ...run.ideas.map((i) => i.id), ...run.documents.map((d) => d.id)];
       const idProblems = recordIdProblems(rep.html, ids);
       res.push([!idProblems.length && !errors.length, `${where}: no record id in the report and no page error${idProblems.length || errors.length ? `: ${[...idProblems, ...errors].join("; ")}` : ""}`]);
@@ -327,12 +349,16 @@ try {
         res.push([!m.out.length && m.tables >= 8 && !errors.length, `${where} at ${width} x ${height}: the ${m.tables} tables keep to their ${m.width} px sheets, every head whole${m.out.length || errors.length ? `: ${[...m.out, ...errors].slice(0, 4).join("; ")}` : ""}`]);
         await context.close();
       }
-      const { context, page, errors } = await openReport(id, lang, { width: 794, height: 1123 });
-      await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
-      await page.emulateMedia({ media: "print" });
-      const m = await page.evaluate(FIT, true);
-      res.push([!m.out.length && m.tables >= 8 && !errors.length, `${where} on paper: the ${m.tables} tables keep to 178 mm, every head whole${m.out.length || errors.length ? `: ${[...m.out, ...errors].slice(0, 4).join("; ")}` : ""}`]);
-      await context.close();
+      // On paper, with the media as wide as a print dialog reports it (A4's page area, 673 px) and as page.pdf()
+      // does (the sheet, 794 px).
+      for (const width of [673, 794]) {
+        const { context, page, errors } = await openReport(id, lang, { width, height: 1123 });
+        await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
+        await page.emulateMedia({ media: "print" });
+        const m = await page.evaluate(FIT, true);
+        res.push([!m.out.length && m.tables >= 8 && !errors.length, `${where} on paper, media ${width} px: the ${m.tables} tables keep to 178 mm, every head whole${m.out.length || errors.length ? `: ${[...m.out, ...errors].slice(0, 4).join("; ")}` : ""}`]);
+        await context.close();
+      }
     }
     report("tables", res);
   }
@@ -356,8 +382,13 @@ try {
       await page.emulateMedia({ media: "print" });
       // A4 holds 261 mm between its margins. Each idea's sheet and the glance with its chart keep 9 mm in
       // hand, so a browser that breaks a line or two otherwise (CI's Chromium did) still prints them whole.
-      const tall = await page.evaluate(() => [...document.querySelectorAll("body > [data-vc-print] :is(.rep-page--idea, .rep-page--glance)")].map((p) => ({ head: p.querySelector("h2, h3, h4, h5")?.textContent || "", mm: Math.round(p.getBoundingClientRect().height * 25.4 / 96) })).filter((p) => p.mm > 252));
-      res.push([!tall.length, `${where}: every idea's page and the glance keep 9 mm in hand on A4${tall.length ? `: ${tall.map((p) => `${p.head} ${p.mm} mm`).join("; ")}` : ""}`]);
+      const TALL = () => [...document.querySelectorAll("body > [data-vc-print] :is(.rep-page--idea, .rep-page--glance)")].map((p) => ({ head: p.querySelector("h2, h3, h4, h5")?.textContent || "", mm: Math.round(p.getBoundingClientRect().height * 25.4 / 96) })).filter((p) => p.mm > 252);
+      const tall = await page.evaluate(TALL);
+      // The same with the media as wide as a print dialog reports it, A4's page area of 673 px.
+      await page.setViewportSize({ width: 673, height: 1123 });
+      const tall673 = await page.evaluate(TALL);
+      await page.setViewportSize({ width: 794, height: 1123 });
+      res.push([!tall.length && !tall673.length, `${where}: every idea's page and the glance keep 9 mm in hand on A4, with the media 794 and 673 px wide${tall.length || tall673.length ? `: ${[...tall, ...tall673].map((p) => `${p.head} ${p.mm} mm`).join("; ")}` : ""}`]);
       const type = await page.evaluate(() => {
         const box = document.querySelector("body > [data-vc-print]");
         const cs = (sel) => { const el = box.querySelector(sel); return el ? getComputedStyle(el) : null; };
@@ -379,7 +410,22 @@ try {
       const sheets = names.map((n) => texts.findIndex((t, k) => k > glance && t.includes(n)));
       const own = glance >= 0 && sheets.every((k, i) => k === glance + 1 + i) && !!texts[glance + 1 + names.length]?.includes(squeeze(w["rep.scored.title"]));
       res.push([own, `${where}: the glance's chart prints on the glance's sheet (${glance + 1}), and each of the ${names.length} ideas on a sheet of its own after it (sheets ${sheets.map((k) => k + 1).join(", ")} of ${texts.length}), then How they were scored`]);
+      // The stability check prints whole: its heading and its last row on one sheet.
+      const whole = stabilitySheets(texts, w);
+      res.push([whole.head >= 0 && whole.head === whole.last, `${where}: the stability check prints whole, its heading and its last row on sheet ${whole.head + 1}${whole.head === whole.last ? "" : ` and ${whole.last + 1}`}`]);
       res.push([prepared.printed === 1 && !errors.length, `${where}: no page error${errors.length ? `: ${errors.slice(0, 2).join("; ")}` : ""}`]);
+      await context.close();
+    }
+    // Control: Auental Energie's stability check does not fit under the scores on the scoring sheet (as in
+    // Victor's live run of 25 November 2026, whose last row printed alone on the next sheet). Kept whole, it
+    // moves to the next sheet in one piece; with break-inside set back to auto it splits, and the check
+    // above catches that.
+    {
+      const { context, page, errors } = await openReport("s3", "en", { width: 794, height: 1123 });
+      await page.evaluate(() => { document.querySelector("#report-doc .rep-page--scored .rep-keep").style.breakInside = "auto"; });
+      const { bytes } = await pressPrint(page, "#btn-cta");
+      const whole = stabilitySheets(pdfPageTexts(bytes).map(squeeze), T.en);
+      res.push([whole.head >= 0 && whole.last > whole.head && !errors.length, `control: without its keep-together rule, Auental Energie's stability check splits across sheets ${whole.head + 1} and ${whole.last + 1}`]);
       await context.close();
     }
     // The PDF's name: Save as PDF and Ctrl+P give the page the report's file name while it prints, then the
@@ -601,7 +647,8 @@ try {
       res.push([b.instructions.includes("https://github.com/VictorPflueger/allowance-gapagent,") && b.instructions.includes("https://victorpflueger.github.io/allowance-gapagent/"), "the repository name goes into both of its addresses, cleaned to what GitHub allows"]);
       for (const key of ["instructions", "message"]) {
         await page.click(`#brief-copy-${key}`);
-        await page.waitForTimeout(150);
+        // Wait for the page to say it copied, not a fixed time, which a loaded machine can outlast (review B16).
+        await page.waitForFunction((want) => (document.getElementById("announce")?.textContent || "").includes(want), T.en[`brief.block.${key}`], { timeout: 5000 }).catch(() => {});
         const got = await page.evaluate(() => navigator.clipboard.readText());
         const said = await page.textContent("#announce");
         res.push([got === b[key] && said.includes(T.en[`brief.block.${key}`]), `Copy puts the ${key === "instructions" ? "project instructions" : "first message"} on the clipboard, word for word, and says so`]);
@@ -654,6 +701,26 @@ try {
       const stop = await page.evaluate(() => ({ text: document.querySelector(".brief-stopped .turn-text")?.textContent || "", stage: [...document.getElementById("turn").classList].includes("turn-bar--stopped"), pdf: document.getElementById("btn-cta")?.textContent.trim() }));
       const words = T.en["live.budget.brief"].split(":")[0];
       res.push([stop.text.startsWith(words) && stop.text.includes(fmtEur(0.05, "en")) && !stop.stage && stop.pdf === T.en["report.pdf"] && fake.requests.length === 3 && !errors.length, `at its cap the brief stops before any request ("${stop.text.slice(0, 60)}…"), and the Report step keeps Save as PDF`]);
+      const counted = await page.evaluate(() => [...document.querySelectorAll(".brief-stop-actions button")].map((b) => b.textContent.trim()));
+      res.push([counted.length === 1 && counted[0] === T.en["live.settings"], `control: on the free count, the stop offers ${counted.join(" and ")} alone`]);
+      await context.close();
+    }
+    // Review D1: the free count fails for the Brief writer, so its stop says so and offers Try again first,
+    // with Change settings beside it, the way to a higher cap when the count keeps failing.
+    {
+      const { context, page, fake, errors } = await open({ script: [{ answer: s1.answers.en.merges }, { answer: s1.answers.en.ideas }, { answer: s1.answers.en.recommendation, usage: { input_tokens: 150000, output_tokens: 9000 } }], count: (req) => (/^You are the Brief writer/.test(String(req?.system || "")) ? null : standInTokens(req, { docTokens: 9000 })) });
+      await liveRead(page, "en", { cap: 0.05 });
+      await liveReport(page);
+      await page.click("#btn-brief");
+      await page.waitForSelector("#brief-drawer[open]");
+      await page.click("#brief-write");
+      await page.waitForSelector("#brief-retry", { timeout: 30000 });
+      const stop = await page.evaluate(() => ({ text: document.querySelector(".brief-stopped .turn-text")?.textContent || "", buttons: [...document.querySelectorAll(".brief-stop-actions button")].map((b) => b.textContent.trim()) }));
+      const ok = stop.text.includes(T.en["live.budget.uncounted"]) && stop.buttons.join("|") === [T.en["live.again"], T.en["live.settings"]].join("|");
+      const settings = await page.$("#brief-settings");
+      if (settings) await settings.click();
+      const dialog = !!settings && await page.waitForSelector("#live-dialog[open]", { timeout: 5000 }).then(() => true).catch(() => false);
+      res.push([ok && dialog && fake.requests.length === 3 && !errors.length, `with the count failing, the brief's stop says so and offers ${stop.buttons.join(" and ")}; Change settings opens the live-run dialog`]);
       await context.close();
     }
     report("brief", res);

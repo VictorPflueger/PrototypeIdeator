@@ -5,7 +5,7 @@
 export const APP = {
   id: "pi",
   name: "Prototype Ideator",
-  version: "0.4.0",
+  version: "1.0.0",
   url: "https://victorpflueger.github.io/PrototypeIdeator/"
 };
 
@@ -97,10 +97,12 @@ export const LIMITS = {
 // The budget cap a person sets for one live run, in euros (brief §5.3 and D4).
 export const BUDGET = { minEur: 0.05, maxEur: 3.0, defaultEur: 0.5, stepEur: 0.05 };
 
-// The estimate's assumptions, stated in the guide (brief §5.6, PLAN.md §9.4): about four characters a
-// token, a thinking allowance per step, and Anthropic's rule for the tokens of a PDF page.
+// The estimate's assumptions, stated in the guide (brief §5.6, PLAN.md §9.4): about 2.7 characters a token,
+// a thinking allowance per step, and Anthropic's rule for the tokens of a PDF page. Anthropic's glossary
+// (read 25 November 2026): a token is about 3.5 English characters on earlier models, and Claude 4.7 and
+// later produce about 30 percent more tokens for the same text; 3.5 / 1.3 is about 2.7.
 export const ESTIMATE = {
-  charsPerToken: 4,
+  charsPerToken: 2.7,
   thinkingTokens: { fast: 0, balanced: 1500, thorough: 1500 },
   pdfPage: { textLow: 1500, textHigh: 3000, image: 1568 },
   // A live run's estimate before it starts takes the answers' sizes from the three recorded scenarios;
@@ -112,6 +114,16 @@ export const ESTIMATE = {
   requestSeconds: [3, 8],
   outputTokensPerSecond: { "claude-haiku-5-5": [60, 150], "claude-sonnet-5-5": [30, 80], "claude-opus-5-5": [20, 50] }
 };
+
+// The budget cap's input before every request (brief §5.5): the free token count of the system prompt and
+// the messages, plus a margin, since Anthropic calls the count an estimate that may differ "by a small
+// amount" (token counting page, read 25 November 2026), plus the output schema at the cautious ratio, since
+// structured outputs add a system prompt about the format that the count may leave out. When the count
+// fails, the whole request is taken at the cautious ratio: two letters a token, every other ASCII character
+// (a digit, a space, a mark) a token of its own, every other character at its UTF-8 bytes, and each PDF at
+// Anthropic's rule's high end; and when fallbackTierMargin times that count passes Haiku's step at 100,000
+// tokens, the request is priced at the long-prompt tier (reviews C5 and D3).
+export const CAP_INPUT = { countMargin: 0.02, countMarginTokens: 64, lettersPerToken: 2, messageTokens: 16, fallbackTierMargin: 1.5 };
 
 // The models the live dialog's Advanced offers (cut C5 of PLAN.md: Opus 5.5 is not needed here).
 export const LIVE_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5"];

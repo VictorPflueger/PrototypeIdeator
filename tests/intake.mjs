@@ -2,7 +2,9 @@
 // a request. Two parts:
 //   rules  js/documents.js on entries made here: a challenger's report reads into issues; a Word or
 //          PowerPoint file is refused with "Save it as PDF first"; six files, more than 20 MB and more than
-//          100 PDF pages each give their own message; two companies and two reports of one challenger too;
+//          100 PDF pages each give their own message, also for a PDF whose pages sit in a compressed object
+//          stream, and a PDF whose pages can't be counted is refused; two companies and two reports of one
+//          challenger too;
 //   page   in Chromium, after Run it live: the brief's example handoff file dropped on the zone becomes one
 //          issue on screen with PI4's title and figures, with no request to any host and no key asked for; a
 //          Word file shows the PDF message on its row; back at Start the files stay as read; Start a new run
@@ -16,7 +18,8 @@ import { createReport } from "./lib/report.mjs";
 
 const r = createReport("intake");
 const imp = (p) => import(path.join(APP_ROOT, p));
-const { checkIntake, kindOf } = await imp("js/documents.js");
+const { checkIntake, kindOf, readFile, pdfPages, pdfPageCount } = await imp("js/documents.js");
+const { objectStreamPdf } = await import("./lib/objstm-pdf.mjs");
 const { LIMITS } = await imp("js/config.js");
 const EN = (await imp("js/i18n/en.js")).default;
 const DE = (await imp("js/i18n/de.js")).default;
@@ -42,6 +45,25 @@ const entry = (name, extra = {}) => ({ id: `f-${name}`, name, kind: kindOf(name,
   r.check(big.problems.some((p) => p.code === "bytes") && !big.ready, "more than 20 MB in all: its own problem");
   const pages = checkIntake([entry("a.pdf", { pages: 80, content: null }), entry("b.pdf", { pages: 30, content: null })]);
   r.check(pages.problems.some((p) => p.code === "pages" && p.pages === 110) && !pages.ready, "110 PDF pages: its own problem, with the count");
+}
+// PDFs whose page objects sit in compressed object streams (PDF 1.5, as qpdf --object-streams=generate and
+// many writers save them), made by tests/lib/objstm-pdf.mjs. Review A2: such a file read as having no pages,
+// so it skipped the page limit and was priced at nothing.
+{
+  const asFile = (name, bytes) => ({ name, type: "application/pdf", size: bytes.length, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length) });
+  const five = await readFile(asFile("compressed-5.pdf", objectStreamPdf(5)), "f1");
+  r.check(five.pages === 5 && !checkIntake([five]).files[0].refusal && checkIntake([five]).ready, `a 5-page PDF with its pages in an object stream reads as ${five.pages} pages and is taken`);
+  r.control(pdfPageCount(objectStreamPdf(5)) === null, "the plain scan alone finds no pages in it, so the check above reads the object stream");
+  const long = await readFile(asFile("compressed-200.pdf", objectStreamPdf(200)), "f2");
+  const longIn = checkIntake([long]);
+  r.check(long.pages === 200 && longIn.problems.some((p) => p.code === "pages" && p.pages === 200) && !longIn.ready, `a 200-page PDF saved that way is held to the limit: "${EN["intake.problem.pages"].replace("{pages}", 200).replace("{max}", 100)}"`);
+  const broken = await readFile(asFile("locked.pdf", objectStreamPdf(5, { broken: true })), "f3");
+  const brokenIn = checkIntake([broken]);
+  r.check(broken.pages === null && brokenIn.files[0].refusal?.code === "pdfPages" && !brokenIn.ready && EN["intake.refused.pdfPages"] && DE["intake.refused.pdfPages"], `a PDF whose pages can't be counted is refused: "${EN["intake.refused.pdfPages"]}"`);
+  const s3 = new Uint8Array(readFileSync(path.join(APP_ROOT, "data", "scenarios", "s3-annual-report-en.pdf")));
+  r.check((await pdfPages(s3)) === 5 && pdfPageCount(s3) === 5, "S3's own PDF, whose page objects are plain, still reads as 5 pages");
+}
+{
   const other = structuredClone(example);
   other.company.name = "Another Carrier";
   other.tool = { ...other.tool, id: "swot-challenger", name: "SWOT Challenger" };

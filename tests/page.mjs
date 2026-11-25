@@ -8,8 +8,13 @@
 //              report read in a live run, storage holds
 //              only vc-theme, pi.lang and Vici's vc-guide note, with no database, cache or cookie, and the
 //              page asked no other host for anything;
-//   layout     at 1920 x 1080 and 1280 x 720, light and dark, English and German: no sideways scroll, no
-//              page scroll, no text cut off, the Your turn bar covers nothing, and no page error; and every
+//   chart      the chart of score against build effort names every idea on screen and on paper: no label
+//              over another label, a marker or a range line, none outside the plot, and leaders that cross
+//              no label (S1 to S3, Victor's live run of 25 November 2026 and ten crowded German names);
+//   layout     at 1920 x 1080 and 1280 x 720, and between them at 1600 x 900 and 1366 x 768 (every step
+//              of S1 and the live intake, which print BETWEEN SIZES LAID OUT), light and dark, English and
+//              German: no sideways scroll, no page scroll, no text cut off, the Your turn bar covers nothing,
+//              and no page error; and every
 //              visible text reaches 4.5:1 and every icon 3:1 against the fill it sits on, as rendered (a
 //              callout keeps its pastel in the dark theme, so a page-theme token inside it can vanish); the
 //              live screens too (the dialog, a step at work, an error, a stopped step, the live report, from
@@ -19,13 +24,15 @@
 //              REPORT VIEWS LAID OUT;
 //   comb       the comb of ideas for every count from 1 to 10, drawn by the app's honeycomb() where the page
 //              draws it (the Ideate step at 1920 x 1080 and 1280 x 720, the report's cover on screen and on
-//              paper): no two cells overlap, every cell keeps inside its box and every label inside its cell;
+//              paper with the media 673 and 794 px wide): the columns the app gives it, no two cells
+//              overlapping, every cell inside its box and every label inside its cell;
 //   probe      the Ideator probe's console line (js/probe.js SNIPPET), run in the page as served under its
 //              security policy, against a stand-in for api.anthropic.com: it asks for the key in a dialog,
 //              sends three requests to the API host only, prints two tables, keeps nothing in storage
 //              and never writes the key to the console.
-// Prints PAGE LANGUAGES OK, PAGE TILES OK, PAGE STORAGE OK, COMB LAID OUT, PAGE LAYOUT OK and PAGE PROBE OK.
-// Usage: node tests/page.mjs [languages|tiles|storage|comb|layout|probe]
+// Prints PAGE LANGUAGES OK, PAGE TILES OK, PAGE STORAGE OK, COMB LAID OUT, CHART LABELS PLACED, PAGE LAYOUT OK
+// and PAGE PROBE OK.
+// Usage: node tests/page.mjs [languages|tiles|storage|comb|chart|layout|probe]
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, KEYS, MOCK_KEY } from "./lib/harness.mjs";
@@ -265,7 +272,9 @@ try {
   // closer, they overlap. Every cell keeps inside its box, and every label inside its cell.
   if (want("comb")) {
     const res = [];
-    const NAMES = ["Allowance Gap Agent", "Route Switch Desk", "Zertifikatslücken-Agent", "Instant Spot Quote", "Emissions per Box", "FuelEU Pool Planner", "Surcharge Explainer", "Spot-Sofortangebot", "Empty Moves Planner", "Leercontainer-Planer"];
+    // English names and long German compounds: every piece of a name (between spaces, or up to a hyphen)
+    // stays whole in its cell (review B7).
+    const NAMES = ["Allowance Gap Agent", "Route Switch Desk", "Zertifikatslücken-Agent", "Instant Spot Quote", "Betriebsstunden-Angebot", "Schwachstellen-Wächter", "Surcharge Explainer", "Spot-Sofortangebot", "Netzinvestitions-Planer", "Leercontainer-Planer"];
     const LAY = async ({ n, names, where, print }) => {
       const { honeycomb } = await import("/js/charts.js");
       const root = print ? document.querySelector("body > [data-vc-print]") : document;
@@ -291,11 +300,28 @@ try {
       const inner = { left: r.left + parseFloat(cs.paddingLeft) - 1, right: r.right - parseFloat(cs.paddingRight) + 1, top: r.top - 1, bottom: r.bottom + 1 };
       const outside = cells.filter((c) => c.left < inner.left || c.right > inner.right || c.top < inner.top || c.bottom > inner.bottom).length;
       const spill = [...ul.querySelectorAll(".comb-tile")].filter((tile) => tile.scrollHeight > tile.clientHeight + 1 || tile.scrollWidth > tile.clientWidth + 1).map((tile) => tile.textContent.trim().slice(0, 24));
-      return { overlap: n > 1 && min < h * 0.99, min: Math.round(min), h: Math.round(h), outside, spill };
+      // A piece wider than the cell's line would break inside a word.
+      const broken = [...ul.querySelectorAll(".comb-name")].filter((el) => {
+        const tile = el.closest(".comb-tile");
+        const ts = getComputedStyle(tile);
+        const room = tile.clientWidth - parseFloat(ts.paddingLeft) - parseFloat(ts.paddingRight);
+        const pieces = el.textContent.split(/\s+/u).flatMap((w) => w.split(/(?<=-)/u)).filter(Boolean);
+        const probe = document.createElement("span");
+        probe.style.cssText = "position:absolute;left:0;top:0;white-space:nowrap;visibility:hidden";
+        el.append(probe);
+        const widest = Math.max(...pieces.map((p) => { probe.textContent = p; return probe.getBoundingClientRect().width; }));
+        probe.remove();
+        el.dataset.fit = `${widest.toFixed(1)} > ${room.toFixed(1)} px at ${parseFloat(getComputedStyle(el).fontSize).toFixed(1)} px`;
+        return widest > room + 0.5;
+      }).map((el) => `${el.textContent} (${el.dataset.fit})`);
+      // The columns the app gives the comb: one row up to six ideas, then four or six columns.
+      const cols = getComputedStyle(ul).gridTemplateColumns.split(" ").filter(Boolean).length;
+      const want = n <= 6 ? n : n <= 8 ? 4 : 6;
+      return { overlap: n > 1 && min < h * 0.99, min: Math.round(min), h: Math.round(h), outside, spill, broken, cols, want };
     };
     const verdict = (label, all) => {
-      const bad = all.filter(([, m]) => m.overlap || m.outside || m.spill.length);
-      return [!bad.length, `${label}: 1 to 10 ideas lay out with no two cells overlapping, every cell inside its box and every label inside its cell${bad.length ? `: ${bad.map(([n, m]) => `${n} ideas (centres ${m.min} px apart for cells ${m.h} px high${m.outside ? `, ${m.outside} outside` : ""}${m.spill.length ? `, labels spill: ${m.spill.join(", ")}` : ""})`).join("; ")}` : ""}`];
+      const bad = all.filter(([, m]) => m.overlap || m.outside || m.spill.length || m.broken.length || m.cols !== m.want);
+      return [!bad.length, `${label}: 1 to 10 ideas lay out in the columns the app gives them, with no two cells overlapping, every cell inside its box and every label inside its cell, no word broken${bad.length ? `: ${bad.map(([n, m]) => `${n} ideas (${m.cols} columns for ${m.want}, centres ${m.min} px apart for cells ${m.h} px high${m.outside ? `, ${m.outside} outside` : ""}${m.spill.length ? `, labels spill: ${m.spill.join(", ")}` : ""}${m.broken.length ? `, words broken: ${m.broken.join(", ")}` : ""})`).join("; ")}` : ""}`];
     };
     for (const [width, height] of [[1920, 1080], [1280, 720]]) {
       for (const [step, where, label] of [[3, ".evidence .ideas-comb", "the Ideate step"], [6, "#report-doc .vc-report__cover .ideas-comb", "the report's cover"]]) {
@@ -307,19 +333,124 @@ try {
         await context.close();
       }
     }
-    // On paper: the print copy at A4's 178 mm between its margins, under the print styles. The window is A4's
-    // 210 mm wide, as a printed page is to its media queries, and the copy keeps to the 178 mm inside them.
-    {
-      const { context, page, errors } = await open("?guide=0&lang=en&scenario=s1&step=6", { width: 794, height: 1123, locale: "en-GB" });
+    // On paper: the print copy at A4's 178 mm between its margins, under the print styles. A print dialog
+    // reports A4's page area, 178 mm or 673 px, to the media queries (a printed comb fell to Vici's phone
+    // rule there, in Victor's first printed report of 25 November 2026); Chromium's page.pdf() reports the
+    // sheet's 210 mm, 794 px. The comb is laid out in a window of each width, the copy kept to 178 mm.
+    for (const width of [673, 794]) {
+      const { context, page, errors } = await open("?guide=0&lang=en&scenario=s1&step=6", { width, height: 1123, locale: "en-GB" });
       await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
       await page.emulateMedia({ media: "print" });
       const all = [];
       for (let n = 1; n <= 10; n++) all.push([n, await page.evaluate(LAY, { n, names: NAMES, where: ".vc-report__cover .ideas-comb", print: true })]);
-      res.push(verdict("the report's cover on paper", all));
-      res.push([!errors.length, `the cover on paper: no page error${errors.length ? `: ${errors.slice(0, 2).join("; ")}` : ""}`]);
+      res.push(verdict(`the report's cover on paper, media ${width} px wide`, all));
+      res.push([!errors.length, `the cover on paper at ${width} px: no page error${errors.length ? `: ${errors.slice(0, 2).join("; ")}` : ""}`]);
       await context.close();
     }
     report("comb", res, "COMB LAID OUT");
+  }
+
+  // ---- chart -------------------------------------------------------------------------------------------
+  // The chart of score against build effort names every idea, on screen (the Score step) and on paper (the
+  // report's glance): every marker has its label, no label covers another label, a marker or a range line,
+  // none leaves the plot, and a leader, where one is drawn, crosses no other label. Victor's first printed
+  // live run of 25 November 2026 left one of five ideas without a name, and the range lines ran through the
+  // names. Measured with the labels as rendered (getBBox), for the three scenarios in both languages, for that
+  // live run's five ideas, and for ten ideas with long German names crowded round one score.
+  if (want("chart")) {
+    const res = [];
+    const MEASURE_CHART = (sel) => {
+      const svg = document.querySelector(sel)?.querySelector("svg.score-chart");
+      if (!svg) return { points: 0, labels: 0, out: ["no chart"] };
+      const bb = (el) => { const b = el.getBBox(); return { x1: b.x, y1: b.y, x2: b.x + b.width, y2: b.y + b.height }; };
+      const hits = (a, b) => a.x1 < b.x2 - 0.5 && b.x1 < a.x2 - 0.5 && a.y1 < b.y2 - 0.5 && b.y1 < a.y2 - 0.5;
+      const points = [...svg.querySelectorAll(".chart-point")];
+      const labels = [...svg.querySelectorAll(".chart-label")];
+      const hexes = points.map((g) => bb(g.querySelector(".chart-hex")));
+      const lines = points.map((g) => { const b = bb(g.querySelector(".chart-whisker")); return { ...b, y1: b.y1 - 1, y2: b.y2 + 1 }; });
+      const boxes = labels.map(bb);
+      const axis = svg.querySelector(".chart-axis line");
+      const plot = { x1: Number(axis.getAttribute("x1")) - 1, y2: Number(axis.getAttribute("y1")), x2: svg.viewBox.baseVal.width };
+      const out = [];
+      const named = new Set(labels.map((l) => l.dataset.idea));
+      for (const g of points) if (!named.has(g.dataset.idea)) out.push(`no label for ${g.dataset.idea}`);
+      boxes.forEach((a, i) => {
+        const name = labels[i].textContent;
+        boxes.forEach((b, j) => { if (j > i && hits(a, b)) out.push(`"${name}" covers "${labels[j].textContent}"`); });
+        hexes.forEach((hx, j) => { if (hits(a, hx)) out.push(`"${name}" covers the marker of ${points[j].dataset.idea}`); });
+        lines.forEach((l, j) => { if (hits(a, l)) out.push(`"${name}" sits on the range line of ${points[j].dataset.idea}`); });
+        if (a.x1 < plot.x1 || a.x2 > plot.x2 || a.y1 < 0 || a.y2 > plot.y2) out.push(`"${name}" leaves the plot`);
+      });
+      // The x axis's ticks read what they mark: each label's number lies where the first and last put it.
+      const xt = [...svg.querySelectorAll(".chart-axis text:not(.chart-axis-title)")].filter((t) => t.getAttribute("text-anchor") === "middle").map((t) => ({ x: Number(t.getAttribute("x")), v: Number(t.textContent.replace(/[^\d-]/g, "")) }));
+      if (xt.length >= 3) {
+        const [a, z] = [xt[0], xt.at(-1)];
+        for (const t of xt) {
+          const at = a.v + ((t.x - a.x) * (z.v - a.v)) / (z.x - a.x);
+          if (Math.abs(at - t.v) > 0.01) out.push(`the tick "${t.v}" marks ${Math.round(at * 100) / 100}`);
+        }
+      }
+      const leaders = [...svg.querySelectorAll(".chart-leader")];
+      for (const ln of leaders) {
+        const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((k) => Number(ln.getAttribute(k)));
+        for (let k = 1; k < 20; k++) {
+          const px = x1 + ((x2 - x1) * k) / 20, py = y1 + ((y2 - y1) * k) / 20;
+          const through = boxes.findIndex((b) => px > b.x1 + 1 && px < b.x2 - 1 && py > b.y1 + 1 && py < b.y2 - 1);
+          if (through >= 0) { out.push(`a leader crosses "${labels[through].textContent}"`); break; }
+        }
+      }
+      return { points: points.length, labels: labels.length, leaders: leaders.length, out };
+    };
+    const DRAW = async ({ rows, picks, still }) => {
+      const { scoreChart } = await import("/js/charts.js");
+      const sel = still ? "#report-doc .rep-page--glance .score-figure" : ".evidence .score-figure";
+      const fig = scoreChart(rows, { picks, still, height: still ? 220 : 320 });
+      document.querySelector(sel).replaceWith(fig);
+      return true;
+    };
+    const cases = [];
+    for (const sc of ["s1", "s2", "s3"]) for (const lang of ["en", "de"]) for (const step of [4, 6]) cases.push({ query: `?guide=0&lang=${lang}&scenario=${sc}&step=${step}`, name: `${sc.toUpperCase()} ${lang}, ${step === 4 ? "Score step" : "report's glance"}`, sel: step === 4 ? ".evidence .score-figure" : "#report-doc .rep-page--glance .score-figure" });
+    // Victor's live run of 25 November 2026 (Haiku 5.5, Fast) and ten long German names round one score.
+    const victor = [["Heat Plan Advisor", 3.9, 25, 35], ["Grid Load Forecaster", 3.85, 30, 40], ["Meter Visit Planner", 3.75, 20, 28], ["Rival Offer Watch", 3.4, 18, 25], ["Tariff Billing Bridge", 3.2, 20, 30]];
+    const crowd = [["Zertifikatslücken-Agent", 4.3, 8, 14], ["Routenwahl-Assistent", 4.25, 10, 16], ["Frachtindex-Wächter", 4.2, 9, 13], ["Emissionen je Container", 4.15, 11, 15], ["FuelEU-Poolplaner", 4.1, 10, 14], ["Spot-Sofortangebot", 4.05, 9, 12], ["Zuschlags-Erklärer", 4, 8, 13], ["Leercontainer-Planer", 3.95, 12, 18], ["Anlaufhafen-Prognose", 3.9, 7, 11], ["Kundendaten-Brücke", 3.85, 10, 15]];
+    const rowsOf = (list) => list.map(([name, value, low, high], i) => ({ id: `P${i + 1}`, name, value, low, high }));
+    for (const [list, label] of [[victor, "Victor's live run"], [crowd, "ten crowded German names"]]) for (const still of [false, true]) {
+      cases.push({ query: `?guide=0&lang=en&scenario=s1&step=${still ? 6 : 4}`, name: `${label}, ${still ? "report's glance" : "Score step"}`, sel: still ? "#report-doc .rep-page--glance .score-figure" : ".evidence .score-figure", draw: { rows: rowsOf(list), picks: ["P1", "P2", "P3"], still } });
+    }
+    const bad = [];
+    let leaders = 0;
+    let labelled = 0;
+    for (const c of cases) {
+      const { context, page, errors } = await open(c.query, { width: 1280, height: 720, locale: "en-GB" });
+      // The page draws its step again once the fonts have loaded; the measure waits for that.
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(150);
+      if (c.draw) await page.evaluate(DRAW, c.draw);
+      const m = await page.evaluate(MEASURE_CHART, c.sel);
+      leaders += m.leaders || 0;
+      labelled += m.labels;
+      if (m.out.length || !m.points || m.labels !== m.points || errors.length) bad.push(`${c.name}: ${[...m.out, ...errors].slice(0, 4).join("; ") || `${m.labels} labels for ${m.points} ideas`}`);
+      await context.close();
+    }
+    res.push([!bad.length, `${cases.length} charts (S1 to S3 in both languages on the Score step and the report's glance, Victor's live run and ten crowded German names on both): ${labelled} labels, one for every idea, none over another label, a marker or a range line, none outside the plot, ${leaders} leaders crossing no label${bad.length ? `:\n      ${bad.slice(0, 8).join("\n      ")}` : ""}`]);
+    // Control: a label moved onto another idea's marker, and a label taken away, are caught.
+    {
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=4", { width: 1280, height: 720, locale: "en-GB" });
+      const caught = await page.evaluate((m) => {
+        const measure = new Function(`return (${m})`)();
+        const svg = document.querySelector(".evidence svg.score-chart");
+        const labels = [...svg.querySelectorAll(".chart-label")];
+        const hex = svg.querySelectorAll(".chart-point .chart-hex")[1].getBBox();
+        labels[0].setAttribute("x", String(hex.x)); labels[0].setAttribute("y", String(hex.y + hex.height / 2 + 4));
+        const moved = measure(".evidence .score-figure").out.some((x) => /covers the marker/.test(x));
+        labels[2].remove();
+        const gone = measure(".evidence .score-figure").out.some((x) => /^no label for/.test(x));
+        return moved && gone;
+      }, MEASURE_CHART.toString());
+      res.push([caught, "control: a label moved onto another idea's marker, and a label taken away, are caught"]);
+      await context.close();
+    }
+    report("chart", res, "CHART LABELS PLACED");
   }
 
   // ---- layout ------------------------------------------------------------------------------------------
@@ -412,11 +543,19 @@ try {
       }
       for (const sc of ["s2", "s3"]) for (let step = 1; step <= 6; step++) states.push({ width, height, lang, theme: "light", query: `?guide=0&lang=${lang}&scenario=${sc}&step=${step}`, name: `${sc.toUpperCase()} step ${step}` });
     }
+    // Between the two sizes (AC-14 says "1920 x 1080 to 1280 x 720"): a laptop's 1366 x 768 and 1600 x 900,
+    // every step of S1 and the live intake, in both languages and themes; they print BETWEEN SIZES LAID OUT.
+    for (const [width, height] of [[1600, 900], [1366, 768]]) for (const lang of ["en", "de"]) for (const theme of ["light", "dark"]) {
+      for (let step = 1; step <= 6; step++) states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}&scenario=s1&step=${step}`, name: `S1 step ${step}`, between: true });
+      states.push({ width, height, lang, theme, query: `?guide=0&lang=${lang}`, name: "live intake", extra: "live", between: true });
+    }
     const example = readFileSync(path.join(APP_ROOT, "tests", "fixtures", "strategy-challenge-example.json"), "utf8");
     const failures = [];
     // The report's views (the Report step of S1 to S3, the live report and the brief's drawers): whatever fails
     // in them, for the token REPORT VIEWS LAID OUT.
     const reportIssues = [];
+    // What fails between the two sizes, for the token BETWEEN SIZES LAID OUT.
+    const betweenIssues = [];
     for (const st of states) {
       const { context, page, errors } = await open(st.query, { width: st.width, height: st.height, theme: st.theme });
       if (st.extra === "weights") await page.click("#btn-weights");
@@ -446,9 +585,13 @@ try {
       const ok = !m.sideways && !m.scroll && !m.cut.length && !m.covered.length && !errors.length;
       if (!ok) failures.push(`${st.name}, ${st.width} x ${st.height}, ${st.theme}, ${st.lang}: ${JSON.stringify({ sideways: m.sideways, scroll: m.scroll, cut: m.cut.slice(0, 3), covered: m.covered, errors })}`);
       if (/step 6$/.test(st.name)) reportIssues.push(...(ok ? [] : [failures.at(-1)]), ...m.small, ...k.low);
+      if (st.between) betweenIssues.push(...(ok ? [] : [failures.at(-1)]), ...m.small.map((x) => `${st.name}, ${st.width} x ${st.height}: ${x}`));
       await context.close();
     }
-    res.push([!failures.length, `${states.length} views (every step of S1 to S3, Score's weights, table and stability, Play running, the Start step with Undo after a switch, the live intake before and after files) at 1920 x 1080 and 1280 x 720: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${failures.length ? `:\n      ${failures.slice(0, 12).join("\n      ")}` : ""}`]);
+    const between = states.filter((st) => st.between).length;
+    res.push([!failures.length, `${states.length} views (every step of S1 to S3, Score's weights, table and stability, Play running, the Start step with Undo after a switch, the live intake before and after files) at 1920 x 1080 and 1280 x 720, and ${between} between them at 1600 x 900 and 1366 x 768: no sideways or page scroll, nothing cut, nothing under the Your turn bar, no page error${failures.length ? `:\n      ${failures.slice(0, 12).join("\n      ")}` : ""}`]);
+    if (between && !betweenIssues.length) console.log("BETWEEN SIZES LAID OUT");
+    else console.log(`Between the sizes: ${betweenIssues.slice(0, 8).join("; ")}`);
     // Control: a story made taller than its panel is caught as covered or as page scroll.
     {
       const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=2", { width: 1280, height: 720 });
@@ -530,6 +673,28 @@ try {
     if (!smallSeen.length && plantedCaught) console.log("TARGETS AT LEAST 40 PX");
     if (!reportIssues.length && !briefFailures.length) console.log("REPORT VIEWS LAID OUT");
     else console.log(`Report views: ${[...reportIssues, ...briefFailures].slice(0, 8).join("; ")}`);
+    // The score table keeps every column it shows inside its box, the score above all, at the four sizes in
+    // both languages: a table wrap may scroll sideways, which the checks above allow, but here the score
+    // itself went out of view in German at 1280 x 720. Control: the table's old padding.
+    {
+      const over = [];
+      let controlCaught = false;
+      for (const [w, hgt] of [[1280, 720], [1366, 768], [1600, 900], [1920, 1080]]) for (const lang of ["en", "de"]) for (const sc of ["s1", "s2", "s3"]) {
+        const { context, page } = await open(`?guide=0&lang=${lang}&scenario=${sc}&step=4`, { width: w, height: hgt });
+        await page.click("label:has(#view-table)");
+        await page.waitForTimeout(150);
+        const fit = () => page.evaluate(() => { const wrap = document.querySelector("#score-table").closest(".vc-table-wrap"); return wrap.scrollWidth - wrap.clientWidth; });
+        const by = await fit();
+        if (by > 1) over.push(`${sc} ${lang} ${w} x ${hgt} by ${by} px`);
+        if (w === 1280 && lang === "de" && sc === "s1") {
+          await page.evaluate(() => document.querySelectorAll("#score-table .crit-col").forEach((c) => { c.style.paddingInline = "var(--vc-space-3)"; }));
+          controlCaught = (await fit()) > 1;
+        }
+        await context.close();
+      }
+      res.push([!over.length, `the score table keeps its columns inside its box in S1 to S3, both languages, from 1280 x 720 to 1920 x 1080${over.length ? `: over ${over.join("; ")}` : ""}`]);
+      res.push([controlCaught, "control: the rating columns at the table's old padding run over at 1280 x 720 in German"]);
+    }
     report("layout", res, "PAGE LAYOUT OK");
   }
 

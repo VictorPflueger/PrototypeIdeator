@@ -10,7 +10,8 @@
 //              the engine gives;
 //   weights    (G9, AC-20) a weight moved with the keyboard re-ranks at once, with no request, and the table,
 //              the chart and the stability sentence follow the engine;
-//   play       (G10) Play walks the steps and stops where the person acts, Space plays and pauses, the arrow
+//   play       (G10) Play walks the steps and stops where the person acts (a weight, a view, an idea opened;
+//              not the step's own action), Space plays and pauses, the arrow
 //              keys and PageUp and PageDown move, ?scenario=s1&step=4 opens the run at Score, paused, and
 //              every step has one primary action, in its Your turn bar;
 //   ideas      (G11) one honeycomb cell per idea, each reached with the keyboard, and a cell opens the idea's
@@ -40,7 +41,7 @@ const { tileModel } = await imp("js/kpis.js");
 const { decide } = await imp("js/issues.js");
 const { placeIdea } = await imp("js/views/shortlist.js");
 const { DEFAULT_WEIGHTS, WEIGHT_RULE } = await imp("js/engine.js");
-const { fmtScore } = await imp("js/format.js");
+const { fmtScore, fmtEurCompact } = await imp("js/format.js");
 
 const browser = await launchBrowser();
 const server = await serveStatic(APP_ROOT, 8450 + Math.floor(Math.random() * 300));
@@ -78,7 +79,9 @@ const pausePlay = async (page) => { if (await page.$('#btn-play[data-state="paus
 const tiles = (page) => page.evaluate(() => Object.fromEntries(["stake", "covered", "top", "cost"].map((k) => {
   const el = document.getElementById(`kpi-${k}`);
   const was = el.querySelector(".kpi-was");
-  return [k, { value: el.querySelector(".kpi-value").textContent, note: el.querySelector(".kpi-note").textContent, was: was.hidden ? "" : was.textContent, state: el.dataset.state }];
+  // The note's own words, and apart from them the lilac line At stake adds for AI estimates.
+  const note = el.querySelector(".kpi-note");
+  return [k, { value: el.querySelector(".kpi-value").textContent, note: note.firstChild?.nodeType === 3 ? note.firstChild.textContent : note.textContent, ai: note.querySelector(".kpi-ai")?.textContent || "", was: was.hidden ? "" : was.textContent, state: el.dataset.state }];
 })));
 
 /** Plays a scenario through the page's own buttons, from Start to Report, calling visit at each step. */
@@ -171,6 +174,23 @@ try {
       res.push([after.stake.value === expect.stake.value && after.stake.was === before && after.stake.state === "moved" && after.stake.value !== before, `${lang}: parking "${victim.title.slice(0, 40)}…" moves at stake from ${before} to ${after.stake.value}, the old value struck through beside it`]);
       await context.close();
     }
+    // Review B2: on the Read step each kept issue shows the value it counts at in At stake, its group's when
+    // a merged member's is larger, also when it states none itself; "not stated" only when no fact holds one.
+    for (const id of ["s1", "s2", "s3"]) for (const lang of ["en", "de"]) {
+      const run = recordedRun(scenarioById(id), lang);
+      const { context, page } = await open(`?guide=0&lang=${lang}&scenario=${id}&step=2`);
+      const shown = await page.$$eval("tr.issue-row--kept", (trs) => trs.map((tr) => ({ id: tr.dataset.issue, value: tr.querySelector(".stake-cell strong")?.textContent || null })));
+      const off = shown.filter((x) => {
+        const fact = run.facts[`issue.${x.id}.eur`]?.value;
+        return fact === undefined ? x.value !== null : x.value !== fmtEurCompact(fact, lang);
+      });
+      res.push([shown.length > 0 && !off.length, `${id} ${lang}: each of the ${shown.length} kept issues shows the value it counts at${off.length ? `; off: ${off.map((x) => `${x.id} ${x.value}`).join(", ")}` : ""}`]);
+      // Review A6: At stake says in lilac when it holds the Reader's AI estimates, and only then.
+      const ai = (await tiles(page)).stake.ai;
+      const estimated = run.figures.atStake.estimated > 0;
+      res.push([estimated ? ai === DICT[lang]["kpi.atStake.aiSome"] || ai === DICT[lang]["kpi.atStake.aiAll"] : ai === "", `${id} ${lang}: At stake ${estimated ? `says "${ai}", since ${run.figures.atStake.estimated} of its amounts are the Reader's estimates` : "carries no AI line, since no amount is an AI estimate"}`]);
+      await context.close();
+    }
     report("figures", res, "PRESENTER FIGURES OK");
   }
 
@@ -242,7 +262,7 @@ try {
       run = buildRun(sc, lang, { decisions, weights, picks, decided: true });
       const expect = tileModel({ mode: "simulation", run, preview, reached: 5, lang });
       const got = await tiles(page);
-      const okTiles = ["stake", "covered", "top"].every((k) => got[k].value === expect[k].value && got[k].note === expect[k].note);
+      const okTiles = ["stake", "covered", "top"].every((k) => got[k].value === expect[k].value && got[k].note === expect[k].note && got[k].ai === (expect[k].ai || ""));
       res.push([okTiles, `${where}: the tiles show ${["stake", "covered", "top"].map((k) => got[k].value).join(" | ")}, as the engine works out${okTiles ? "" : ` (engine: ${["stake", "covered", "top"].map((k) => `${expect[k].value} ${expect[k].note}`).join(" | ")})`}`]);
       const found = await page.evaluate(() => document.querySelector("#report-doc .rep-page--short")?.textContent || "");
       const okReport = Object.values(run.recommendation || {}).every((s) => found.includes(s.slice(0, 50))) && found.includes(run.recommended[0].name);
@@ -383,6 +403,16 @@ try {
     res.push([JSON.stringify(order) === JSON.stringify(run.ranked.map((r) => r.id)), "the chart's markers follow the same order"]);
     res.push([sentence === run.sentence && title.includes(run.ranked[0].name), `the stability sentence and the title follow: "${title}"`]);
     res.push([focused === "w-value", "the slider keeps the focus while the step draws itself again"]);
+    // Review B4: the read-outs keep their % and, when the weights don't add up to 100 %, each its share;
+    // Vici's slider script must not write the bare value into them.
+    {
+      await page.click("label:has(#view-chart)");
+      await page.waitForTimeout(150);
+      const outs = await page.$$eval(".weight-out", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+      const total = Object.values(weights).reduce((a, b) => a + b, 0);
+      const shares = outs.filter((x) => /share \d+ %$/.test(x)).length;
+      res.push([outs.length === 7 && outs.every((x) => /^\d+ %/.test(x)) && (total === 100 || shares === 7), `the seven read-outs keep their % and, at ${total} % in all, each shows its share: ${outs.slice(0, 3).join(" | ")} …`]);
+    }
     res.push([api === 0 && !outside.length && !errors.length, "no request at all, to the API or anywhere else, and no page error"]);
     // Control: the default weights give another order, so the check above can fail.
     const base = buildRun(sc, lang, {}).ranked.map((r) => r.id);
@@ -449,6 +479,111 @@ try {
       const foot = await text(s.page, "#foot-note");
       res.push([at === 1 && foot === d["p.yourMove"], `Play waits at Read, where the person decides, and says so beside the action ("${foot}")`]);
       await s.context.close();
+    }
+    // Review B1: Play stops wherever the person acts, on the weights, on a view of the evidence or on an
+    // idea, so the page never moves on under the person's hand; the step's own action keeps it going.
+    {
+      const state = (page) => page.getAttribute("#btn-play", "data-state");
+      const playAgain = async (page) => { await page.focus("#step-title"); await page.keyboard.press(" "); await page.waitForTimeout(100); };
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=4");
+      await playAgain(page);
+      const playing = await state(page);
+      await page.click("#btn-weights");
+      await page.waitForTimeout(200);
+      const afterWeights = await state(page);
+      await playAgain(page);
+      await page.click('label:has(#view-table)');
+      await page.waitForTimeout(200);
+      const afterView = await state(page);
+      await playAgain(page);
+      await page.focus("#w-value");
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(200);
+      const afterSlider = await state(page);
+      // Paused, the page stays: twelve seconds later it is still on Score, which Play leaves after at most 14.
+      await page.waitForTimeout(12000);
+      const stayed = await current(page);
+      res.push([playing === "pause" && afterWeights === "play" && afterView === "play" && afterSlider === "play" && stayed === 3, `on Score, Change the weights, the table view and a weight's slider each pause Play (${[playing, afterWeights, afterView, afterSlider].join(", ")}), and the page stays on Score (step ${stayed + 1})`]);
+      await context.close();
+      // Ideate: an idea opened pauses Play; the step's own action does not.
+      const i = await open("?guide=0&lang=en&scenario=s1&step=3");
+      await playAgain(i.page);
+      await i.page.click('#stage [data-action="open-idea"]');
+      await i.page.waitForSelector("#idea-drawer[open]");
+      const afterIdea = await state(i.page);
+      await i.page.keyboard.press("Escape");
+      await i.page.waitForFunction(() => !document.querySelector("dialog[open]"));
+      await playAgain(i.page);
+      await i.page.click("#btn-cta");
+      await i.page.waitForTimeout(300);
+      const afterCta = await state(i.page);
+      const onScore = await current(i.page);
+      res.push([afterIdea === "play" && afterCta === "pause" && onScore === 3, `on Ideate, an idea opened pauses Play (${afterIdea}); Next: score the ideas keeps it playing (${afterCta}, now at step ${onScore + 1})`]);
+      await i.context.close();
+    }
+    // Review C1: a keyboard user tabbing through a step is acting too. On Ideate, Tab passes the step's own
+    // action with Play still on, then lands on an idea, which pauses it, and the page keeps the focus there;
+    // the page's own focus on the title, after a key, does not pause it.
+    {
+      const state = (page) => page.getAttribute("#btn-play", "data-state");
+      const where = (page) => page.evaluate(() => { const a = document.activeElement; return a === document.body ? "body" : a.id || `${a.tagName.toLowerCase()}.${String(a.className.baseVal ?? a.className).split(" ")[0]}`; });
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=3");
+      await page.focus("#step-title");
+      await page.keyboard.press(" ");
+      await page.waitForTimeout(100);
+      await page.focus("#step-title");
+      await page.waitForTimeout(150);
+      const afterTitle = await state(page);
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(150);
+      const first = await where(page);
+      const afterCta = await state(page);
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(150);
+      const second = await where(page);
+      const afterTab = await state(page);
+      // Paused, the page stays: 15 s later it is still on Ideate, which Play leaves after at most 14, and the focus is where the Tab left it.
+      await page.waitForTimeout(15000);
+      const stayed = await current(page);
+      const kept = await where(page);
+      res.push([afterTitle === "pause" && first === "btn-cta" && afterCta === "pause" && second === "button.vc-tile" && afterTab === "play" && stayed === 2 && kept === second,
+        `on Ideate, the title focused by the page and Tab onto the step's own action keep Play on (${afterTitle}, ${afterCta} on ${first}); Tab onto an idea (${second}) pauses it (${afterTab}), and 15 s later the page is still on Ideate (step ${stayed + 1}) with the focus on ${kept}`]);
+      await context.close();
+      // Play started by Space on a chart point moves on with the focus on the next step's title, not the page's body.
+      const s = await open("?guide=0&lang=en&scenario=s1&step=4");
+      await s.page.focus("#stage .chart-point");
+      await s.page.keyboard.press(" ");
+      await s.page.waitForTimeout(100);
+      const on = await state(s.page);
+      await s.page.waitForFunction(() => document.querySelectorAll("#steps .vc-step")[4].classList.contains("vc-step--current"), null, { timeout: 16000 }).catch(() => {});
+      const moved = await current(s.page);
+      const focus = await where(s.page);
+      res.push([on === "pause" && moved === 4 && focus === "step-title", `Space on a chart point plays (${on}); Play moves on to Shortlist (step ${moved + 1}) with the focus on its title (${focus}), not the page's body`]);
+      await s.context.close();
+      // Review D2: Next, which the keyboard is on, goes disabled when Play reaches the furthest step; the
+      // focus goes to that step's title, not the page's body.
+      const n = await open("?guide=0&lang=en&scenario=s1&step=4");
+      await n.page.focus("#step-title");
+      await n.page.keyboard.press(" ");
+      await n.page.keyboard.press("Shift+Tab");
+      await n.page.keyboard.press("Shift+Tab");
+      const onNext = await where(n.page);
+      await n.page.waitForFunction(() => document.querySelectorAll("#steps .vc-step")[4].classList.contains("vc-step--current"), null, { timeout: 16000 }).catch(() => {});
+      const there = await current(n.page);
+      const after = await where(n.page);
+      const nextOff = await n.page.$eval("#btn-next", (b) => b.disabled);
+      res.push([onNext === "btn-next" && there === 4 && nextOff && after === "step-title", `with the keyboard on Next (${onNext}), Play reaches Shortlist (step ${there + 1}), Next goes disabled, and the focus goes to its title (${after})`]);
+      await n.context.close();
+    }
+    // Control: without an act Play stays on, so the checks above see the act, not a timeout.
+    {
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=4");
+      await page.focus("#step-title");
+      await page.keyboard.press(" ");
+      await page.waitForTimeout(600);
+      const still = await page.getAttribute("#btn-play", "data-state");
+      res.push([still === "pause", `control: on Score with no act, Play is still on after 0.6 s (${still})`]);
+      await context.close();
     }
     report("play", res, "PRESENTER PLAY OK");
   }

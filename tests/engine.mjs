@@ -174,7 +174,7 @@ r.check(E.weightProblems({ value: 20 }).length > 0 && E.weightProblems({ ...E.DE
   const keys = ["at_stake", "issues.kept", "issues.covered", "ideas.count", "top.score", "top.name", "idea.A.score", "idea.A.rank", "idea.A.firsts", "idea.A.cost", "issue.I1.eur"];
   r.check(keys.every((k) => Object.hasOwn(facts, k)), `the fact values carry every key of PLAN.md §9.1 (${keys.filter((k) => !Object.hasOwn(facts, k)).join(", ") || "all there"})`);
   r.check(facts["top.name"].value === "A" && facts["idea.A.rank"].value === 1 && facts["idea.A.firsts"].value === 9 && facts["issues.kept"].value === 2, "and their values come from the engine: A first, ranked 1, first in 9 rankings, 2 issues kept");
-  r.check(facts["at_stake"].type === "eur" && facts["top.score"].type === "score" && facts["idea.A.cost"].type === "eur_cents", "each fact says how it is written: euros, a score or euros with cents");
+  r.check(facts["at_stake"].type === "eur" && facts["top.score"].type === "score" && facts["idea.A.cost"].type === "eur_run", "each fact says how it is written: euros, a score or one live run's cost");
 }
 
 r.finish("ENGINE OK");

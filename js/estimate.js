@@ -1,16 +1,17 @@
 // The session-cost estimate (brief §5.5 and §5.6, PLAN.md §9.4): each step's request rebuilt from the real
 // prompt, the state the step sends and its output schema, priced with the shared cost model. A recorded
 // run gives the answers' sizes; a live run before it starts uses the expected sizes below. Assumptions,
-// stated in the guide: about four characters a token; a thinking allowance per step on Balanced and
-// Thorough; a PDF page at 1,500 to 3,000 text tokens plus 1,568 image tokens, which a live run replaces
-// with the free token count. The result is a range, low and high, in tokens, dollars and euros.
+// stated in the guide: about 2.7 characters a token (ESTIMATE in js/config.js, from Anthropic's glossary); a
+// thinking allowance per step on Balanced and Thorough; a PDF page at 1,500 to 3,000 text tokens plus 1,568
+// image tokens. A live run's budget cap doesn't rest on this: it counts every request (js/pipeline.js). The
+// result is a range, low and high, in tokens, dollars and euros.
 
 import { ESTIMATE, PRESETS, FX_USD_EUR } from "./config.js";
 import { usageCostUsd } from "./cost.js";
 import { readerPrompt, mergesPrompt, ideatorPrompt, writerPrompt, briefPrompt } from "./prompts.js";
 import { readerSchema, mergesSchema, ideasSchema, recommendationSchema, briefSchema } from "./schemas.js";
 
-/** Tokens of a text at about four characters a token. */
+/** Tokens of a text at about 2.7 characters a token. */
 export const tokensOf = (text) => Math.ceil(String(text ?? "").length / ESTIMATE.charsPerToken);
 const json = (v) => JSON.stringify(v ?? null);
 

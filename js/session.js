@@ -1,10 +1,11 @@
-// The one store of this tab's work (brief §5.9): what the person entered and uploaded, the documents'
-// text and bytes, the run's events and everything the agents and the engine produced. It lives in memory
-// and nowhere else: nothing here is written to local storage, session storage, IndexedDB, the Cache API
-// or a cookie, put in a URL or logged, and a reload or a closed tab ends it. The person keeps a result
-// only by downloading it. The key alone lives apart, in js/keystore.js, which is shared by the four
-// tools; "Clear everything" empties both. While a result exists that hasn't been downloaded, the browser
-// asks before the page is left.
+// The tab's session record (brief §5.9): the run's events and whether a result exists that hasn't been
+// downloaded, with the documents the person added. The live run itself, its files' text and bytes, the
+// fields and the agents' answers, lives in the presenter's state (S.live in js/presenter.js), and the key
+// in js/keystore.js, which the four tools share. All of it lives in memory and nowhere else: nothing is
+// written to local storage, session storage, IndexedDB, the Cache API or a cookie, put in a URL or logged,
+// and a reload or a closed tab ends it. The person keeps a result only by downloading it. "Clear
+// everything" on the live Start step empties the presenter's run, this record and the key. While a result
+// exists that hasn't been downloaded, the browser asks before the page is left.
 
 import { forgetKey } from "./keystore.js";
 import { APP } from "./config.js";

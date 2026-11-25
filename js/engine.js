@@ -204,11 +204,23 @@ function keptIdOf(id, issues) {
   return null;
 }
 
-/** At stake a year: the kept issues' expected euros, on the issues that state them. { eur, stated, of }. */
+/** The member whose expected euros a kept issue's group counts at: its largest value, or null (D15). */
+function groupMember(issue, issues) {
+  const members = [issue, ...issues.filter((x) => x.status === "merged" && x.merged_into === issue.id)];
+  let best = null;
+  for (const m of members) if (typeof m.eur_year_expected === "number" && Number.isFinite(m.eur_year_expected) && (!best || m.eur_year_expected > best.eur_year_expected)) best = m;
+  return best;
+}
+
+/**
+ * At stake a year: the kept issues' expected euros, on the issues that state them. { eur, stated, of,
+ * estimated }: estimated counts the amounts that are the Reader's AI estimates, which every figure built on
+ * them has to say (review A6).
+ */
 export function atStake(issues) {
-  const values = kept(issues).map((i) => groupValue(i, issues));
-  const stated = values.filter((v) => v !== null);
-  return { eur: stated.length ? stated.reduce((a, b) => a + b, 0) : null, stated: stated.length, of: values.length };
+  const members = kept(issues).map((i) => groupMember(i, issues));
+  const stated = members.filter(Boolean);
+  return { eur: stated.length ? stated.reduce((a, m) => a + m.eur_year_expected, 0) : null, stated: stated.length, of: members.length, estimated: stated.filter((m) => m.estimate).length };
 }
 
 /** The tile's value: "€14.2m on 6 of 9 issues", or the amount alone when every issue states one. */
@@ -249,12 +261,13 @@ export function shortlistShare(issues, ideas, shortlist) {
 
 /**
  * The fact values for {{fact:key}} placeholders (brief §5.10, PLAN.md §9.1): each { type, value }, typed
- * so that js/facts.js writes it in the run's language. type is eur, eur_cents, score, count, share or text.
+ * so that js/facts.js writes it in the run's language. type is eur, eur_run (one live run's cost, written as
+ * the tables write it), score, count, share or text.
  */
 export function factValues({ issues = [], ideas = [], weights = DEFAULT_WEIGHTS, model = "claude-haiku-5-5", shortlist = null, lang = "en" }) {
   const facts = {};
   const s = atStake(issues);
-  facts.at_stake = { type: "eur", value: s.eur, stated: s.stated, of: s.of };
+  facts.at_stake = { type: "eur", value: s.eur, stated: s.stated, of: s.of, estimated: s.estimated || 0 };
   facts["issues.kept"] = { type: "count", value: s.of };
   const cov = issuesCovered(issues, ideas);
   facts["issues.covered"] = { type: "count", value: cov.covered, of: cov.of };
@@ -271,7 +284,7 @@ export function factValues({ issues = [], ideas = [], weights = DEFAULT_WEIGHTS,
       facts[`idea.${r.id}.rank`] = { type: "count", value: r.rank };
       facts[`idea.${r.id}.firsts`] = { type: "count", value: st.counts[r.id].firsts, of: st.of };
       const inputs = idea.live_inputs || {};
-      facts[`idea.${r.id}.cost`] = { type: "eur_cents", value: liveRunEstimate({ model, calls: inputs.model_calls, searches: inputs.web_searches }).eur };
+      facts[`idea.${r.id}.cost`] = { type: "eur_run", value: liveRunEstimate({ model, calls: inputs.model_calls, searches: inputs.web_searches }).eur };
     }
   }
   // Every issue with an amount: a kept one at its group's value (D15), a merged or parked one at its own,

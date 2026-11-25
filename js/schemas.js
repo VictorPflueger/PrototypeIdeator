@@ -274,13 +274,15 @@ const SavedRun = closed({
     cost_eur: { type: ["number", "null"], minimum: 0 },
     seconds: { type: ["number", "null"], minimum: 0 },
     // What each step took, repairs included: its requests, its tokens and its largest answer, from which a
-    // step's max_tokens is set. Tokens only; no text.
+    // step's max_tokens is set, and what the free count gave before the requests went out, to set beside
+    // the input billed. Tokens only; no text.
     usage: closed(Object.fromEntries(["reader", "merges", "ideator", "writer"].map((agent) => [agent, closed({
       requests: { type: "integer", minimum: 1 },
       input_tokens: { type: "integer", minimum: 0 },
       output_tokens: { type: "integer", minimum: 0 },
-      max_output_tokens: { type: "integer", minimum: 0 }
-    })])), [])
+      max_output_tokens: { type: "integer", minimum: 0 },
+      counted_input_tokens: { type: "integer", minimum: 0 }
+    }, ["requests", "input_tokens", "output_tokens", "max_output_tokens"])])), [])
   })
 });
 

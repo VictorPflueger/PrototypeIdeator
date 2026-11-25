@@ -19,14 +19,16 @@
 // steps 1 to 3 and 5 stay; block ids, lever ids and legal references go; years and dates pass.
 
 import { t, getLang } from "./i18n/index.js";
-import { fmtScore, fmtShare, fmtInt, fmtEur, fmtEurCompact, noData } from "./format.js";
+import { fmtScore, fmtShare, fmtInt, fmtEurRun, fmtEurCompact, noData } from "./format.js";
 
 /** A placeholder: {{fact:at_stake}}. */
 export const FACT_RE = /\{\{fact:([A-Za-z0-9_.-]+)\}\}/g;
 
 /**
  * A fact's value as text in a language. fact: { type, value } from engine.factValues; type eur (short
- * form, and "on 6 of 9 issues" when it rests on part of them), eur_cents, score, share, count or text.
+ * form, and "on 6 of 9 issues" when it rests on part of them), eur_run (one live run's cost: a tenth of a cent
+ * below €0.10, as the tables write it, so prose never says €0.00 beside them; review C4), score, share,
+ * count or text.
  */
 export function formatFact(fact, lang = getLang()) {
   if (!fact || fact.value === null || fact.value === undefined) {
@@ -35,9 +37,11 @@ export function formatFact(fact, lang = getLang()) {
   switch (fact.type) {
     case "eur": {
       const amount = fmtEurCompact(fact.value, lang);
-      return fact.of !== undefined && fact.stated !== undefined && fact.stated < fact.of ? t("kpi.atStake.part", { amount, stated: fact.stated, of: fact.of }, lang) : amount;
+      const text = fact.of !== undefined && fact.stated !== undefined && fact.stated < fact.of ? t("kpi.atStake.part", { amount, stated: fact.stated, of: fact.of }, lang) : amount;
+      // A sum that holds the Reader's AI estimates says so wherever it is written (review A6).
+      return fact.estimated > 0 ? t("kpi.atStake.withAi", { text, ai: t(fact.estimated < fact.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll", null, lang) }, lang) : text;
     }
-    case "eur_cents": return fmtEur(fact.value, lang);
+    case "eur_run": return fmtEurRun(fact.value, lang);
     case "score": return fmtScore(fact.value, lang);
     case "share": return fmtShare(fact.value, lang);
     case "count": return fmtInt(fact.value, lang);
