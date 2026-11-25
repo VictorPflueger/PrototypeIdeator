@@ -77,7 +77,7 @@ The sisters' agent loops, tools, simulations and domain modules are not taken (P
 
 ## Part 2. Independent review
 
-The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes on `d611b4e`: all of them held but one low (B7), and it found one new medium (C1) and six lows and observations, all fixed in `7040db7`. In look 4 a fourth fresh agent confirmed those (below).
+The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes on `d611b4e`: all of them held but one low (B7), and it found one new medium (C1) and six lows and observations, all fixed in `7040db7` and `fbd147c`. In look 4 a fourth fresh agent checked those fixes (below).
 
 ### Look 1: the code
 
@@ -144,4 +144,34 @@ A fresh agent checked every fix of looks 1 and 2 on `d611b4e` against `66b8743`,
 
 ## Part 3. Steve Jobs review and partner review
 
-To be filled in as the reviews run.
+Both reviews ran on 25 November 2026 on the running tool after the independent review's fixes, cold in a new tab at 1280 × 720 and 1920 × 1080, light and dark, English and German (the screenshots of S1 and S3 at each size, theme and language, taken again after look 3's fixes), and once along DEMO_SCRIPT with a timer, Play on.
+
+### Design review: Prototype Ideator 1.0.0
+
+**Verdict:** INSANELY GREAT (score 9/10)
+
+**The One Thing:** a company's documents become a ranked shortlist of agentic-AI prototypes, each tied to the money at stake: for Tidewell Lines, €10.8m a year on 7 of 8 kept issues, with Allowance Gap Agent first in 9 of 9 rankings.
+
+**Keeps its promise?** Yes. The four tiles answer before anything runs, Start and Find prototype ideas reach the eight ideas in two clicks, a weight moves the order while the title keeps its 9 of 9, and the report prints for the room with the footer on every page. Six of the seven diagnostic rows pass; the open one is row 4: the live run has run end to end only against the stand-in, so Victor's three runs on the real API are what takes it to 10.
+
+**Cut list:** nothing more for 1.0.0. This cycle cut a note under the chart (its axis says it), the glance's separate AI paragraph (one sentence in the lead), the two reserved note lines in every tile (they cost the Start step its room at 1280 × 720) and the title edit of the brief's 6.2 (recorded for 1.1.0).
+
+**Fix list:**
+1. Victor's live run on Fast, Balanced and Thorough, each within its cap, with the saved runs in TECH_NOTES, section 8: the counted input beside the billed, the cost against the cap, the largest answer.
+2. The stand-in challenger reports give way to the challengers' own exports in 1.1.0 (labelled stand-ins until then).
+
+**Back of the fence:** the boot screen of the page opened from a file, an empty drop zone, a refused file's row, a rejected key, the cap stop, a step that failed its checks twice, the cleared state and the stopped run's report all hold the hero screens' standard in both themes. Left as they are: the merge target's title is cut at a word even at 1920 × 1080, where the select has room (its tooltip holds the whole, and two titles that would read alike start where they part); and in German the comb's longest compounds set a size or two below their neighbours to stay whole, Zertifikatslücken-Agent at about 10 px at 1280 × 720, which the idea's own page names in full.
+
+### Partner review: Prototype Ideator 1.0.0
+
+**Verdict:** ready.
+
+**The One Thing:** from a company's documents to a ranked shortlist of agentic-AI prototypes tied to the money at stake: Tidewell Lines puts €10.8m a year at stake, and Allowance Gap Agent leads in 9 of 9 rankings.
+
+**Keeps its promise:** yes. Cold at 1280 × 720 the guide opens by itself and says in its first lines what goes in and what comes out; closed, the first screen names the company, its three reports (marked stand-ins) and the four figures with what each measures. At every step the page says what it does (the lilac line), what it is worth (At stake, Issues covered, Top score) and which figure moved (struck through beside the new value): a key figure first moves at step 2, when an issue is parked. Every figure is the engine's from the scenario's own data, its evidence one click away (the issue's source, the idea's page, the stability view), and the fictional companies, the stand-in reports and the AI's estimates say so. Timed along DEMO_SCRIPT, Play on, in both languages: the guide, Start, the Read step waiting for the presenter, eight ideas, an idea open for 30 s with Play paused, the weights at 30 % for 20 s (top score 4.73, still 9 of 9), the shortlist and the report ("your shortlist answers 63 %") in 70 s of clicks, with the talk in between fitting the script's five minutes.
+
+**Cut list:** none. Each of the six steps moves the story or a figure; the stability view is the evidence for the title's "9 of 9", and the ideas file is the handoff the brief asks for.
+
+**Fix list:** none open. Found and fixed during the review: at 1280 × 720 in German the score table ran 78 px wider than its box, so the score column needed sideways scrolling; the rating columns now take less room, and `tests/page.mjs layout` checks the table at four sizes in both languages.
+
+**Keep list:** the byline with Victor's portrait, LinkedIn and website; the guide that opens on start, ends with the timed talk track and explains each of the four key figures; the four tiles at the top right, which answer before anything runs; Play that stops wherever you act; "You are interacting with an AI system" beside every control that starts a live run; the lilac marks on what the AI wrote or estimated; the stand-in and fictional-company labels; the public-information notice; Clear everything; the report's footer and vote sheet.
