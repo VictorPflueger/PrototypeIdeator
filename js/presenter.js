@@ -5,6 +5,9 @@
 // Taken from the Data Quality Agent 2.2.0's app.js (Play, keys, deep links, focus and scroll kept across a
 // re-render) with the Sovereignty Assessment's language switch.
 //
+// The run ends in the report (brief §9, js/report_doc.js) with its three downloads (js/exports.js), and a
+// build brief for one shortlisted idea (brief §6.6, js/brief.js) in its own drawer.
+//
 // A live run (brief §5) is a scenario the agents write while it plays: js/live_run.js turns the person's
 // files and the agents' answers into the scenarios' format, so every step past Start draws a live run with
 // the code that draws a replay. Start the agents opens the live-run dialog; reading, the Ideator and the
@@ -25,26 +28,29 @@ import { decide, choiceTook } from "./issues.js";
 import { tileModel, renderTiles, costText } from "./kpis.js";
 import { DEFAULT_WEIGHTS, weightProblems } from "./engine.js";
 import { readFile, checkIntake } from "./documents.js";
-import { addDocument, removeDocument, addEvent, markResult, markDownloaded } from "./session.js";
+import { addDocument, removeDocument, addEvent, markResult } from "./session.js";
 import { renderStart } from "./views/start.js";
 import { renderIntake } from "./views/intake.js";
 import { renderRead } from "./views/read.js";
 import { renderIdeate, ideaPage } from "./views/ideate.js";
 import { renderScore } from "./views/score.js";
 import { renderShortlist, placeIdea } from "./views/shortlist.js";
-import { renderReport } from "./views/report.js";
-import { turnBar } from "./views/common.js";
-import { clear, h } from "./dom.js";
+import { renderReport, downloadButtons } from "./views/report.js";
+import { reportDoc, stopReason } from "./report_doc.js";
+import { fileName, saveText, printReport, printWithKeys, reportHtml, ideasFile, ideasProblems } from "./exports.js";
+import { briefBlocks, briefMarkdown, composedPart } from "./brief.js";
+import { turnBar, uncheckedNote } from "./views/common.js";
+import { clear, h, copyText } from "./dom.js";
 import { fmtScore, fmtEur, fmtEurSpend } from "./format.js";
-import { LIMITS, BUDGET, MODELS } from "./config.js";
+import { LIMITS, BUDGET, MODELS, PRESETS, DEFAULT_PRESET } from "./config.js";
 import { openLiveDialog } from "./live_dialog.js";
-import { readStep, ideasStep, writerStep } from "./live_agents.js";
-import { liveScenario, acceptedFiles, readingSize, privateSources, savedRun } from "./live_run.js";
+import { readStep, ideasStep, writerStep, briefStep } from "./live_agents.js";
+import { liveScenario, acceptedFiles, readingSize, privateSources, savedRun, briefRequest } from "./live_run.js";
 import { createMeter } from "./pipeline.js";
 import { messageOf } from "./api_messages.js";
 import { getKey, hasKey, redactSecrets } from "./keystore.js";
 import { privateFindings } from "./privacy.js";
-import { liveSizes, estimateLive, timeWords } from "./estimate.js";
+import { liveSizes, estimateLive, estimateBrief, timeWords } from "./estimate.js";
 import { problem } from "./watch.js";
 
 const LANGS = ["en", "de"];
@@ -69,6 +75,8 @@ const S = {
   scoreView: "chart",
   // After a switch of company that set choices aside: the run as it was, for Undo.
   undo: null,
+  // The build brief's drawer: the shortlisted idea it is for, and the repository name the person typed.
+  brief: { idea: null, repo: "" },
   live: blankLive()
 };
 
@@ -93,7 +101,8 @@ function blankLive() {
     unchecked: { reader: [], merges: [], ideator: [], writer: [] },
     repaired: { reader: false, merges: false, ideator: false, writer: false },
     trimmed: null,              // { from, to } when code kept the first ideas of an answer with too many
-    ms: { reader: 0, merges: 0, ideator: 0, writer: 0 },
+    briefs: {},                 // idea id → { part, unchecked, repaired }: the Brief writer's answers
+    ms: { reader: 0, merges: 0, ideator: 0, writer: 0, brief: 0 },
     requests: 0,
     last: null,                 // the last finished run in this tab: { eur, seconds }, for the dialog
     setAside: null              // after Start a new run: the run as it was, for Undo
@@ -171,8 +180,10 @@ export async function start() {
   // The guide's Start, on a guide opened during a replay, plays on from where the page is.
   for (const g of $$(".vc-guide")) g.addEventListener("vc:guideclose", (e) => { if (e.detail?.returnValue === "done" && S.mode === "simulation" && S.reached > 0) play(); });
 
+  // Ctrl+P prints the report alone, as Save as PDF does, wherever there is one to print.
+  printWithKeys(() => { const report = printable(); return report ? { report, name: pdfName() } : null; });
   showLang(getLang());
-  onLang(() => { showLang(getLang()); render(); fillGuide(); });
+  onLang(() => { showLang(getLang()); render(); fillGuide(); if ($("#brief-drawer")?.open) drawBrief(); });
   fillGuide();
   const step = Number(params.get("step"));
   if (Number.isInteger(step) && step >= 2 && step <= 6) deepLink(step);
@@ -513,7 +524,7 @@ function removeFile(id) {
 // ---- the live run ----------------------------------------------------------------------------------------
 
 const modelLabel = (id) => MODELS.find((m) => m.id === id)?.label || id;
-const AGENT_OF = { read: null, ideas: "ideator", write: "writer" };
+const AGENT_OF = { read: null, ideas: "ideator", write: "writer", brief: "brief" };
 let sizes = null;
 let ticker = 0;
 
@@ -549,7 +560,9 @@ async function openDialog(phase = "read", { forgetFirst = false } = {}) {
     settings: S.live.settings,
     capEur: S.live.capEur,
     spentEur: S.live.meter ? S.live.meter.spentEur() : 0,
-    estimate: (settings) => estimateLive({ ...size, count: S.live.form.count, settings, sizes: sizesOf(), lang: S.live.runLang || getLang(), from: phase }),
+    estimate: (settings) => (phase === "brief"
+      ? estimateBrief({ settings, inputText: briefInputText(), lang: S.live.runLang || getLang() })
+      : estimateLive({ ...size, count: S.live.form.count, settings, sizes: sizesOf(), lang: S.live.runLang || getLang(), from: phase })),
     words: { cost: costWords, time: (sec) => timeWords(sec, t) },
     findings: phase === "read" ? privateFindings(privateSources({ files, form: S.live.form, labels })) : [],
     pdfs: phase === "read" && files.some((f) => f.kind === "pdf"),
@@ -599,7 +612,8 @@ function busyWords() {
   const text = b.agent === "merges" ? t("live.busy.merges")
     : b.agent === "reader" ? tn("live.busy.reader", files)
       : b.agent === "ideator" ? tn("live.busy.ideator", count)
-        : t("live.busy.writer");
+        : b.agent === "brief" ? t("live.busy.brief")
+          : t("live.busy.writer");
   const seconds = (performance.now() - b.startedAt) / 1000;
   const spent = S.live.meter ? S.live.meter.spentEur() : 0;
   const meta = t("live.busy.meta", { time: secondsWords(seconds), amount: fmtEurSpend(spent) });
@@ -615,7 +629,7 @@ function tick() {
   const note = $("#busy-note");
   if (meta && meta.textContent !== w.meta) meta.textContent = w.meta;
   if (note && note.textContent !== w.note) note.textContent = w.note;
-  const text = $("#turn .turn-text");
+  const text = S.live.busy?.phase === "brief" ? $("#brief-busy-text") : $("#turn .turn-text");
   if (text && text.textContent !== w.text) text.textContent = w.text;
 }
 
@@ -647,6 +661,7 @@ async function runLive(phase) {
   const started = performance.now();
   if (agent) {
     render();
+    if (phase === "brief") drawBrief();
     clearInterval(ticker);
     ticker = setInterval(tick, 1000);
   }
@@ -672,10 +687,20 @@ async function runLive(phase) {
       S.live.ms.ideator = out.ms;
       liveChanged();
       Object.assign(S, { picks: null, decided: false, ideated: true });
+      S.live.briefs = {};
       S.reached = 4;
       markResult();
       log("ideas", "ideate", { ideas: out.ideas.ideas.length, repaired: out.repaired });
       next = 2;
+    } else if (phase === "brief") {
+      const run = currentRun(S.live.runLang);
+      const idea = run.ideas.find((i) => i.id === S.brief.idea);
+      const out = await briefStep({ ...ctx, run, idea });
+      S.live.briefs[idea.id] = { part: out.brief, unchecked: out.unchecked, repaired: out.repaired };
+      S.live.ms.brief += out.ms;
+      markResult();
+      log("brief", "report", { idea: idea.id, repaired: out.repaired });
+      next = S.step;
     } else {
       const run = currentRun(S.live.runLang);
       const picks = run.shortlist.picks.map((p) => p.idea);
@@ -706,7 +731,14 @@ async function runLive(phase) {
   if (S.live.stop) {
     render();
     announce(stopText(S.live.stop));
-    $("#btn-cta")?.focus({ preventScroll: true });
+    if (phase === "brief") { drawBrief(); $("#brief-retry")?.focus({ preventScroll: true }); } else $("#btn-cta")?.focus({ preventScroll: true });
+    return;
+  }
+  if (phase === "brief") {
+    render();
+    drawBrief();
+    announce(t("brief.source.live"));
+    $("#brief-copy-instructions")?.focus({ preventScroll: true });
     return;
   }
   go(next, { keep: true });
@@ -753,7 +785,26 @@ function liveBar() {
   const problems = st.problems && st.problems.length
     ? h("details", { class: "stop-problems", on: { toggle: reveal } }, h("summary", {}, h("span", { class: "vc-icon vc-icon--chevron-right summary-chevron", "aria-hidden": "true" }), t("live.problems")), h("ul", { lang: "en" }, st.problems.slice(0, 8).map((p) => h("li", {}, named(redactSecrets(p))))))
     : null;
-  return turnBar({ kind: "stopped", text: stopText(st), action: primary, actions, extra: problems });
+  return turnBar({ kind: "stopped", text: stopText(st), action: primary, actions, extra: [problems, doneRow(st)] });
+}
+
+/**
+ * Under a stopped bar: what is done, in the report and its downloads, once the run has issues to show. Folded,
+ * as What the checks found is, so the bar keeps to the one thing to do; opened, the story scrolls to its end.
+ */
+function doneRow(st) {
+  if (!stoppedReportable(st)) return null;
+  const reveal = (e) => { if (e.target.open) { const panel = e.target.closest(".panel"); if (panel) panel.scrollTop = panel.scrollHeight; } };
+  return h("details", { class: "stop-done", on: { toggle: reveal } },
+    h("summary", {}, h("span", { class: "vc-icon vc-icon--chevron-right summary-chevron", "aria-hidden": "true" }), t("report.doneOpen")),
+    h("p", { class: "stop-done__text" }, t("report.done")),
+    h("div", { class: "turn-downloads" }, downloadButtons({ onPdf: savePdf, onHtml: saveHtml, onJson: saveJson })),
+    h("p", { class: "turn-hint" }, t("report.pdfHint")));
+}
+
+/** A stopped live run has a report to give once its issues are read and the stop is not the brief's. */
+function stoppedReportable(st = S.live.stop) {
+  return !!st && S.mode === "live" && st.phase !== "brief" && st.phase !== "read" && S.reached >= 1 && currentRun(S.live.runLang).issues.length > 0;
 }
 
 /** Start a new run: the files, fields and answers of this one are set aside, with Undo. */
@@ -780,15 +831,6 @@ function undoNewRun() {
   ($("#step-title") || stage).focus({ preventScroll: true });
 }
 
-/** A file name as the report's: prototype-ideator-<company>-<date>-<lang>, umlauts written out. */
-export function fileName(company, lang, suffix) {
-  const slug = String(company || "run").toLowerCase()
-    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
-    .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "run";
-  return `prototype-ideator-${slug}-${today()}-${lang}${suffix}`;
-}
-
 /** Save run as simulation: the run in the scenarios' format, downloaded; nothing is stored. */
 function saveRun() {
   const run = currentRun(S.live.runLang);
@@ -801,14 +843,7 @@ function saveRun() {
     byAgent: meter?.byAgent
   });
   const name = fileName(run.company?.name, S.live.runLang || getLang(), "-run.json");
-  const blob = new Blob([redactSecrets(JSON.stringify(data, null, 2))], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = h("a", { href: url, download: name, hidden: true });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  markDownloaded();
+  saveText(name, JSON.stringify(data, null, 2), "application/json");
   announce(t("report.saved", { file: name }));
 }
 
@@ -831,6 +866,234 @@ function liveMarks() {
   const ideas = new Set(u.ideator.map((w) => (/^idea (\d+) /.exec(w) || [])[1]).filter(Boolean).map((n) => `P${n}`));
   const report = new Set(u.writer);
   return { issues, ideas, report };
+}
+
+// ---- the report and its downloads ----------------------------------------------------------------------------
+
+let shownReport = null;
+/** The language a report, a download or a brief is in: the run's in a live run, the page's in the simulation. */
+const docLang = () => (S.mode === "live" ? S.live.runLang || getLang() : getLang());
+/** A live run's stop as the report and the ideas file name it. */
+const stopOf = () => ({ agent: S.live.stop.agent, reason: stopReason(S.live.stop) });
+
+/** What the report says about its run: the mode, the model and setting, the files read, a stop, the marks. */
+function reportMeta(run, lang, stopped) {
+  const live = S.mode === "live";
+  // A simulation names the setting a live run starts with, so its cover says what a live run would use.
+  const start = PRESETS.find((p) => p.id === DEFAULT_PRESET);
+  const st = live ? S.live.settings : { ...start, preset: start.id };
+  return {
+    lang, mode: live ? "live" : "simulation", date: today(),
+    model: st ? modelLabel(st.model) : null,
+    setting: st ? t("rep.meta.setting", { preset: t(`ld.preset.${st.preset}`, null, lang), effort: t(`effort.${st.effort}`, null, lang) }, lang) : null,
+    files: live ? acceptedFiles(S.live.entries).length : (run.documents || []).length,
+    stopped, unchecked: live ? liveMarks() : null, cutoff: live
+  };
+}
+
+/** The report of the run now, in its language: the Report step's, or a stopped live run's. */
+function reportFor({ stopped = null, id = "rep", reportId = null } = {}) {
+  const lang = docLang();
+  const run = currentRun(lang);
+  return reportDoc(run, { ...reportMeta(run, lang, stopped), level: 3, id, reportId });
+}
+
+/** The report that Save as PDF and Ctrl+P print, or null when the run has none yet. */
+function printable() {
+  if (STEPS[S.step] === "report" && shownReport?.isConnected) return shownReport;
+  if (S.reached >= 5) return reportFor({ id: "rep-print" });
+  if (stoppedReportable()) return reportFor({ stopped: stopOf(), id: "rep-stop" });
+  return null;
+}
+
+/** The PDF's file name, which Save as PDF offers: the report's, without an extension. */
+function pdfName() {
+  const lang = docLang();
+  return fileName(currentRun(lang).company?.name, lang, "");
+}
+
+/** Save as PDF: the browser's print dialog on the report alone; the person chooses Save as PDF. */
+function savePdf() {
+  const report = printable();
+  if (!report) return;
+  announce(t("report.pdfHint"));
+  log("download", STEPS[S.step], { kind: "pdf" });
+  printReport(report, pdfName());
+}
+
+/** The HTML file: the report as a page of its own, its pictures as data. */
+async function saveHtml() {
+  const report = printable();
+  if (!report) return;
+  // A report built for the download and never shown loads its pictures first, so the file carries them.
+  await Promise.all([...report.querySelectorAll("img")].map((img) => (img.complete && img.naturalWidth ? null : img.decode().catch(() => null))));
+  const lang = docLang();
+  const name = fileName(currentRun(lang).company?.name, lang, ".html");
+  saveText(name, reportHtml(report), "text/html");
+  log("download", STEPS[S.step], { kind: "html" });
+  announce(t("report.saved", { file: name }));
+}
+
+/** The ideas file, prototype-ideas/1, checked against its schema before it leaves. */
+function saveJson() {
+  const lang = docLang();
+  const run = currentRun(lang);
+  const live = S.mode === "live";
+  const stopped = S.reached < 5 && stoppedReportable() ? stopOf() : null;
+  const data = ideasFile(run, { lang, mode: live ? "live" : "simulation", model: live ? S.live.settings?.model : null, setting: live ? S.live.settings?.preset : null, stopped });
+  const problems = ideasProblems(data);
+  if (problems.length) { problem(t("report.jsonInvalid"), problems.slice(0, 3).join("; ")); return; }
+  const name = fileName(run.company?.name, lang, ".json");
+  saveText(name, JSON.stringify(data, null, 2), "application/json");
+  log("download", STEPS[S.step], { kind: "json" });
+  announce(t("report.saved", { file: name }));
+}
+
+// ---- the build brief -----------------------------------------------------------------------------------------
+
+/** The shortlisted ideas a brief can be written for, in their places. */
+const briefIdeas = (run) => run.shortlist.picks.map((p) => run.ideas.find((i) => i.id === p.idea)).filter(Boolean);
+
+/** The idea's part: the Brief writer's in a live run, the recording's or one composed from the idea's page. */
+function briefPart(run, idea, lang) {
+  if (S.mode === "live") {
+    const b = S.live.briefs[idea.id];
+    return b ? { part: b.part, source: "live", unchecked: b.unchecked, repaired: b.repaired } : { part: null, source: null };
+  }
+  const s = sc();
+  const recorded = s.choices.brief_idea === idea.id ? s.answers[lang].brief : null;
+  return recorded ? { part: recorded, source: "recorded" } : { part: composedPart(idea, lang), source: "composed" };
+}
+
+/** The Brief writer's input for the idea the drawer shows, for the live dialog's estimate. */
+function briefInputText() {
+  const run = currentRun(docLang());
+  const idea = run.ideas.find((i) => i.id === S.brief.idea) || briefIdeas(run)[0];
+  return idea ? briefRequest({ run, idea, runLang: docLang() }).content[0].text : "";
+}
+
+/** Write a build brief: the drawer for the first shortlisted idea, or the one chosen last. */
+function openBrief() {
+  const dlg = $("#brief-drawer");
+  if (!dlg) return;
+  const ideas = briefIdeas(currentRun(docLang()));
+  if (!ideas.some((i) => i.id === S.brief.idea)) S.brief.idea = ideas[0]?.id || null;
+  if (!S.brief.idea) return;
+  drawBrief();
+  if (!dlg.open) dlg.showModal();
+  $("#brief-body").scrollTop = 0;
+}
+
+/** The blocks of the brief the drawer shows, with the repository name as typed. */
+function briefNow() {
+  const lang = docLang();
+  const run = currentRun(lang);
+  const idea = briefIdeas(run).find((i) => i.id === S.brief.idea);
+  if (!idea) return null;
+  const got = briefPart(run, idea, lang);
+  return { lang, run, idea, got, blocks: got.part ? briefBlocks({ run, idea, part: got.part, lang, repo: S.brief.repo, composed: got.source === "composed" }) : null };
+}
+
+/** The drawer: the idea, the repository name, where the idea's part comes from, the two blocks. */
+function drawBrief() {
+  const dlg = $("#brief-drawer");
+  const now = briefNow();
+  if (!dlg || !now) return;
+  const { run, idea, got, blocks } = now;
+  const live = S.mode === "live";
+  const busy = live && S.live.busy?.phase === "brief";
+  const stop = live && !busy && S.live.stop?.phase === "brief" ? S.live.stop : null;
+  $("#brief-title").textContent = idea.name;
+  const body = $("#brief-body");
+  const foot = $("#brief-footer");
+  clear(body);
+  clear(foot);
+  const ideas = briefIdeas(run);
+  const chooser = ideas.length > 1
+    ? h("fieldset", { class: "brief-ideas" }, h("legend", { class: "vc-label" }, t("brief.idea")),
+      h("div", { class: "vc-segmented", role: "radiogroup", "aria-label": t("brief.idea") }, ideas.map((i) => h("label", {},
+        h("input", { type: "radio", name: "brief-idea", value: i.id, checked: i.id === idea.id || undefined, disabled: busy || undefined, on: { change: () => { S.brief.idea = i.id; drawBrief(); $(`#brief-drawer input[name="brief-idea"][value="${i.id}"]`)?.focus(); } } }),
+        h("span", {}, i.name)))))
+    : null;
+  const repo = h("div", { class: "vc-field brief-repo" },
+    h("label", { class: "vc-label", for: "brief-repo" }, t("brief.repo")),
+    h("input", { class: "vc-input", id: "brief-repo", type: "text", value: S.brief.repo, autocomplete: "off", spellcheck: "false", "data-1p-ignore": true, "data-lpignore": "true", placeholder: t("brief.repo.placeholder"), "aria-describedby": "brief-repo-hint", on: { input: (e) => { S.brief.repo = e.target.value; drawBlocks(); } } }),
+    h("p", { class: "vc-help", id: "brief-repo-hint" }, t("brief.repo.hint"), " ", t("p.public")));
+  const ai = (text) => h("p", { class: "agent-line brief-source" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), t("ai.tag")), h("span", {}, text));
+  let source = null;
+  if (got.source === "recorded") source = ai(t("brief.source.recorded"));
+  else if (got.source === "composed") source = h("p", { class: "vc-alert vc-alert--neutral brief-source", role: "note" }, h("span", { class: "vc-icon vc-icon--info", "aria-hidden": "true" }), h("span", {}, t("brief.source.composed")));
+  else if (got.source === "live") source = [ai(got.repaired ? `${t("brief.source.live")} ${t("live.repaired")}` : t("brief.source.live")), got.unchecked?.length ? uncheckedNote() : null];
+  else if (busy) {
+    const w = busyWords();
+    source = h("div", { class: "vc-callout vc-callout--ai brief-busy", "aria-busy": "true" },
+      h("span", { class: "vc-callout__cell", "aria-hidden": "true" }, h("span", { class: "vc-spinner vc-spinner--sm" })),
+      h("div", { class: "vc-callout__body" },
+        h("p", { class: "turn-text", id: "brief-busy-text" }, w.text),
+        h("p", { class: "busy-meta", id: "busy-meta" }, w.meta),
+        h("p", { class: "busy-note", id: "busy-note", "aria-live": "polite" }, w.note),
+        h("button", { type: "button", class: "vc-button vc-button--secondary vc-button--sm", id: "brief-stop", on: { click: stopLive } }, h("span", { class: "vc-icon vc-icon--stop", "aria-hidden": "true" }), h("span", {}, t("live.stop")))));
+  } else if (stop) {
+    const go2 = stop.next === "key" ? () => openDialog("brief", { forgetFirst: true }) : stop.next === "settings" ? () => openDialog("brief") : () => tryAgain("brief");
+    const label = stop.next === "key" ? t("live.key") : stop.next === "settings" ? t("live.settings") : t("live.again");
+    source = h("div", { class: "vc-callout vc-callout--caution brief-stopped" },
+      h("span", { class: "vc-callout__cell", "aria-hidden": "true" }, h("span", { class: "vc-icon vc-icon--warning" })),
+      h("div", { class: "vc-callout__body" },
+        h("p", { class: "vc-callout__title" }, t("turn.stopped")),
+        h("p", { class: "turn-text" }, stopText(stop)),
+        stop.problems?.length ? h("ul", { class: "brief-problems", lang: "en" }, stop.problems.slice(0, 6).map((x) => h("li", {}, named(redactSecrets(x))))) : null,
+        h("button", { type: "button", class: "vc-button", id: "brief-retry", on: { click: go2 } }, label)));
+  } else {
+    const st = S.live.settings;
+    const est = st && hasKey() ? estimateBrief({ settings: st, inputText: briefInputText(), lang: docLang() }) : null;
+    source = h("p", { class: "step-note brief-live-lead" }, est
+      ? t("brief.live.lead", { cost: costWords(est.eur), time: timeWords(est.seconds, t), model: modelLabel(st.model), cap: fmtEur(S.live.capEur) })
+      : t("brief.live.key"));
+    foot.append(
+      h("span", { class: "vc-tag vc-tag--feature" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), h("span", {}, t("p.ai"))),
+      h("button", { type: "button", class: "vc-button", id: "brief-write", on: { click: () => askLive("brief") } }, h("span", { class: "vc-icon vc-icon--zap", "aria-hidden": "true" }), h("span", {}, t("brief.write"))));
+  }
+  const block = (key, label, text) => h("div", { class: "vc-code brief-block" },
+    h("div", { class: "vc-code__header" },
+      h("span", { id: `brief-label-${key}` }, label),
+      h("button", { type: "button", class: "vc-button vc-button--secondary vc-button--sm brief-copy", id: `brief-copy-${key}`, "aria-describedby": `brief-label-${key}`, on: { click: (e) => copyBlock(key, label, e.currentTarget) } },
+        h("span", { class: "vc-icon vc-icon--copy", "aria-hidden": "true" }), h("span", {}, t("brief.copy")))),
+    h("pre", { class: "brief-pre", tabindex: "0", "aria-labelledby": `brief-label-${key}` }, h("code", { id: `brief-text-${key}` }, text)));
+  body.append(...[
+    h("p", { class: "step-note brief-lead" }, t("brief.lead")),
+    chooser, repo, source,
+    blocks ? h("div", { class: "brief-blocks" }, block("instructions", t("brief.block.instructions"), blocks.instructions), block("message", t("brief.block.message"), blocks.message)) : null
+  ].flat().filter(Boolean));
+  if (blocks) foot.append(h("button", { type: "button", class: "vc-button vc-button--secondary", id: "brief-download", on: { click: downloadBrief } }, h("span", { class: "vc-icon vc-icon--download", "aria-hidden": "true" }), h("span", {}, t("brief.download"))));
+  foot.hidden = !foot.childNodes.length;
+}
+
+/** The two blocks again with the repository name as typed, without drawing the drawer again. */
+function drawBlocks() {
+  const now = briefNow();
+  if (!now?.blocks) return;
+  const a = $("#brief-text-instructions");
+  const b = $("#brief-text-message");
+  if (a) a.textContent = now.blocks.instructions;
+  if (b) b.textContent = now.blocks.message;
+}
+
+/** A block to the clipboard, with Vici's feedback on the button. */
+async function copyBlock(key, label, button) {
+  const text = $(`#brief-text-${key}`)?.textContent || "";
+  const ok = window.Vici?.copy ? await window.Vici.copy(text, button) : await copyText(text);
+  announce(ok ? t("brief.copied", { block: label }) : t("brief.copyFailed"));
+  if (ok) log("brief_copy", "report", { block: key });
+}
+
+/** Both blocks as one Markdown file. */
+function downloadBrief() {
+  const now = briefNow();
+  if (!now?.blocks) return;
+  const slug = now.idea.name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const name = fileName(now.run.company?.name, now.lang, `-brief-${slug || "idea"}.md`);
+  saveText(name, briefMarkdown(now.blocks, now.lang), "text/markdown", { result: false });
+  announce(t("report.saved", { file: name }));
 }
 
 // ---- dialogs ----------------------------------------------------------------------------------------------------
@@ -869,6 +1132,9 @@ const findByKey = (key) => {
   }) || null;
 };
 
+/** The stop whose bar the story last scrolled to, so a stop scrolls the story once. */
+let shownStop = null;
+
 function render() {
   if (!stage) return;
   const lang = getLang();
@@ -890,14 +1156,21 @@ function render() {
   // A live step that runs or stopped shows that in its bar; while an agent works, the rest of the step
   // waits, so what the request was built from can't change under it.
   if (live) {
-    const own = (S.live.busy && S.live.busy.agent && S.live.busy.step === S.step) || (S.live.stop && S.live.stop.step === S.step);
+    // The Brief writer's request and its stop show in the brief's drawer; the report stays as it is.
+    const briefing = S.live.busy?.phase === "brief" || S.live.stop?.phase === "brief";
+    const own = !briefing && ((S.live.busy && S.live.busy.agent && S.live.busy.step === S.step) || (S.live.stop && S.live.stop.step === S.step));
     const bar = own ? liveBar() : null;
     if (bar) view.querySelector("#turn")?.replaceWith(bar);
-    if (S.live.busy && S.live.busy.agent) for (const el of view.querySelectorAll(".evidence, .story > :not(#turn)")) el.inert = true;
+    if (S.live.busy && S.live.busy.agent && !briefing) for (const el of view.querySelectorAll(".evidence, .story > :not(#turn)")) el.inert = true;
   }
   stage.append(view);
   for (const d of stage.querySelectorAll("details")) if (open.has(d.className)) d.open = true;
   if (sameStep) [...stage.querySelectorAll(".panel, .vc-table-wrap")].forEach((el, i) => { if (scrolls[i]) el.scrollTop = scrolls[i]; });
+  // A stop that has just come shows its bar under what the agents finished, not over it: the story scrolls
+  // to its end once, and keeps where the person scrolls after that.
+  const stopBar = stage.querySelector("#turn.turn-bar--stopped");
+  if (stopBar && shownStop !== S.live.stop) { const story = stopBar.closest(".panel"); if (story) story.scrollTop = story.scrollHeight; }
+  shownStop = stopBar ? S.live.stop : null;
   if (focusKey) {
     const target = findByKey(focusKey);
     if (target && !target.disabled) target.focus({ preventScroll: true });
@@ -974,13 +1247,15 @@ function stepView(lang) {
         onNext: () => go(5, { keep: true })
       });
     case "report": {
-      if (!live) return renderReport({ run, lang, onAnother: () => { const ids = scenarios().map((x) => x.id); switchCompany(ids[(ids.indexOf(S.scenarioId) + 1) % ids.length]); ($("#step-title") || stage).focus({ preventScroll: true }); } });
+      shownReport = reportFor({ reportId: "report-doc" });
+      const common = { run, lang, report: shownReport, onPdf: savePdf, onHtml: saveHtml, onJson: saveJson, onBrief: openBrief };
+      if (!live) return renderReport(common);
       const meter = S.live.meter?.snapshot();
       const st = S.live.settings;
       const setting = st ? t("report.setting", { preset: t(`ld.preset.${st.preset}`), model: modelLabel(st.model), effort: t(`effort.${st.effort}`) }) : "";
       const seconds = Object.values(S.live.ms).reduce((a, b) => a + b, 0) / 1000;
       return renderReport({
-        run, lang,
+        ...common,
         live: {
           measured: t("report.measured", { cost: fmtEurSpend(meter ? meter.eur : 0), requests: tn("report.requests", meter ? meter.requests : 0), time: secondsWords(seconds), setting }),
           cutoff: t("report.cutoff"),

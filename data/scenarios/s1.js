@@ -567,6 +567,49 @@ const RECOMMENDATION = {
   needed: L("Rank your top three, name who should be in the room, and agree which public data the first build may use.", "Reihen Sie Ihre drei Favoriten, nennen Sie, wer im Raum sein soll, und legen Sie fest, welche öffentlichen Daten der erste Bau nutzen darf.")
 };
 
+/** The Brief writer's part for the first shortlisted idea, the Allowance Gap Agent (P1), as recorded. */
+const BRIEF = {
+  builds: L(
+    "A tool for the pricing desk that prices the emission allowances each European voyage needs and sets their cost per container beside today's surcharge, loop by loop. It shows where the surcharge falls short and proposes next month's surcharge with its basis. Pricing decides before anything reaches a customer.",
+    "Ein Werkzeug für das Pricing, das die Emissionszertifikate jeder Europafahrt bepreist und ihre Kosten je Container neben den heutigen Zuschlag stellt, Dienst für Dienst. Es zeigt, wo der Zuschlag nicht reicht, und schlägt den Zuschlag für den nächsten Monat mit seiner Grundlage vor. Das Pricing entscheidet, bevor etwas beim Kunden ankommt."),
+  steps: [
+    L("The presenter picks a Europe loop and a month.", "Die vorführende Person wählt einen Europadienst und einen Monat."),
+    L("The agent lists the loop's voyages to and from EU ports from the published schedule.", "Der Agent listet die Fahrten des Dienstes von und zu EU-Häfen aus dem veröffentlichten Fahrplan."),
+    L("It prices the allowances each voyage needs and works out the cost per container.", "Er bepreist die Zertifikate jeder Fahrt und rechnet die Kosten je Container aus."),
+    L("It sets that cost beside today's surcharge and marks the gap.", "Er stellt diese Kosten neben den heutigen Zuschlag und markiert die Lücke."),
+    L("It proposes next month's surcharge and drafts the customer notice for pricing to approve.", "Er schlägt den Zuschlag für den nächsten Monat vor und entwirft die Kundeninformation, die das Pricing freigibt.")
+  ],
+  key_figures: [
+    { name: L("Emission allowance cost per container", "Kosten für Emissionszertifikate je Container"), measures: L("What the allowances add to each container on a loop, from the voyages' emissions and the allowance price", "Was die Zertifikate jedem Container eines Dienstes hinzufügen, aus den Emissionen der Fahrten und dem Zertifikatspreis") },
+    { name: L("Surcharge gap per container", "Zuschlagslücke je Container"), measures: L("The allowance cost per container that the surcharge does not cover", "Die Zertifikatskosten je Container, die der Zuschlag nicht deckt") },
+    { name: L("Money at stake a year", "Geld im Jahr auf dem Spiel"), measures: L("The uncovered allowance cost across Europe services, {{fact:issue.bmc-I1.eur}} a year in the simulation", "Die ungedeckten Zertifikatskosten der Europadienste, in der Simulation {{fact:issue.bmc-I1.eur}} im Jahr") }
+  ],
+  data: [
+    L("Published sailing schedules and port calls", "Veröffentlichte Fahrpläne und Hafenanläufe"),
+    L("Published allowance prices, fixed to one date in the simulation", "Veröffentlichte Zertifikatspreise, in der Simulation auf ein Datum festgelegt"),
+    L("The EU rules on which voyages need allowances, with their phase-in by year", "Die EU-Regeln dazu, welche Fahrten Zertifikate brauchen, mit ihrer Einführung nach Jahren"),
+    L("Synthetic container volumes and fuel use per loop", "Synthetische Containermengen und Treibstoffverbrauch je Dienst")
+  ],
+  tools: [
+    { name: L("Voyage finder", "Fahrtensuche"), does: L("Spots the voyages to and from EU ports in a loop's published schedule", "Findet im veröffentlichten Fahrplan eines Dienstes die Fahrten von und zu EU-Häfen") },
+    { name: L("Rule check", "Regelprüfung"), does: L("Checks each port pair against the rules for voyages inside, into and out of the EU", "Prüft jedes Hafenpaar gegen die Regeln für Fahrten innerhalb, in die und aus der EU") },
+    { name: L("Allowance calculator", "Zertifikatsrechner"), does: L("Works out the allowances per voyage and the cost per container", "Rechnet die Zertifikate je Fahrt und die Kosten je Container aus") },
+    { name: L("Surcharge proposer", "Zuschlagsvorschlag"), does: L("Proposes a surcharge that closes the gap, with its basis", "Schlägt einen Zuschlag vor, der die Lücke schließt, mit seiner Grundlage") },
+    { name: L("Notice drafter", "Entwurf der Kundeninformation"), does: L("Prepares the customer notice for the new surcharge", "Bereitet die Kundeninformation zum neuen Zuschlag vor") }
+  ],
+  guardrails: [
+    L("Code computes every allowance, cost and surcharge; the model only explains them.", "Code berechnet jedes Zertifikat, alle Kosten und jeden Zuschlag; das Modell erklärt sie nur."),
+    L("Pricing approves or changes the surcharge before any notice goes out.", "Das Pricing gibt den Zuschlag frei oder ändert ihn, bevor eine Information hinausgeht."),
+    L("The simulation fixes the allowance price to one dated value and says so.", "Die Simulation legt den Zertifikatspreis auf einen datierten Wert fest und sagt das."),
+    L("Emissions per ship are estimates until the company shares its own, and the page marks them.", "Die Emissionen je Schiff sind Schätzungen, bis das Unternehmen seine eigenen teilt, und die Seite kennzeichnet sie.")
+  ],
+  golden_cases: [
+    { name: L("One voyage into the EU", "Eine Fahrt in die EU"), given: L("a 2025 voyage from Shanghai to Rotterdam emitting 10,000 tonnes of CO2, half of it counted since it starts outside the EU, 70 % of that due for 2025, at €80 an allowance", "eine Fahrt im Jahr 2025 von Shanghai nach Rotterdam mit 10.000 Tonnen CO2, davon die Hälfte gezählt, weil sie außerhalb der EU beginnt, davon 70 % für 2025 fällig, zu 80 € je Zertifikat"), expect: L("3,500 allowances, €280,000 for the voyage", "3.500 Zertifikate, 280.000 € für die Fahrt") },
+    { name: L("Cost per container", "Kosten je Container"), given: L("€280,000 of allowances on a voyage carrying 7,000 containers", "280.000 € an Zertifikaten auf einer Fahrt mit 7.000 Containern"), expect: L("€40 per container", "40 € je Container") },
+    { name: L("Surcharge gap", "Zuschlagslücke"), given: L("€40 of allowance cost per container and a surcharge of €25", "40 € Zertifikatskosten je Container und ein Zuschlag von 25 €"), expect: L("a gap of €15 per container, closed by a proposed surcharge of €40", "eine Lücke von 15 € je Container, geschlossen durch einen vorgeschlagenen Zuschlag von 40 €") }
+  ]
+};
+
 const name = (tool) => L(`${tool}-challenger-tidewell-lines-2026-11-23-en.json`, `${tool}-challenger-tidewell-lines-2026-11-23-de.json`);
 
 /** Scenario S1 as authored: js/scenarios.js resolves it into the Scenario contract, one file per language. */
@@ -585,7 +628,7 @@ export default {
     { id: "d3", kind: "handoff", tool: "pestel", name: name("pestel"), stand_in: true, fictional: true, spec: PESTEL }
   ],
   facts: Object.values(FACTS),
-  answers: { reader: null, merges: MERGES, ideas: IDEAS, recommendation: RECOMMENDATION, brief: null },
+  answers: { reader: null, merges: MERGES, ideas: IDEAS, recommendation: RECOMMENDATION, brief: BRIEF },
   choices: {
     issues: [
       { id: "swot-I1", action: "merge", into: "bmc-I1", reason: null },
@@ -595,7 +638,7 @@ export default {
     ],
     weights: null,
     shortlist: ["P1", "P3", "P4"],
-    brief_idea: null
+    brief_idea: "P1"
   },
   // The engine's figures along the recorded choices, frozen: tools/check-scenarios.mjs fails when a change
   // to the engine, the files, the prompts or the answers moves one (--print-reference prints them anew).

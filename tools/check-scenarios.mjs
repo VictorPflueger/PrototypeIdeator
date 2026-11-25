@@ -76,7 +76,7 @@ if (isMain) {
   let problems = 0;
   for (const sc of all) {
     const found = checkScenario(sc, { ...base, pdf: base.pdf(sc) });
-    console.log(`${sc.id} ${sc.company.name}: ${found.length ? `${found.length} problem${found.length === 1 ? "" : "s"}` : "passes"} (${sc.documents.length} documents, ${sc.answers.en.ideas.ideas.length} ideas, both languages, recorded path and one other)`);
+    console.log(`${sc.id} ${sc.company.name}: ${found.length ? `${found.length} problem${found.length === 1 ? "" : "s"}` : "passes"} (${sc.documents.length} documents, ${sc.answers.en.ideas.ideas.length} ideas, ${sc.answers.en.brief ? "a build brief, " : ""}both languages, recorded path and one other)`);
     for (const p of found) console.log(`  [${p.kind}] ${p.where}: ${p.message}`);
     problems += found.length;
   }

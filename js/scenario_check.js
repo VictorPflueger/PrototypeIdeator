@@ -16,7 +16,8 @@
 //   choice        another path than the recorded one gives figures or texts that disagree
 
 import { validate, describeErrors } from "./schema.js";
-import { CONTRACTS, REGISTRY, readerSchema, mergesSchema, ideasSchema, recommendationSchema, HANDOFF_FILE } from "./schemas.js";
+import { CONTRACTS, REGISTRY, readerSchema, mergesSchema, ideasSchema, recommendationSchema, briefSchema, HANDOFF_FILE } from "./schemas.js";
+import { briefProblems, briefEvidence } from "./brief.js";
 import { FACT_RE, auditText, normalise } from "./facts.js";
 import { ideaProblems } from "./guards.js";
 import { buildRun, recordedRun, referenceOf, readScenario, ideasOf, evidenceOf } from "./simulation.js";
@@ -173,6 +174,9 @@ export function checkScenario(sc, ctx = {}) {
     check("merges", a.merges, mergesSchema());
     check("ideas", a.ideas, ideasSchema(sc.count));
     check("recommendation", a.recommendation, recommendationSchema());
+    check("brief", a.brief, briefSchema());
+    // A recorded build brief belongs to the idea choices.brief_idea names, in both languages, or to none.
+    if (!!sc.choices?.brief_idea !== !!a.brief) add("brief", `answers.${lang}.brief`, sc.choices?.brief_idea ? `missing for ${sc.choices.brief_idea}` : "recorded, but choices.brief_idea names no idea");
   }
   if (sc.answers?.en && sc.answers?.de) compareLanguages(sc.answers.en, sc.answers.de, "answers", add);
   for (const k of ["pitch", "focus"]) if (sc[k]) compareLanguages(sc[k].en, sc[k].de, k, add);
@@ -193,6 +197,7 @@ export function checkScenario(sc, ctx = {}) {
     if (d.action === "merge" && !issueIds.has(d.into)) add("id", "choices.issues", `"${d.into}" is not an issue of the run`);
   }
   for (const id of sc.choices.shortlist || []) if (!ideaIds.has(id)) add("id", "choices.shortlist", `"${id}" is not an idea`);
+  if (sc.choices.brief_idea && !ideaIds.has(sc.choices.brief_idea)) add("id", "choices.brief_idea", `"${sc.choices.brief_idea}" is not an idea`);
   if (problems.some((p) => p.kind === "id")) return problems;
 
   // audit: every prose field in both languages, with the run's facts and evidence
@@ -215,6 +220,15 @@ export function checkScenario(sc, ctx = {}) {
       if (/\S\s*—\s*\S|\S\s+–\s+\S/u.test(s)) add("audit", `answers.${lang}.${where}`, "a dash as punctuation");
     }
     if (a.reader) a.reader.issues.forEach((x, i) => x.sources.forEach((s, j) => { if (s.quote.length > 150) add("audit", `answers.${lang}.reader.issues[${i}].sources[${j}]`, "a quote longer than 150 characters"); }));
+    // The recorded build brief: the counts, nothing that touches the template, and its prose through the audit.
+    const briefIdea = a.brief ? run.ideas.find((i) => i.id === sc.choices.brief_idea) : null;
+    if (briefIdea) {
+      const idea = briefIdea;
+      const b = briefProblems(a.brief, { facts, evidence: briefEvidence(run, idea) });
+      for (const x of b.refusals) add("brief", `answers.${lang}.brief`, x);
+      for (const x of b.audit) add("audit", `answers.${lang}.brief.${x.where}`, `refused: ${[...x.tokens, ...x.unknownFacts].join(", ")}`);
+      for (const x of b.notes) add("audit", `answers.${lang}.brief`, x);
+    }
   }
 
   // fact: every fact and every address the scenario cites is in DATA_SOURCES.md, read on the same day

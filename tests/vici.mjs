@@ -189,6 +189,8 @@ try {
       steps.push(await p.content());
       if (step === 3) { await p.click(".comb-tile"); await p.waitForTimeout(250); steps.push(await p.content()); await p.keyboard.press("Escape"); }
       if (step === 4) for (const v of ["table", "stability"]) { await p.click(`label:has(#view-${v})`); await p.waitForTimeout(150); steps.push(await p.content()); }
+      // The Report step holds the whole report; its build brief opens in a drawer of its own.
+      if (step === 6) { await p.click("#btn-brief"); await p.waitForSelector("#brief-drawer[open]"); await p.waitForTimeout(200); steps.push(await p.content()); await p.keyboard.press("Escape"); }
     }
     // The live screens: the live-run dialog (Vici's own check of the pattern), a step at work, a stop with
     // what the checks found open, and the live report, from S1's reports against the scripted stand-in.
@@ -208,7 +210,7 @@ try {
     check(!rg.length && !rb.length && !rw.length && !ra.length && !errors.length, `rendered in ${name(lang)}: the guide, the byline, the writing and the AI notice pass, at the first step and after Run it live${[...rg, ...rb, ...rw, ...ra, ...errors].length ? `: ${[...rg, ...rb, ...rw, ...ra, ...errors].join("; ")}` : ""}`);
     check(new RegExp(`<html[^>]*lang="${lang === "de" ? "de" : "en-GB"}"`).test(views[0]) && views[0].includes(lang === "de" ? AI_NOTICE.de : AI_NOTICE.en), `rendered in ${name(lang)}: the page says its language and carries the AI notice in it`);
     const ri = [...views, ...steps].flatMap((v) => [...recordIdProblems(v, IDS), ...recordIdProblems(v, IDEA_IDS, { min: 2 })]);
-    check(steps.length === 18 + 3 + 6 + 4 && !ri.length, `rendered in ${name(lang)}: names, not record ids, on every step of S1, S2 and S3, on each idea's page, in every Score view and on the live screens (${steps.length} screens)${ri.length ? `: ${[...new Set(ri)].slice(0, 6).join("; ")}` : ""}`);
+    check(steps.length === 18 + 3 + 6 + 3 + 4 && !ri.length, `rendered in ${name(lang)}: names, not record ids, on every step of S1, S2 and S3, on each idea's page, in every Score view, in each report and its build brief, and on the live screens (${steps.length} screens)${ri.length ? `: ${[...new Set(ri)].slice(0, 6).join("; ")}` : ""}`);
     const sw = steps.flatMap((v) => writingProblems(v));
     check(!sw.length, `rendered in ${name(lang)}: every step keeps Vici's writing rules${sw.length ? `: ${[...new Set(sw)].slice(0, 6).join("; ")}` : ""}`);
     const stores = await p.evaluate(async () => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), databases: (await indexedDB.databases()).map((d) => d.name), caches: await caches.keys(), cookie: document.cookie }));

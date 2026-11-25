@@ -393,6 +393,46 @@ const RECOMMENDATION = {
   needed: L("Rank your top three, name who from the town should be in the room, and confirm that synthetic street and customer data is fine for a first build.", "Reihen Sie Ihre drei Favoriten, nennen Sie, wer aus der Stadt im Raum sein soll, und bestätigen Sie, dass synthetische Straßen- und Kundendaten für einen ersten Bau in Ordnung sind.")
 };
 
+/** The Brief writer's part for the first shortlisted idea, Street Heat Check (P1), as recorded. */
+const BRIEF = {
+  builds: L(
+    "A tool for heat planning that checks each street's heat demand, the age of its gas pipes and its buildings, and proposes district heat, heat pumps or gas for the town's heat plan. It shows what each choice means for the gas grid. The heat planning team and the town decide every street.",
+    "Ein Werkzeug für die Wärmeplanung, das für jede Straße Wärmebedarf, Alter der Gasleitungen und Gebäude prüft und für die Wärmeplanung der Stadt Fernwärme, Wärmepumpen oder Gas vorschlägt. Es zeigt, was jede Wahl für das Gasnetz bedeutet. Das Team der Wärmeplanung und die Stadt entscheiden jede Straße."),
+  steps: [
+    L("A map of the town shows every street with its heat demand.", "Eine Karte der Stadt zeigt jede Straße mit ihrem Wärmebedarf."),
+    L("The agent marks the streets where district heat would pay.", "Der Agent markiert die Straßen, in denen sich Fernwärme lohnt."),
+    L("It shows what each choice means for the gas grid's book value.", "Er zeigt, was jede Wahl für den Buchwert des Gasnetzes bedeutet."),
+    L("It drafts the street list for the council's heat plan.", "Er entwirft die Straßenliste für die Wärmeplanung des Rats.")
+  ],
+  key_figures: [
+    { name: L("Heat customers connected", "Angeschlossene Wärmekunden"), measures: L("District heat connections today and after the streets the plan switches", "Fernwärmeanschlüsse heute und nach den Straßen, die der Plan umstellt") },
+    { name: L("Gas grid at risk", "Gefährdetes Gasnetz"), measures: L("The residual book value of the gas pipes in streets that switch away from gas", "Der Restbuchwert der Gasleitungen in Straßen, die vom Gas wechseln") }
+  ],
+  data: [
+    L("The heat-planning rules of Lower Saxony", "Die Regeln der Wärmeplanung in Niedersachsen"),
+    L("Public maps of the town, with synthetic buildings in the demo", "Öffentliche Karten der Stadt, mit synthetischen Gebäuden in der Demo"),
+    L("Synthetic heat demand per street", "Synthetischer Wärmebedarf je Straße"),
+    L("The utility's published figures on heat customers and the gas grid", "Die veröffentlichten Zahlen des Versorgers zu Wärmekunden und Gasnetz")
+  ],
+  tools: [
+    { name: L("Street finder", "Straßensuche"), does: L("Spots streets with high heat demand close to the heat network", "Findet Straßen mit hohem Wärmebedarf nahe am Wärmenetz") },
+    { name: L("Grid check", "Netzprüfung"), does: L("Checks the age of the gas pipes, the buildings and their heating", "Prüft das Alter der Gasleitungen, die Gebäude und ihre Heizung") },
+    { name: L("Option costing", "Kostenvergleich"), does: L("Works out the cost of district heat, heat pumps and gas per street", "Rechnet die Kosten von Fernwärme, Wärmepumpen und Gas je Straße aus") },
+    { name: L("Plan proposer", "Planvorschlag"), does: L("Proposes an option street by street, with its reasons", "Schlägt Straße für Straße eine Option vor, mit ihren Gründen") },
+    { name: L("Council brief", "Vorlage für den Rat"), does: L("Prepares the street list and a summary for the council", "Bereitet die Straßenliste und eine Zusammenfassung für den Rat vor") }
+  ],
+  guardrails: [
+    L("Code computes every cost and book value; the model explains the choice in words.", "Code berechnet alle Kosten und Buchwerte; das Modell erklärt die Wahl in Worten."),
+    L("The heat planning team and the town decide each street; the page only proposes.", "Das Team der Wärmeplanung und die Stadt entscheiden jede Straße; die Seite schlägt nur vor."),
+    L("Buildings and heat demand are synthetic in the demo, and the page says so.", "Gebäude und Wärmebedarf sind in der Demo synthetisch, und die Seite sagt das.")
+  ],
+  golden_cases: [
+    { name: L("District heat pays", "Fernwärme lohnt sich"), given: L("a street 300 m long needing 2,400 MWh of heat a year, next to the heat network, with the demo's threshold at 1.5 MWh per metre", "eine 300 m lange Straße mit 2.400 MWh Wärmebedarf im Jahr, direkt am Wärmenetz, bei einer Schwelle der Demo von 1,5 MWh je Meter"), expect: L("8 MWh per metre a year, above the threshold, so district heat is proposed", "8 MWh je Meter im Jahr, über der Schwelle, also wird Fernwärme vorgeschlagen") },
+    { name: L("Heat pumps", "Wärmepumpen"), given: L("a street of detached houses 600 m long needing 300 MWh a year, with the same threshold", "eine 600 m lange Straße mit Einfamilienhäusern und 300 MWh Wärmebedarf im Jahr, bei derselben Schwelle"), expect: L("0.5 MWh per metre a year, below the threshold, so heat pumps are proposed", "0,5 MWh je Meter im Jahr, unter der Schwelle, also werden Wärmepumpen vorgeschlagen") },
+    { name: L("Gas grid at risk", "Gefährdetes Gasnetz"), given: L("a street whose gas pipes carry €120,000 of residual book value, switching to district heat", "eine Straße, deren Gasleitungen 120.000 € Restbuchwert tragen und die auf Fernwärme wechselt"), expect: L("€120,000 added to the gas grid at risk on the street list", "120.000 € mehr gefährdetes Gasnetz auf der Straßenliste") }
+  ]
+};
+
 export default {
   schema: "pi-scenario/1",
   id: "s3",
@@ -407,7 +447,7 @@ export default {
     { id: "d2", kind: "handoff", tool: "swot", name: L("swot-challenger-auental-energie-2026-11-23-en.json", "swot-challenger-auental-energie-2026-11-23-de.json"), stand_in: true, fictional: true, spec: SWOT }
   ],
   facts: Object.values(FACTS),
-  answers: { reader: READER, merges: null, ideas: IDEAS, recommendation: RECOMMENDATION, brief: null },
+  answers: { reader: READER, merges: null, ideas: IDEAS, recommendation: RECOMMENDATION, brief: BRIEF },
   choices: {
     issues: [
       { id: "swot-I1", action: "merge", into: "doc-I5", reason: null },
@@ -416,7 +456,7 @@ export default {
     ],
     weights: null,
     shortlist: ["P1", "P3", "P4"],
-    brief_idea: null
+    brief_idea: "P1"
   },
   // The engine's figures along the recorded choices, frozen: tools/check-scenarios.mjs fails when a change
   // to the engine, the files, the prompts or the answers moves one (--print-reference prints them anew).

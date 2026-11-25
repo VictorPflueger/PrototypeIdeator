@@ -1,7 +1,8 @@
 // The live run's agents, one request each (brief §5.2, PLAN.md §8.1): reading (nothing for one challenger's
 // file, the Reader's merges request for several challengers' files, the Reader on documents), the Ideator on
-// the kept issues and the Writer on the shortlist. Each builds its request from the run's state with
-// js/live_run.js, checks the answer with its guards in js/guards.js and goes through js/pipeline.js, which
+// the kept issues, the Writer on the shortlist and, on request, the Brief writer on one shortlisted idea.
+// Each builds its request from the run's state with js/live_run.js, checks the answer with its guards in
+// js/guards.js (js/brief.js for the Brief writer) and goes through js/pipeline.js, which
 // keeps the request under the budget cap and sends a failing answer back once. A PDF's tokens are counted
 // first by the free endpoint, so the cap sees the real input before the Reader's request goes out.
 //
@@ -9,8 +10,9 @@
 
 import { runStep } from "./pipeline.js";
 import { countTokens } from "./count.js";
-import { acceptedFiles, readingOf, readerRequest, mergesRequest, ideatorRequest, writerRequest, handoffIssuesOf } from "./live_run.js";
+import { acceptedFiles, readingOf, readerRequest, mergesRequest, ideatorRequest, writerRequest, briefRequest, handoffIssuesOf } from "./live_run.js";
 import { readerProblems, mergesProblems, ideaProblems, writerProblems } from "./guards.js";
+import { briefProblems, briefEvidence } from "./brief.js";
 import { evidenceOf } from "./simulation.js";
 import { tokensOf } from "./estimate.js";
 
@@ -96,4 +98,19 @@ export async function writerStep({ run, runLang, key, settings, meter, signal, o
     check: (a) => writerProblems(a, { facts, evidence: run.evidence })
   });
   return { recommendation: out.answer, unchecked: out.unchecked, repaired: out.repaired, ms: out.ms };
+}
+
+/**
+ * The Brief writer on one shortlisted idea: the idea's own part of its build brief, checked against the
+ * template's fixed parts. Returns { brief, unchecked, repaired, ms }.
+ */
+export async function briefStep({ run, idea, runLang, key, settings, meter, signal, onEvent = () => {}, send }) {
+  const req = briefRequest({ run, idea, runLang });
+  const facts = Object.keys(run.facts);
+  const evidence = briefEvidence(run, idea);
+  const out = await runStep({
+    agent: "brief", key, settings, system: req.system, content: req.content, schema: req.schema, meter, signal, onEvent, send,
+    check: (a) => briefProblems(a, { facts, evidence })
+  });
+  return { brief: out.answer, unchecked: out.unchecked, repaired: out.repaired, ms: out.ms };
 }

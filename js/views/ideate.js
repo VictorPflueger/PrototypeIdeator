@@ -13,13 +13,17 @@ import { honeycomb } from "../charts.js";
 import { heading, agentLine, turnBar, storyPanel, evidencePanel, namesOf, uncheckedNote } from "./common.js";
 
 /** Five hexagon cells, filled up to a rating of 1 to 5 (Vici's rating cells), with the number in words. */
-export function ratingCells(score) {
-  return h("span", { class: "vc-rating rating-cells", role: "img", "aria-label": t("drawer.rating", { n: score }) },
+export function ratingCells(score, lang) {
+  return h("span", { class: "vc-rating rating-cells", role: "img", "aria-label": t("drawer.rating", { n: score }, lang) },
     [1, 2, 3, 4, 5].map((k) => h("span", { class: ["vc-rating__cell", k <= score ? "vc-rating__cell--on" : ""], "aria-hidden": "true" })));
 }
 
-/** The idea's page, for the drawer. ctx: { run, lang, unchecked (true when the fact audit refused a text of it twice) }. */
-export function ideaPage(idea, { run, lang, unchecked = false }) {
+/**
+ * The idea's page, for the drawer and the report. ctx: { run, lang, unchecked (true when the fact audit
+ * refused a text of it twice), level (its section headings' level: 3 in the drawer, lower in the report) }.
+ */
+export function ideaPage(idea, { run, lang, unchecked = false, level = 3 }) {
+  const tr = (key, vars = null) => t(key, vars, lang);
   const names = namesOf(run);
   const facts = run.facts;
   const fill = (s) => renderFacts(s, facts, lang);
@@ -29,31 +33,31 @@ export function ideaPage(idea, { run, lang, unchecked = false }) {
     const i = names.issue(id);
     if (!i) return null;
     const keptOf = names.keptOf(id);
-    return h("li", {}, h("span", {}, (keptOf || i).title), i.status === "parked" ? h("span", { class: "vc-tag vc-tag--sm vc-tag--warning parked-tag" }, t("drawer.parkedIssue")) : null);
+    return h("li", {}, h("span", {}, (keptOf || i).title), i.status === "parked" ? h("span", { class: "vc-tag vc-tag--sm vc-tag--warning parked-tag" }, tr("drawer.parkedIssue")) : null);
   });
-  const section = (key, ...children) => h("section", { class: "idea-section" }, h("h3", { class: "idea-h" }, t(key)), ...children);
+  const section = (key, ...children) => h("section", { class: ["idea-section", `idea-section--${key.replace("drawer.", "")}`] }, h(`h${level}`, { class: "idea-h" }, tr(key)), ...children);
   return h("article", { class: "idea-page", dataset: { idea: idea.id } },
-    unchecked ? uncheckedNote() : null,
+    unchecked ? uncheckedNote(lang) : null,
     h("p", { class: "idea-what" }, fill(idea.what_it_does)),
     h("div", { class: "idea-facts" },
-      h("p", {}, h("span", { class: "idea-label" }, t("drawer.score")), h("strong", {}, ranked ? fmtScore(ranked.value, lang) : "…"), ranked ? h("span", { class: "muted" }, t("drawer.rank", { n: ranked.rank, of: run.ideas.length })) : null),
-      h("p", {}, h("span", { class: "idea-label" }, t("drawer.effort")), h("strong", {}, t("drawer.days", { low: fmtInt(idea.effort_days.low, lang), high: fmtInt(idea.effort_days.high, lang) }))),
-      h("p", {}, h("span", { class: "idea-label" }, t("drawer.cost")), h("strong", {}, cost !== undefined ? fmtEur(cost, lang) : "…"), h("span", { class: "muted" }, t("drawer.costBasis", { calls: idea.live_inputs.model_calls, searches: idea.live_inputs.web_searches })))),
-    section("drawer.answers", h("ul", { class: "idea-issues" }, issueItems), h("p", { class: "muted" }, t("drawer.for", { audience: fill(idea.audience) }))),
+      h("p", {}, h("span", { class: "idea-label" }, tr("drawer.score")), h("strong", {}, ranked ? fmtScore(ranked.value, lang) : "…"), ranked ? h("span", { class: "muted" }, tr("drawer.rank", { n: ranked.rank, of: run.ideas.length })) : null),
+      h("p", {}, h("span", { class: "idea-label" }, tr("drawer.effort")), h("strong", {}, tr("drawer.days", { low: fmtInt(idea.effort_days.low, lang), high: fmtInt(idea.effort_days.high, lang) }))),
+      h("p", {}, h("span", { class: "idea-label" }, tr("drawer.cost")), h("strong", {}, cost !== undefined ? fmtEur(cost, lang) : "…"), h("span", { class: "muted" }, tr("drawer.costBasis", { calls: idea.live_inputs.model_calls, searches: idea.live_inputs.web_searches })))),
+    section("drawer.answers", h("ul", { class: "idea-issues" }, issueItems), h("p", { class: "muted" }, tr("drawer.for", { audience: fill(idea.audience) }))),
     section("drawer.room", h("ol", { class: "idea-room" }, idea.room.map((x) => h("li", {}, fill(x))))),
     section("drawer.figures", h("div", { class: "vc-table-wrap" }, h("table", { class: "vc-table vc-table--compact figures-table" },
-      h("thead", {}, h("tr", {}, h("th", { scope: "col" }, t("drawer.figure")), h("th", { scope: "col" }, t("drawer.today")), h("th", { scope: "col" }, t("drawer.demo")))),
+      h("thead", {}, h("tr", {}, h("th", { scope: "col" }, tr("drawer.figure")), h("th", { scope: "col" }, tr("drawer.today")), h("th", { scope: "col" }, tr("drawer.demo")))),
       h("tbody", {}, idea.key_figures.map((f) => h("tr", {},
         h("th", { scope: "row" }, fill(f.name)),
-        h("td", {}, f.public ? [h("span", {}, f.today), h("span", { class: "figure-source" }, /^https?:/.test(f.source) ? h("a", { class: "vc-link", href: f.source, rel: "noopener", target: "_blank" }, t("drawer.source"), h("span", { class: "vc-visually-hidden" }, t("p.newTab"))) : f.source)] : h("span", { class: "muted" }, t("drawer.notPublic"))),
+        h("td", {}, f.public ? [h("span", {}, f.today), h("span", { class: "figure-source" }, /^https?:/.test(f.source) ? h("a", { class: "vc-link", href: f.source, rel: "noopener", target: "_blank" }, tr("drawer.source"), h("span", { class: "vc-visually-hidden" }, tr("p.newTab"))) : f.source)] : h("span", { class: "muted" }, tr("drawer.notPublic"))),
         h("td", {}, fill(f.demo)))))))),
-    section("drawer.how", h("dl", { class: "idea-how" }, ["spot", "check", "calculate", "propose", "prepare", "decision"].map((k) => h("div", { class: k === "decision" ? "how-decision" : "" }, h("dt", {}, t(`drawer.how.${k}`)), h("dd", {}, fill(idea.how[k])))))),
+    section("drawer.how", h("dl", { class: "idea-how" }, ["spot", "check", "calculate", "propose", "prepare", "decision"].map((k) => h("div", { class: k === "decision" ? "how-decision" : "" }, h("dt", {}, tr(`drawer.how.${k}`)), h("dd", {}, fill(idea.how[k])))))),
     section("drawer.data", h("ul", {}, idea.data.map((x) => h("li", {}, fill(x))))),
     idea.risks.length ? section("drawer.risks", h("ul", {}, idea.risks.map((x) => h("li", {}, fill(x))))) : null,
     section("drawer.ratings", h("div", { class: "vc-table-wrap" }, h("table", { class: "vc-table vc-table--compact ratings-table" },
       h("tbody", {}, CRITERIA.map((c) => h("tr", {},
-        h("th", { scope: "row" }, t(`crit.${c}`)),
-        h("td", {}, ratingCells(idea.ratings[c].score)),
+        h("th", { scope: "row" }, tr(`crit.${c}`)),
+        h("td", {}, ratingCells(idea.ratings[c].score, lang)),
         h("td", {}, fill(idea.ratings[c].reason)))))))),
     section("drawer.why", h("p", {}, fill(idea.why))));
 }

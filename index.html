@@ -128,6 +128,20 @@
     <div class="vc-dialog__body" id="idea-body"></div>
   </dialog>
 
+  <!-- The build brief for one shortlisted idea (brief §6.6): the template's two blocks with the idea's own
+       part, which js/presenter.js fills; each block copies to the clipboard, and both download as Markdown. -->
+  <dialog class="vc-dialog vc-dialog--drawer brief-drawer" id="brief-drawer" aria-labelledby="brief-title">
+    <header class="vc-dialog__header">
+      <div class="idea-drawer__head">
+        <span class="vc-tag vc-tag--sm brief-tag" data-i18n="brief.tag">Build brief</span>
+        <h2 class="vc-dialog__title" id="brief-title">Idea</h2>
+      </div>
+      <button type="button" class="vc-icon-button" data-vc-close aria-label="Close" data-i18n-attr="aria-label:p.close"><span class="vc-icon vc-icon--close" aria-hidden="true"></span></button>
+    </header>
+    <div class="vc-dialog__body brief-body" id="brief-body"></div>
+    <footer class="vc-dialog__footer brief-footer" id="brief-footer" hidden></footer>
+  </dialog>
+
   <!-- Run it live: Vici's live-run dialog, its parts in Vici's order. js/live_dialog.js fills the setting's
        note, Advanced, the warning and the estimate, and checks the key with Anthropic's free model list
        before it goes into js/keystore.js, the only place it is held. The field sits in no form. -->
@@ -208,7 +222,7 @@
             <tr><th scope="row">Ideate</th><td>The Ideator proposes up to ten prototypes, each on its own page.</td></tr>
             <tr><th scope="row">Score</th><td>Code scores every idea on seven criteria and checks how stable the ranking is.</td></tr>
             <tr><th scope="row">Shortlist</th><td>You rank your top three.</td></tr>
-            <tr><th scope="row">Report</th><td>The Writer writes the summary, and code fills in every figure.</td></tr>
+            <tr><th scope="row">Report</th><td>The Writer writes the summary, code fills in every figure, and the report saves as a PDF, an HTML file and an ideas file. A build brief turns a shortlisted idea into a new Claude project.</td></tr>
           </tbody>
         </table></div>
         <p>It opens on Tidewell Lines, a fictional container carrier in Bremen: three challenger reports, <span data-fig="talk.issues">…</span> issues and <span data-fig="talk.ideas">…</span> ideas. Two more companies are one click away on the first screen.</p>
@@ -273,7 +287,7 @@
           <li><strong>Read: three reports on one carrier.</strong> <span class="vc-guide__say">“Three challengers looked at the same company. The Reader merged the emission costs all three raise, and you keep, merge or park each issue.”</span> <span class="vc-guide__time">1 min</span></li>
           <li><strong>Ideate: open one idea.</strong> <span class="vc-guide__say">“Each cell is a prototype tied to an issue and its KPIs. Here is <span data-fig="talk.top">…</span>: what the room would see, and how its agent works while a person decides.”</span> <span class="vc-guide__time">1.5 min</span></li>
           <li><strong>Score: change a weight.</strong> <span class="vc-guide__say">“Weigh business value higher and watch the order. <span data-fig="talk.top">…</span> stays first in <span data-fig="talk.firsts">…</span> rankings.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Shortlist and report.</strong> <span class="vc-guide__say">“You rank your top three. The Writer writes the summary, and code fills in every figure.”</span> <span class="vc-guide__time">0.5 min</span></li>
+          <li><strong>Shortlist, report and brief.</strong> <span class="vc-guide__say">“You rank your top three, and the report is ready to print for the room. One click turns the first pick into a build brief for a new Claude project.”</span> <span class="vc-guide__time">0.5 min</span></li>
         </ol>
       </section>
     </div>
@@ -301,7 +315,7 @@
             <tr><th scope="row">Ideen</th><td>Der Ideenfinder schlägt bis zu zehn Prototypen vor, jeden auf einer eigenen Seite.</td></tr>
             <tr><th scope="row">Bewerten</th><td>Code bewertet jede Idee nach sieben Kriterien und prüft, wie stabil die Rangfolge ist.</td></tr>
             <tr><th scope="row">Auswahl</th><td>Sie reihen Ihre drei Favoriten.</td></tr>
-            <tr><th scope="row">Bericht</th><td>Der Autor schreibt die Zusammenfassung, und Code setzt jede Zahl ein.</td></tr>
+            <tr><th scope="row">Bericht</th><td>Der Autor schreibt die Zusammenfassung, Code setzt jede Zahl ein, und der Bericht lässt sich als PDF, HTML-Datei und Ideendatei speichern. Ein Bau-Briefing macht aus einer Idee der Auswahl ein neues Claude-Projekt.</td></tr>
           </tbody>
         </table></div>
         <p>Er beginnt mit Tidewell Lines, einer fiktiven Containerreederei in Bremen: drei Challenger-Berichte, <span data-fig="talk.issues">…</span> Themen und <span data-fig="talk.ideas">…</span> Ideen. Zwei weitere Unternehmen sind auf dem ersten Bildschirm einen Klick entfernt.</p>
@@ -366,7 +380,7 @@
           <li><strong>Lesen: drei Berichte zu einer Reederei.</strong> <span class="vc-guide__say">„Drei Challenger haben dasselbe Unternehmen geprüft. Der Leser hat die Emissionskosten gebündelt, die alle drei nennen, und Sie behalten, bündeln oder parken jedes Thema.“</span> <span class="vc-guide__time">1 min</span></li>
           <li><strong>Ideen: eine Idee öffnen.</strong> <span class="vc-guide__say">„Jede Zelle ist ein Prototyp, gebunden an ein Thema und seine Kennzahlen. Hier ist <span data-fig="talk.top">…</span>: was der Raum sähe und wie sein Agent arbeitet, während ein Mensch entscheidet.“</span> <span class="vc-guide__time">1,5 min</span></li>
           <li><strong>Bewerten: ein Gewicht ändern.</strong> <span class="vc-guide__say">„Gewichten Sie den Nutzen höher und sehen Sie auf die Reihenfolge. <span data-fig="talk.top">…</span> bleibt in <span data-fig="talk.firsts">…</span> Rangfolgen vorn.“</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Auswahl und Bericht.</strong> <span class="vc-guide__say">„Sie reihen Ihre drei Favoriten. Der Autor schreibt die Zusammenfassung, und Code setzt jede Zahl ein.“</span> <span class="vc-guide__time">0,5 min</span></li>
+          <li><strong>Auswahl, Bericht und Briefing.</strong> <span class="vc-guide__say">„Sie reihen Ihre drei Favoriten, und der Bericht ist bereit zum Drucken für den Raum. Ein Klick macht aus der ersten Wahl ein Bau-Briefing für ein neues Claude-Projekt.“</span> <span class="vc-guide__time">0,5 min</span></li>
         </ol>
       </section>
     </div>

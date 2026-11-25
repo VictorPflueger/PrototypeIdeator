@@ -114,9 +114,10 @@ check(!viciCss.length, `Vici's stylesheet loads its fonts and icons from this si
 const jsOut = [...js, ...data, "vici/dist/vici.js"].flatMap((f) => jsLoads(read(f)).map((x) => `${f}: ${x}`));
 check(!jsOut.length, `no script imports or opens anything from another site${jsOut.length ? `: ${jsOut.join(", ")}` : ""}`);
 // Hosts named in code: the API (the only one the page connects to), links a person opens (the repository's
-// DATA_SOURCES.md on GitHub among them), SVG's namespace and the schemas' own identifiers. A scenario's
-// sources are links too, shown under the issue map; each host must be one DATA_SOURCES.md lists.
-const LINK_HOSTS = new Set(["platform.claude.com", "victorpflueger.github.io", "github.com", "www.w3.org", "json-schema.org", "example.org"]);
+// DATA_SOURCES.md on GitHub among them, and from 0.4.0 Victor's LinkedIn profile in the report's byline),
+// SVG's namespace and the schemas' own identifiers. A scenario's sources are links too, shown under the
+// issue map; each host must be one DATA_SOURCES.md lists.
+const LINK_HOSTS = new Set(["platform.claude.com", "victorpflueger.github.io", "github.com", "www.linkedin.com", "www.w3.org", "json-schema.org", "example.org"]);
 const SOURCE_HOSTS = new Set([...read("DATA_SOURCES.md").matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1].toLowerCase()));
 const hosts = new Map();
 for (const f of [...js, ...data]) for (const h of hostsIn(read(f))) if (!hosts.has(h)) hosts.set(h, f);

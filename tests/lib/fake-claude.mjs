@@ -32,6 +32,7 @@ export function agentOf(req) {
   const s = String(req?.system || "");
   if (/^You are the Ideator/.test(s)) return "ideator";
   if (/^You are the Writer/.test(s)) return "writer";
+  if (/^You are the Brief writer/.test(s)) return "brief";
   if (/^You are the Reader/.test(s)) return /Find the issues that name the same thing/.test(s) ? "merges" : "reader";
   return "unknown";
 }

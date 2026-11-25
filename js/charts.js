@@ -32,26 +32,35 @@ export function hexPoints(x, y, r) {
 
 /**
  * The honeycomb: a list of hexagon cells, one per idea, each a button that opens the idea's page.
- * ideas: [{ id, name }]; picks: ids of the shortlist (their cells carry their place); onOpen(id).
+ * ideas: [{ id, name }]; picks: ids of the shortlist (their cells carry their place); onOpen(id). still:
+ * for the report, cells that are text, not buttons, each with its score (scores: id → score in words).
  */
-export function honeycomb(ideas, { picks = [], onOpen } = {}) {
+export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = null, label = null, lang = getLang() } = {}) {
   const n = ideas.length;
-  // Up to four ideas sit in one zigzag row; more fill two rows: 5 or 6 in three columns, 7 or 8 in four, 9 or 10 in five.
-  const cols = n <= 4 ? Math.max(1, n) : Math.ceil(n / 2);
-  return h("ul", { class: ["vc-honeycomb", "ideas-comb", `ideas-comb--${cols}`], "aria-label": t("ideate.comb") },
+  // Up to six ideas sit in one zigzag row; seven or eight fill two rows of four, nine or ten two rows of six.
+  // Vici's honeycomb drops every second cell, which is every second column only in a single row or in rows of
+  // an even length: two rows of three or five would lay one cell over another.
+  const cols = n <= 6 ? Math.max(1, n) : n <= 8 ? 4 : 6;
+  // The comb sits in a box that sizes its cells (css/app.css: .ideas-comb-wrap), so a wide comb fits its room.
+  return h("div", { class: "ideas-comb-wrap" }, h("ul", { class: ["vc-honeycomb", "ideas-comb", `ideas-comb--${cols}`, still ? "ideas-comb--still" : ""], "aria-label": label || t("ideate.comb", null, lang) },
     ideas.map((idea) => {
       const place = picks.indexOf(idea.id);
-      return h("li", { class: "comb-cell" },
-        h("button", {
+      const inner = [
+        place >= 0 ? h("span", { class: "comb-place" }, t("short.place", { n: place + 1 }, lang)) : null,
+        h("span", { class: "comb-name" }, idea.name),
+        scores && scores[idea.id] ? h("span", { class: "comb-score" }, scores[idea.id]) : null
+      ];
+      const tone = ["vc-tile", place >= 0 ? "vc-tile--merlot comb-tile--pick" : "vc-tile--lilac", "comb-tile"];
+      return h("li", { class: "comb-cell" }, still
+        ? h("span", { class: tone, dataset: { idea: idea.id } }, inner)
+        : h("button", {
           type: "button",
-          class: ["vc-tile", place >= 0 ? "vc-tile--merlot comb-tile--pick" : "vc-tile--lilac", "comb-tile"],
+          class: tone,
           dataset: { idea: idea.id, action: "open-idea" },
           "aria-haspopup": "dialog",
           on: { click: () => onOpen?.(idea.id) }
-        },
-        place >= 0 ? h("span", { class: "comb-place" }, t("short.place", { n: place + 1 })) : null,
-        h("span", { class: "comb-name" }, idea.name)));
-    }));
+        }, inner));
+    })));
 }
 
 /** Round numbers for an axis from lo to hi: about `count` ticks on a step of 1, 2 or 5 times a power of ten. */
@@ -67,12 +76,13 @@ function ticks(lo, hi, count = 5) {
 
 /**
  * Score against build effort. rows: [{ id, name, value (score), low, high (person-days) }], in rank
- * order; picks: the shortlist's ids in order. Returns the figure with its legend and tooltip.
+ * order; picks: the shortlist's ids in order; height: the chart's height in its own units, 640 wide (the
+ * report's is lower, so its page holds the table and the chart). Returns the figure with its legend and tooltip.
  */
-export function scoreChart(rows, { picks = [] } = {}) {
-  const lang = getLang();
+export function scoreChart(rows, { picks = [], lang = getLang(), still = false, idPrefix = "score-chart", height = 320 } = {}) {
+  const tr = (key, vars = null) => t(key, vars, lang);
   const W = 640;
-  const H = 320;
+  const H = height;
   const m = { top: 16, right: 24, bottom: 44, left: 52 };
   const days = rows.flatMap((r) => [r.low, r.high]);
   const scores = rows.map((r) => r.value);
@@ -90,8 +100,8 @@ export function scoreChart(rows, { picks = [] } = {}) {
     s("line", { x1: m.left, x2: W - m.right, y1: H - m.bottom, y2: H - m.bottom }),
     xt.map((v) => s("text", { x: x(v), y: H - m.bottom + 18, "text-anchor": "middle" }, fmtInt(v, lang))),
     yt.map((v) => s("text", { x: m.left - 8, y: y(v) + 4, "text-anchor": "end" }, fmtScore(v, lang))),
-    s("text", { class: "chart-axis-title", x: (m.left + W - m.right) / 2, y: H - 6, "text-anchor": "middle" }, t("score.chart.x")),
-    s("text", { class: "chart-axis-title", x: 14, y: (m.top + H - m.bottom) / 2, "text-anchor": "middle", transform: `rotate(-90 14 ${(m.top + H - m.bottom) / 2})` }, t("score.chart.y")));
+    s("text", { class: "chart-axis-title", x: (m.left + W - m.right) / 2, y: H - 6, "text-anchor": "middle" }, tr("score.chart.x")),
+    s("text", { class: "chart-axis-title", x: 14, y: (m.top + H - m.bottom) / 2, "text-anchor": "middle", transform: `rotate(-90 14 ${(m.top + H - m.bottom) / 2})` }, tr("score.chart.y")));
 
   // Labels, greedily from the highest score down: beside the marker on the right, else on the left, else a
   // line or two above or below; a label is never drawn over another label, another marker or the plot's
@@ -127,10 +137,10 @@ export function scoreChart(rows, { picks = [] } = {}) {
     if (!on) { tip.hidden = true; return; }
     tip.textContent = "";
     tip.append(
-      h("strong", {}, `${fmtScore(p.r.value, lang)} `), h("span", {}, t("score.chart.tipScore")),
+      h("strong", {}, `${fmtScore(p.r.value, lang)} `), h("span", {}, tr("score.chart.tipScore")),
       h("br"), h("span", {}, p.r.name), h("br"),
-      h("span", { class: "chart-tip-sub" }, t("score.chart.tipDays", { low: fmtInt(p.r.low, lang), high: fmtInt(p.r.high, lang) })),
-      p.place >= 0 ? h("span", { class: "chart-tip-sub" }, ` · ${t("short.placeLong", { n: p.place + 1 })}`) : null);
+      h("span", { class: "chart-tip-sub" }, tr("score.chart.tipDays", { low: fmtInt(p.r.low, lang), high: fmtInt(p.r.high, lang) })),
+      p.place >= 0 ? h("span", { class: "chart-tip-sub" }, ` · ${tr("short.placeLong", { n: p.place + 1 })}`) : null);
     // Placed through the CSS object model, which the policy allows (no style attribute is written as text).
     tip.dataset.side = p.cx > W / 2 ? "left" : "right";
     tip.style.left = `${((p.cx / W) * 100).toFixed(1)}%`;
@@ -140,11 +150,13 @@ export function scoreChart(rows, { picks = [] } = {}) {
 
   const marks = s("g", { class: "chart-marks" }, points.map((p) => {
     const pick = p.place >= 0;
+    // Still, in the report, the chart is one picture named by its caption, and the table beside it holds
+    // its values; on screen each marker is a picture of its own that the keyboard reaches.
     const g = s("g", {
       class: ["chart-point", pick ? "chart-point--pick" : ""].join(" ").trim(),
-      tabindex: "0",
-      role: "img",
-      "aria-label": `${p.r.name}: ${t("score.chart.aria", { score: fmtScore(p.r.value, lang), low: fmtInt(p.r.low, lang), high: fmtInt(p.r.high, lang) })}${pick ? `, ${t("short.placeLong", { n: p.place + 1 })}` : ""}`,
+      tabindex: still ? null : "0",
+      role: still ? null : "img",
+      "aria-label": still ? null : `${p.r.name}: ${tr("score.chart.aria", { score: fmtScore(p.r.value, lang), low: fmtInt(p.r.low, lang), high: fmtInt(p.r.high, lang) })}${pick ? `, ${tr("short.placeLong", { n: p.place + 1 })}` : ""}`,
       "data-idea": p.r.id
     },
     s("line", { class: "chart-whisker", x1: x(p.r.low), x2: x(p.r.high), y1: p.cy, y2: p.cy }),
@@ -152,17 +164,17 @@ export function scoreChart(rows, { picks = [] } = {}) {
     s("polygon", { class: "chart-hex", points: hexPoints(p.cx, p.cy, 9) }),
     pick ? s("text", { class: "chart-place", x: p.cx, y: p.cy + 3.5, "text-anchor": "middle" }, String(p.place + 1)) : null,
     p.label ? s("text", { class: "chart-label", x: p.label.lx, y: p.label.ly, "text-anchor": p.label.right ? "start" : "end" }, p.r.name) : null);
-    for (const [ev, on] of [["pointerenter", true], ["pointerleave", false], ["focus", true], ["blur", false]]) g.addEventListener(ev, () => show(p, on));
+    if (!still) for (const [ev, on] of [["pointerenter", true], ["pointerleave", false], ["focus", true], ["blur", false]]) g.addEventListener(ev, () => show(p, on));
     return g;
   }));
 
-  const svg = s("svg", { class: "score-chart", viewBox: `0 0 ${W} ${H}`, role: "group", "aria-labelledby": "score-chart-title" }, grid, axes, marks);
+  const svg = s("svg", { class: "score-chart", viewBox: `0 0 ${W} ${H}`, role: still ? "img" : "group", "aria-labelledby": `${idPrefix}-title` }, grid, axes, marks);
   // One series needs no legend; once there is a shortlist, the legend tells its filled markers from the rest.
   const legend = picks.length === 0 ? null : h("ul", { class: "vc-legend chart-legend" },
-    h("li", {}, h("span", { class: "legend-hex legend-hex--pick", "aria-hidden": "true" }), t("score.chart.picks")),
-    h("li", {}, h("span", { class: "legend-hex", "aria-hidden": "true" }), t("score.chart.others")));
+    h("li", {}, h("span", { class: "legend-hex legend-hex--pick", "aria-hidden": "true" }), tr("score.chart.picks")),
+    h("li", {}, h("span", { class: "legend-hex", "aria-hidden": "true" }), tr("score.chart.others")));
   return h("figure", { class: "score-figure" },
-    h("figcaption", { class: "score-figure__title", id: "score-chart-title" }, t("score.chart.title")),
-    h("div", { class: "score-figure__plot" }, svg, tip),
+    h("figcaption", { class: "score-figure__title", id: `${idPrefix}-title` }, tr("score.chart.title")),
+    h("div", { class: "score-figure__plot" }, svg, still ? null : tip),
     legend);
 }

@@ -116,9 +116,9 @@ try {
         const company = step === 0 ? null : await text(page, ".step-company__name");
         seen.push({ step, at, ok: at === step && mode === "SIMULATION" && !!title && kicker === d["fiction.tag"] && (step === 0 || company === sc.company.name) });
       });
-      const report = await page.$(".report-page");
+      const report = await page.$("#report-doc .rep-page--short");
       res.push([seen.every((s) => s.ok) && seen.length === 6, `${where}: six steps, each SIMULATION with a title, and the company's name with "${d["fiction.tag"]}"${seen.every((s) => s.ok) ? "" : `: ${JSON.stringify(seen.filter((s) => !s.ok))}`}`]);
-      res.push([!!report && (await text(page, ".report-headline"))?.includes(sc.company.name), `${where}: the Report step shows the short version about ${sc.company.name}`]);
+      res.push([!!report && (await text(page, "#report-doc .rep-headline"))?.includes(sc.company.name), `${where}: the Report step shows the report, its short version about ${sc.company.name}`]);
       const standIns = sc.documents.filter((x) => x.stand_in).map((x) => x.id);
       const okChips = chips.length === sc.documents.length && chips.every((c) => c.tags.includes(d["doc.standIn"]) === standIns.includes(c.id));
       res.push([okChips && standIns.length > 0, `${where}: the Start step's chips say "${d["doc.standIn"]}" on the ${standIns.length} stand-in report(s) and on nothing else`]);
@@ -244,7 +244,7 @@ try {
       const got = await tiles(page);
       const okTiles = ["stake", "covered", "top"].every((k) => got[k].value === expect[k].value && got[k].note === expect[k].note);
       res.push([okTiles, `${where}: the tiles show ${["stake", "covered", "top"].map((k) => got[k].value).join(" | ")}, as the engine works out${okTiles ? "" : ` (engine: ${["stake", "covered", "top"].map((k) => `${expect[k].value} ${expect[k].note}`).join(" | ")})`}`]);
-      const found = await page.evaluate(() => document.querySelector(".report-page")?.textContent || "");
+      const found = await page.evaluate(() => document.querySelector("#report-doc .rep-page--short")?.textContent || "");
       const okReport = Object.values(run.recommendation || {}).every((s) => found.includes(s.slice(0, 50))) && found.includes(run.recommended[0].name);
       res.push([okReport, `${where}: the summary carries the engine's sentences and names ${run.recommended[0].name} first`]);
       res.push([!outside.length && !errors.length, `${where}: no request to any other host and no page error`]);
@@ -327,7 +327,7 @@ try {
       res.push([!outside.length && !errors.length, `${lang}: no request to any other host and no page error`]);
       await context.close();
     }
-    // From the Report step: Try another company sets the choices aside the same way.
+    // From a run that reached the report, back at Start: another company sets the choices aside the same way.
     {
       const lang = "en";
       const { context, page, errors } = await open(`?guide=0&lang=${lang}&scenario=s1&step=4`);
@@ -341,10 +341,13 @@ try {
       await page.click("#btn-cta");
       await page.waitForTimeout(300);
       await pausePlay(page);
-      await page.click("#btn-cta");
+      const atReport = await page.evaluate(() => !!document.querySelector('.step[data-step="report"]'));
+      await page.click("#steps .vc-step:first-child .vc-step__button");
+      await page.waitForTimeout(250);
+      await page.click('label:has(#scenario-s2)');
       await page.waitForTimeout(300);
       const notice = await undoOf(page);
-      res.push([!!notice && notice.text.includes(s1.company.name) && notice.text.includes(EN["start.undo.weights"]) && (await chosen(page)) === "s2" && !errors.length, `from the Report step, Try another company opens Arvento Drives and says "${notice?.text || "nothing"}"`]);
+      res.push([atReport && !!notice && notice.text.includes(s1.company.name) && notice.text.includes(EN["start.undo.weights"]) && (await chosen(page)) === "s2" && !errors.length, `after the report, Arvento Drives chosen at Start says "${notice?.text || "nothing"}"`]);
       await context.close();
     }
     report("switch", res, "PRESENTER SWITCH OK");

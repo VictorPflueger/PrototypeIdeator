@@ -47,8 +47,9 @@ const asked = new Set([
 ]);
 const missing = [...asked].filter((k) => !Object.hasOwn(EN, k) || !Object.hasOwn(DE, k));
 r.check(asked.size > 40 && !missing.length, `the ${asked.size} keys the page and the code ask for exist in both languages${missing.length ? `: ${missing.join(", ")} missing` : ""}`);
-// Keys the code builds from a prefix and a value, such as t(`crit.${c}`): every key of that shape counts as used.
-const dynamic = [...code.matchAll(/\btn?\(\s*`([a-zA-Z0-9_.]*)\$\{[^}]+\}([a-zA-Z0-9_.]*)`/g)]
+// Keys the code builds from a prefix and a value, such as t(`crit.${c}`) or, in the report, which is in the
+// run's language, tr(`crit.${c}`): every key of that shape counts as used.
+const dynamic = [...code.matchAll(/\b(?:tn?|tr)\(\s*`([a-zA-Z0-9_.]*)\$\{[^}]+\}([a-zA-Z0-9_.]*)`/g)]
   .filter((m) => m[1].length > 2)
   .map((m) => new RegExp(`^${m[1].replace(/\./g, "\\.")}[a-zA-Z0-9_]+${m[2].replace(/\./g, "\\.")}(\\.(one|other))?$`));
 const used = (k) => asked.has(k) || code.includes(`"${k}"`) || html.includes(`"${k}"`) || dynamic.some((re) => re.test(k));
