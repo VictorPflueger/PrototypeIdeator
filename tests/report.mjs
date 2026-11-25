@@ -38,7 +38,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { APP_ROOT, launchBrowser, serveStatic, NETWORK_NOISE, viciDir, REQUIRE_VICI } from "./lib/harness.mjs";
-import { createFakeClaude, KEY } from "./lib/fake-claude.mjs";
+import { createFakeClaude, KEY, standInTokens } from "./lib/fake-claude.mjs";
 import { routeStandIn } from "./lib/live-route.mjs";
 
 const parts = process.argv.slice(2).filter((a) => !a.startsWith("--"));
@@ -103,12 +103,12 @@ function footerProblems(bytes, lang, { notice = null } = {}) {
 }
 
 /** A page with no outside host but the stand-in's. */
-async function open({ lang = "en", query = "", width = 1280, height = 720, script = [], theme = null, clipboard = false } = {}) {
+async function open({ lang = "en", query = "", width = 1280, height = 720, script = [], theme = null, clipboard = false, count = undefined } = {}) {
   const fake = createFakeClaude(script);
   const context = await browser.newContext({ viewport: { width, height }, acceptDownloads: true });
   if (clipboard) await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.base.replace(/\/$/, "") });
   if (theme) await context.addInitScript((t) => { try { localStorage.setItem("vc-theme", t); } catch { /* none */ } }, theme);
-  const net = await routeStandIn(context, fake);
+  const net = await routeStandIn(context, fake, count === undefined ? {} : { count });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message || e)));
@@ -269,6 +269,10 @@ try {
       res.push([!cover.length && rep.lang === (lang === "de" ? "de" : "en-GB"), `${where}: the cover and the last page say what brief 9 asks, in the report's language${cover.length ? `: ${cover.join("; ")}` : ""}`]);
       const votes = rep.voteRows.length === run.ideas.length && rep.voteRows.every((v) => v.rank && v.why) && rep.voteName && rep.voteRoom;
       res.push([votes, `${where}: the vote sheet has a rank box and a comment box for each of the ${rep.voteRows.length} ideas, the name and who will be in the room`]);
+      // Review D5: on paper the glance's sparkle has no words, so the cost note and the rule's assumption say
+      // whose the model calls are.
+      const said = await page.evaluate((words) => ({ note: [...document.querySelectorAll("#report-doc .rep-note")].some((p) => p.textContent.startsWith(words.estimated)), rule: [...document.querySelectorAll("#report-doc .rep-assumptions li")].some((li) => li.textContent.includes(words.rule)) }), { estimated: T[lang]["rep.built.estimated"], rule: T[lang]["rep.src.rule"].split(":")[0] });
+      res.push([said.note && said.rule, `${where}: the cost note and the rule's assumption say the model calls are the Ideator's estimates (${said.note ? "note" : "no note"}, ${said.rule ? "assumption" : "no assumption"})`]);
       // Review C3: the shortlist's share of At stake carries the AI mark when the sum holds the Reader's estimates.
       const share = await page.evaluate((start) => { const p = [...document.querySelectorAll("#report-doc p")].find((x) => x.textContent.startsWith(start)); return p ? { ai: p.querySelector(".ai-tag")?.textContent.trim() || "" } : null; }, T[lang]["report.share"].split("{share}")[0]);
       const est = run.figures.atStake;
@@ -697,6 +701,26 @@ try {
       const stop = await page.evaluate(() => ({ text: document.querySelector(".brief-stopped .turn-text")?.textContent || "", stage: [...document.getElementById("turn").classList].includes("turn-bar--stopped"), pdf: document.getElementById("btn-cta")?.textContent.trim() }));
       const words = T.en["live.budget.brief"].split(":")[0];
       res.push([stop.text.startsWith(words) && stop.text.includes(fmtEur(0.05, "en")) && !stop.stage && stop.pdf === T.en["report.pdf"] && fake.requests.length === 3 && !errors.length, `at its cap the brief stops before any request ("${stop.text.slice(0, 60)}…"), and the Report step keeps Save as PDF`]);
+      const counted = await page.evaluate(() => [...document.querySelectorAll(".brief-stop-actions button")].map((b) => b.textContent.trim()));
+      res.push([counted.length === 1 && counted[0] === T.en["live.settings"], `control: on the free count, the stop offers ${counted.join(" and ")} alone`]);
+      await context.close();
+    }
+    // Review D1: the free count fails for the Brief writer, so its stop says so and offers Try again first,
+    // with Change settings beside it, the way to a higher cap when the count keeps failing.
+    {
+      const { context, page, fake, errors } = await open({ script: [{ answer: s1.answers.en.merges }, { answer: s1.answers.en.ideas }, { answer: s1.answers.en.recommendation, usage: { input_tokens: 150000, output_tokens: 9000 } }], count: (req) => (/^You are the Brief writer/.test(String(req?.system || "")) ? null : standInTokens(req, { docTokens: 9000 })) });
+      await liveRead(page, "en", { cap: 0.05 });
+      await liveReport(page);
+      await page.click("#btn-brief");
+      await page.waitForSelector("#brief-drawer[open]");
+      await page.click("#brief-write");
+      await page.waitForSelector("#brief-retry", { timeout: 30000 });
+      const stop = await page.evaluate(() => ({ text: document.querySelector(".brief-stopped .turn-text")?.textContent || "", buttons: [...document.querySelectorAll(".brief-stop-actions button")].map((b) => b.textContent.trim()) }));
+      const ok = stop.text.includes(T.en["live.budget.uncounted"]) && stop.buttons.join("|") === [T.en["live.again"], T.en["live.settings"]].join("|");
+      const settings = await page.$("#brief-settings");
+      if (settings) await settings.click();
+      const dialog = !!settings && await page.waitForSelector("#live-dialog[open]", { timeout: 5000 }).then(() => true).catch(() => false);
+      res.push([ok && dialog && fake.requests.length === 3 && !errors.length, `with the count failing, the brief's stop says so and offers ${stop.buttons.join(" and ")}; Change settings opens the live-run dialog`]);
       await context.close();
     }
     report("brief", res);

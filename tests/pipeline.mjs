@@ -242,7 +242,7 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
 
 // Review C5: with the count failing, the cautious ratio took every character past ASCII as one token, which
 // no source says holds for every script, and Haiku's price steps up fivefold past 100,000 tokens. Now such a
-// character counts at its UTF-8 bytes, and a cautious count within 1.5 times of the step is priced at the
+// character counts at its UTF-8 bytes, and a cautious count whose 1.5 times passes the step is priced at the
 // long-prompt tier; a stop on it says the count didn't answer, with Try again first. The case: 90,000
 // Chinese characters at an assumed 1.43 tokens a character (no source gives the 5.5 models' figure).
 {
@@ -265,10 +265,11 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
   const oldFit = fitToCap({ model: settings.model, inputTokens: oldInput, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: 0.05 });
   const billed = worstCaseEur(settings.model, standInTokens(probe, { withFormat: true, otherTokens: ratio }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
   r.control(oldFit.maxTokens !== null && oldInput < 100000 && billed > 0.05, `the old cautious count saw ${oldInput.toLocaleString("en")} tokens, under the step, let the request out (max_tokens ${oldFit.maxTokens}), and its bill would have been €${billed.toFixed(4)}`);
-  // The bytes: an accented letter 2, a Chinese character 3, an emoji 4, plain ASCII two characters a token.
-  r.check(cautiousTokensOf("ab") === 1 && cautiousTokensOf("\u00e4") === 2 && cautiousTokensOf("\u6E2F") === 3 && cautiousTokensOf("\u{1F600}") === 4 && cautiousTokensOf("Gr\u00f6\u00dfe") === 6,
-    `the cautious count takes plain ASCII at two characters a token and every other character at its UTF-8 bytes ("ab" ${cautiousTokensOf("ab")}, "\u00e4" ${cautiousTokensOf("\u00e4")}, "\u6E2F" ${cautiousTokensOf("\u6E2F")}, an emoji ${cautiousTokensOf("\u{1F600}")}, "Gr\u00f6\u00dfe" ${cautiousTokensOf("Gr\u00f6\u00dfe")})`);
-  // The tier: Haiku's long-prompt prices within 1.5 times of the step on the cautious count only; Sonnet has no step.
+  // The counts: two letters a token, a digit, a space or a mark a token each, an accented letter 2 bytes, a
+  // Chinese character 3, an emoji 4.
+  r.check(cautiousTokensOf("ab") === 1 && cautiousTokensOf("12,") === 3 && cautiousTokensOf("a b") === 2 && cautiousTokensOf("\u00e4") === 2 && cautiousTokensOf("\u6E2F") === 3 && cautiousTokensOf("\u{1F600}") === 4 && cautiousTokensOf("Gr\u00f6\u00dfe") === 6,
+    `the cautious count takes two letters a token, every other ASCII character a token and every other character at its UTF-8 bytes ("ab" ${cautiousTokensOf("ab")}, "12," ${cautiousTokensOf("12,")}, "a b" ${cautiousTokensOf("a b")}, "\u00e4" ${cautiousTokensOf("\u00e4")}, "\u6E2F" ${cautiousTokensOf("\u6E2F")}, an emoji ${cautiousTokensOf("\u{1F600}")}, "Gr\u00f6\u00dfe" ${cautiousTokensOf("Gr\u00f6\u00dfe")})`);
+  // The tier: Haiku's long-prompt prices when 1.5 times the cautious count passes the step, on that count only; Sonnet has no step.
   const haiku = "claude-haiku-5-5";
   r.check(longTierOf(haiku, 70000, null) && !longTierOf(haiku, 60000, null) && !longTierOf(haiku, 70000, 70000) && !longTierOf("claude-sonnet-5-5", 99000, null)
     && worstCaseEur(haiku, 70000, 2000, { longTier: true }) > worstCaseEur(haiku, 70000, 2000) * 4.9,
@@ -276,6 +277,49 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
   const long = MODELS.find((m) => m.id === haiku).price.longPrompt;
   r.check(Math.abs(worstCaseEur(haiku, 70000, 2000, { longTier: true }) - ((70000 * long.input + 2000 * long.output) / 1e6) * FX_USD_EUR) < 1e-12 && usageCostUsd(haiku, { input_tokens: 70000, output_tokens: 2000 }) * FX_USD_EUR === worstCaseEur(haiku, 70000, 2000),
     "the long-prompt worst case is Haiku's long-prompt prices on input and output, and a bill below the step is still priced at the base tier: the cautious tier is the cap's alone");
+}
+
+// Review D3: with the count failing, a table of figures, which takes about a token a character, passed the cap
+// at two ASCII characters a token. Now a digit, a space or a mark counts as a token. The case: a CSV of
+// 120,000 characters at a token a character, on Balanced at €0.05 and on Thorough at €0.15.
+{
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const csv = "2024,17,3.5,880,0.42\n".repeat(Math.ceil(120000 / 21)).slice(0, 120000);
+  for (const [preset, cap] of [["balanced", 0.05], ["thorough", 0.15]]) {
+    const settings = sets[preset];
+    const fake = createFakeClaude((n, req) => ({ answer: writerAnswer, usage: { input_tokens: standInTokens(req, { withFormat: true, asciiChars: 1 }), output_tokens: req.max_tokens } }), { countFails: true });
+    stub(fake);
+    const meter = createMeter(settings.model, cap);
+    let err = null;
+    try { await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: csv }], schema: recommendationSchema(), check: writerCheck, meter }); } catch (e) { err = e; }
+    r.check((err === null || err instanceof BudgetStop) && meter.spentEur() <= cap + 1e-9,
+      `a CSV of 120,000 characters at a token a character, the count failing, ${preset} at €${cap.toFixed(2)}: the run spends €${meter.spentEur().toFixed(4)}${err ? ` and stops before the request (${err.name})` : ""}`);
+    // Control: at two ASCII characters a token the request went out, and its bill passed the cap.
+    const probe = requestOf({ settings, system: sys, content: [{ type: "text", text: csv }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
+    const oldTok = (text) => { let a = 0; for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) < 0x80) a += 1; return Math.ceil(a / 2 + (text.length - a)); };
+    const oldInput = oldTok(probe.system) + oldTok(JSON.stringify(probe.output_config.format.schema)) + 16 + oldTok(csv);
+    const oldFit = fitToCap({ model: settings.model, inputTokens: oldInput, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: cap, longTier: longTierOf(settings.model, oldInput, null) });
+    const billed = worstCaseEur(settings.model, standInTokens(probe, { withFormat: true, asciiChars: 1 }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
+    r.control(oldFit.maxTokens !== null && billed > cap, `${preset}: at two ASCII characters a token the check saw ${oldInput.toLocaleString("en")} tokens, let the request out (max_tokens ${oldFit.maxTokens}), and its bill would have been €${billed.toFixed(4)}`);
+  }
+}
+
+// Review D4: a saved run sets each step's free count beside its billed input, so the count of a request the
+// cap stopped must not add to it. The writer stops at a cap too small, then goes out at a larger one.
+{
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const settings = sets.balanced;
+  const fake = createFakeClaude([{ answer: writerAnswer }]);
+  stub(fake);
+  const meter = createMeter(settings.model, 0.0001);
+  let err = null;
+  try { await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter }); } catch (e) { err = e; }
+  const afterStop = meter.snapshot().byAgent?.writer?.counted_input_tokens ?? 0;
+  meter.set({ capEur: 1 });
+  await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: "{}" }], schema: recommendationSchema(), check: writerCheck, meter });
+  const w = meter.snapshot().byAgent.writer;
+  r.check(err instanceof BudgetStop && afterStop === 0 && fake.counts.length === 2 && w.requests === 1 && w.counted_input_tokens === fake.counts[1].input_tokens,
+    `a request the cap stopped adds no count: ${afterStop} after the stop, then ${w.counted_input_tokens} for the one request that went out (${fake.counts.length} counts asked, ${w.requests} request billed)`);
 }
 
 // ---- a broken stream ---------------------------------------------------------------------------------------

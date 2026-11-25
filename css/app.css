@@ -564,6 +564,7 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
 .brief-busy.vc-callout, .brief-stopped.vc-callout { margin: 0; }
 .brief-busy .vc-callout__body > * + *, .brief-stopped .vc-callout__body > * + * { margin-top: 4px; }
 .brief-problems { margin: 4px 0; padding-left: 1.2em; font-size: var(--vc-font-size-sm); }
+.brief-stop-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .brief-blocks { display: grid; gap: 14px; }
 .brief-block.vc-code { margin: 0; }
 .brief-block .vc-code__header { font-family: var(--vc-font-text); font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); color: var(--vc-text); }

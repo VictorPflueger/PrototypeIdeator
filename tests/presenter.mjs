@@ -560,6 +560,20 @@ try {
       const focus = await where(s.page);
       res.push([on === "pause" && moved === 4 && focus === "step-title", `Space on a chart point plays (${on}); Play moves on to Shortlist (step ${moved + 1}) with the focus on its title (${focus}), not the page's body`]);
       await s.context.close();
+      // Review D2: Next, which the keyboard is on, goes disabled when Play reaches the furthest step; the
+      // focus goes to that step's title, not the page's body.
+      const n = await open("?guide=0&lang=en&scenario=s1&step=4");
+      await n.page.focus("#step-title");
+      await n.page.keyboard.press(" ");
+      await n.page.keyboard.press("Shift+Tab");
+      await n.page.keyboard.press("Shift+Tab");
+      const onNext = await where(n.page);
+      await n.page.waitForFunction(() => document.querySelectorAll("#steps .vc-step")[4].classList.contains("vc-step--current"), null, { timeout: 16000 }).catch(() => {});
+      const there = await current(n.page);
+      const after = await where(n.page);
+      const nextOff = await n.page.$eval("#btn-next", (b) => b.disabled);
+      res.push([onNext === "btn-next" && there === 4 && nextOff && after === "step-title", `with the keyboard on Next (${onNext}), Play reaches Shortlist (step ${there + 1}), Next goes disabled, and the focus goes to its title (${after})`]);
+      await n.context.close();
     }
     // Control: without an act Play stays on, so the checks above see the act, not a timeout.
     {

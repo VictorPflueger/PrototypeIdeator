@@ -316,7 +316,8 @@ export function reportDoc(run, meta) {
             h("td", { class: "vc-num" }, fmtEurRun(cost(r.id), lang)),
             h("td", { class: "vc-num" }, fmtEur(twenty(cost(r.id)), lang)));
         })),
-      h("p", { class: "rep-note" }, tr("rep.built.basis"), " ", ref(ruleRef)))) : null;
+      // The calls and searches are the Ideator's: on paper the glance's sparkle has no words, so they stand here (review D5).
+      h("p", { class: "rep-note" }, tr("rep.built.estimated"), " ", tr("rep.built.basis"), " ", ref(ruleRef)))) : null;
 
   // ---- 8 Vote sheet -----------------------------------------------------------------------------------------
   // Boxes to write in by hand: a report holds no field, and Chromium keeps none in the PDF it saves.

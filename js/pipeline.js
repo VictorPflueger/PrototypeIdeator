@@ -76,22 +76,24 @@ export function requestOf({ settings, system, content, schema, maxTokens, histor
 }
 
 /**
- * Tokens of a text at the cautious ratio (CAP_INPUT): two characters a token for plain ASCII, more than
- * Anthropic's glossary gives for English text on the 5.5 models, and every other character at its UTF-8
+ * Tokens of a text at the cautious ratio (CAP_INPUT): two letters a token, more than Anthropic's glossary
+ * gives for English text on the 5.5 models; every other ASCII character, a digit, a space or a mark, a token
+ * of its own, so a table of figures counts in full (review D3); and every other character at its UTF-8
  * bytes: 2 for an accented letter, 3 for Chinese, Japanese or Korean, 4 for an emoji (review C5). A tokenizer
  * that works on bytes gives no more tokens than a text has bytes; that it does is an assumption, since
  * Anthropic doesn't publish its tokenizer.
  */
 export function cautiousTokensOf(text) {
   const s = String(text ?? "");
-  let ascii = 0;
+  let letters = 0;
   let other = 0;
   for (const ch of s) {
     const cp = ch.codePointAt(0);
-    if (cp < 0x80) ascii += 1;
+    if ((cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a)) letters += 1;
+    else if (cp < 0x80) other += 1;
     else other += cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
   }
-  return Math.ceil(ascii / CAP_INPUT.asciiCharsPerToken) + other;
+  return Math.ceil(letters / CAP_INPUT.lettersPerToken) + other;
 }
 
 /** The output schema's tokens at the cautious ratio: what the cap adds to a count that leaves it out. */
@@ -132,8 +134,8 @@ export function worstCaseEur(model, inputTokens, maxTokens, { longTier = false }
 
 /**
  * The cap prices a request at Haiku's long-prompt tier though its input reckons below the step: when the count
- * failed and the cautious count comes within CAP_INPUT.fallbackTierMargin of it, since the cautious ratio is
- * no bound for every ASCII text, and the tier is a step of five times the price (review C5).
+ * failed and CAP_INPUT.fallbackTierMargin times the cautious count passes the step, since two letters a token
+ * is no bound for every text, and the tier is a step of five times the price (review C5).
  */
 export function longTierOf(model, inputTokens, counted) {
   const step = MODELS.find((m) => m.id === model)?.price?.longPrompt?.thresholdTokens;
@@ -265,13 +267,15 @@ export async function runStep({ agent, key, settings, system, content, schema, c
     onEvent({ type: "counting", agent, attempt, pdf: pdfTokens > 0 });
     const counted = await count({ key, body: probe, signal });
     if (signal?.aborted) throw abortError();
-    meter.counted?.(agent, counted);
     const countedOk = Number.isFinite(counted) && counted > 0;
     const inputTokens = checkedInputTokens(probe, counted, { pdfTokens });
     const reserved = () => (meter.reservedEur ? meter.reservedEur() : meter.spentEur());
     const fit = fitToCap({ model: settings.model, inputTokens, limits, spentEur: reserved(), capEur: meter.capEur, longTier: longTierOf(settings.model, inputTokens, counted) });
     // A stop on the cautious count says the count didn't answer, so Try again may count it (review C5).
     if (fit.maxTokens === null) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur, uncounted: !countedOk });
+    // The free count of a request that goes out, so a saved run sets it beside that request's billed input
+    // (review D4: a request the cap stopped added its count before).
+    meter.counted?.(agent, counted);
     const body = { ...probe, max_tokens: fit.maxTokens };
     maxTokensUsed = fit.maxTokens;
     onEvent({ type: "request", agent, attempt, maxTokens: fit.maxTokens, inputTokens, counted: countedOk, worstEur: fit.worstEur, repair: attempt > 1 });

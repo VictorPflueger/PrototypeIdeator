@@ -77,7 +77,7 @@ The sisters' agent loops, tools, simulations and domain modules are not taken (P
 
 ## Part 2. Independent review
 
-The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes on `d611b4e`: all of them held but one low (B7), and it found one new medium (C1) and six lows and observations, all fixed in `7040db7` and `fbd147c`. In look 4 a fourth fresh agent checked those fixes (below).
+The release candidate `66b8743` was reviewed on 25 November 2026 against the brief and the project instructions, each look by a fresh agent that did not build the tool, in its own clone. In look 1 a fresh agent read the code and probed it with its own scripts; in look 2 another fresh agent used the running tool as a stranger and as a presenter, printed the reports and read every page. Both ended "not ready": look 1 with 2 high and 4 medium findings, look 2 with 1 high and 3 medium. Every high and medium finding is fixed, each with a check that fails on the old code; the lows are fixed or recorded with a reason in TECH_NOTES.md, section 9. In look 3 a third fresh agent checked the fixes on `d611b4e`: all of them held but one low (B7), and it found one new medium (C1) and six lows and observations, all fixed in `7040db7` and `fbd147c`. In look 4 a fourth fresh agent checked those fixes on `de76478`: every fix holds; no high or medium finding open. Its five new lows and observations are fixed after it (below).
 
 ### Look 1: the code
 
@@ -141,6 +141,18 @@ A fresh agent checked every fix of looks 1 and 2 on `d611b4e` against `66b8743`,
 | C5 | observation | With the free count failing, the cautious ratio took a character past ASCII as one token, and Chinese at an assumed 1.43 tokens each passed the cap at Haiku's price step | `js/pipeline.js`, `js/config.js` | Fixed: such a character counts at its UTF-8 bytes, a request near the step is priced at the long-prompt tier, and a stop says the count didn't answer, with Try again first. `tests/pipeline.mjs`, with the old rule as its control |
 | C6 | observation | Merge targets cut to the same words read alike | `js/views/read.js` | Fixed: titles that would read alike start where they part ("… the cost of every voyage"). `tests/unit.mjs` |
 | C7 | observation | With the count failing, the German busy line squeezed the live Start step's file list | `js/i18n/de.js`, `js/i18n/en.js` | Fixed: shorter in both languages; the bar is 176 px tall in either, was 218 |
+
+### Look 4: look 3's fixes
+
+A fresh agent checked C1 to C7 and B7 on `de76478` against `d611b4e`, showing each fault on the old commit and gone on the head. It worked Play by keyboard alone on every step Play leaves by itself, ran 88 cases of the cap with the count failing, laid out the comb with 1 to 10 ideas on screen, in a 673 px print window and in five PDFs, with the fonts held back as well, looked at 64 views and the live bars, and ran the whole suite (28 of 28). Every fix holds; B7 holds within the two limits TECH_NOTES, section 9, records. Its verdict line: every fix holds; no high or medium finding open. The five findings it added are fixed after it, each with a check that fails on the old code:
+
+| ID | Severity | What | Where | State |
+|---|---|---|---|---|
+| D1 | low | A cap stop on the cautious count left the build brief's drawer with Try again alone, so no way to a higher cap there | `js/presenter.js` | Fixed: Change settings stands beside Try again, as in the step's bar. `tests/report.mjs brief` |
+| D2 | low | With the keyboard on Next, Play reaching the furthest step disabled Next and dropped the focus to the page's body | `js/presenter.js` | Fixed: the focus goes to the step's title. `tests/presenter.mjs play` |
+| D3 | observation | With the count failing, a table of figures, about a token a character, still passed the cap at two ASCII characters a token | `js/pipeline.js`, `js/config.js` | Fixed: a digit, a space or a mark counts as a token of its own. `tests/pipeline.mjs`, a CSV of 120,000 characters, with the old rule as its control |
+| D4 | observation | A saved run's free count added the counts of requests the cap stopped | `js/pipeline.js` | Fixed: only a request that goes out adds its count. `tests/pipeline.mjs` |
+| D5 | observation | On paper the glance's sparkle had no words, and nothing said the model calls behind a run's cost are the Ideator's | `js/report_doc.js`, both languages | Fixed: the cost note and the estimate rule's assumption say so. `tests/report.mjs structure` |
 
 ## Part 3. Steve Jobs review and partner review
 

@@ -29,18 +29,18 @@ export function sseFor({ id = "msg_1", model, text, stop = "end_turn", usage = {
 
 /**
  * The stand-in's own token count of a request, as a stand-in for Anthropic's tokenizer: plain ASCII at 2.7
- * characters a token (Anthropic's glossary for the 5.5 models, read 25 November 2026), every other character
- * otherTokens tokens (one, unless a case asks for a script that takes more), 8 tokens a message, and docTokens
- * for each document block. withFormat adds the output schema at the same ratio, for the format prompt
- * structured outputs add to what is billed. The free count answers without it, as the page's count is sent
- * without the schema.
+ * characters a token (Anthropic's glossary for the 5.5 models, read 25 November 2026; asciiChars for a case
+ * that asks for denser text, such as a table of figures), every other character otherTokens tokens (one,
+ * unless a case asks for a script that takes more), 8 tokens a message, and docTokens for each document
+ * block. withFormat adds the output schema at the same ratio, for the format prompt structured outputs add
+ * to what is billed. The free count answers without it, as the page's count is sent without the schema.
  */
-export function standInTokens(req, { docTokens = 0, withFormat = false, otherTokens = 1 } = {}) {
+export function standInTokens(req, { docTokens = 0, withFormat = false, otherTokens = 1, asciiChars = 2.7 } = {}) {
   const tok = (text) => {
     const s = String(text ?? "");
     let ascii = 0;
     for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) < 0x80) ascii += 1;
-    return Math.ceil(ascii / 2.7) + Math.ceil((s.length - ascii) * otherTokens);
+    return Math.ceil(ascii / asciiChars) + Math.ceil((s.length - ascii) * otherTokens);
   };
   let n = tok(req?.system);
   for (const m of req?.messages || []) {

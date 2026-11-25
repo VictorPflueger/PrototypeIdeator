@@ -1151,7 +1151,11 @@ function drawBrief() {
         h("p", { class: "vc-callout__title" }, t("turn.stopped")),
         h("p", { class: "turn-text" }, stopText(stop)),
         stop.problems?.length ? h("ul", { class: "brief-problems", lang: "en" }, stop.problems.slice(0, 6).map((x) => h("li", {}, named(redactSecrets(x))))) : null,
-        h("button", { type: "button", class: "vc-button", id: "brief-retry", on: { click: go2 } }, label)));
+        // Beside Try again, Change settings, as the step's bar offers it: a stop on the cautious count may
+        // need a higher cap if the count keeps failing (review D1).
+        h("div", { class: "brief-stop-actions" },
+          h("button", { type: "button", class: "vc-button", id: "brief-retry", on: { click: go2 } }, label),
+          stop.next === "retry" ? h("button", { type: "button", class: "vc-button vc-button--secondary", id: "brief-settings", on: { click: () => openDialog("brief") } }, t("live.settings")) : null)));
   } else {
     const st = S.live.settings;
     const est = st && hasKey() ? estimateBrief({ settings: st, inputText: briefInputText(), lang: docLang() }) : null;
@@ -1404,6 +1408,7 @@ function intakeView(lang) {
 
 /** The step bar: the current step, the steps done, those not reached yet, and whose turn it is. */
 function renderBar() {
+  const had = document.activeElement;
   const live = S.mode === "live";
   // While an agent works, the page stays on its step: the steps, Back, Next and the way back to the
   // simulation wait for the answer or for Stop.
@@ -1426,6 +1431,9 @@ function renderBar() {
   });
   $("#btn-back").disabled = S.step === 0 || busy;
   $("#btn-next").disabled = busy || !(S.step < S.reached || (S.step === 0 && S.reached === 0 && !live));
+  // Next, Back or a step that the keyboard is on and the page has just disabled, as when Play reaches the
+  // furthest step, hands the focus to the step's title rather than the page's body (review D2).
+  if (had && had.disabled && had.closest?.("#btn-back, #btn-next, #steps")) ($("#step-title") || stage).focus({ preventScroll: true });
   const tagEl = $("#mode-tag");
   tagEl.dataset.mode = live ? "live" : "simulation";
   // LIVE wears Vici's solid tag, so nobody takes a live run for the replay.
