@@ -69,6 +69,29 @@ export function shortTitle(text, max = 26) {
   return `${cut || s.slice(0, max)}\u2026`;
 }
 
+/**
+ * The options' short titles, told apart: where two would read alike, each starts after an ellipsis at the
+ * first word where it parts from the titles it would read like (review C6). The option's title holds the whole.
+ */
+export function shortTitles(titles, max = 26) {
+  const out = titles.map((x) => shortTitle(x, max));
+  const words = titles.map((x) => String(x ?? "").trim().split(/\s+/u));
+  return out.map((x, i) => {
+    const alike = out.flatMap((y, j) => (j !== i && y === x ? [j] : []));
+    if (!alike.length) return x;
+    let from = 0;
+    for (const j of alike) {
+      let n = 0;
+      while (n < words[i].length && n < words[j].length && words[i][n] === words[j][n]) n += 1;
+      from = Math.max(from, n);
+    }
+    if (from === 0 || from >= words[i].length) return x;
+    // As many words before that one as still fit, so a short end keeps its context.
+    while (from > 0 && words[i].slice(from - 1).join(" ").length <= max - 2) from -= 1;
+    return `\u2026 ${shortTitle(words[i].slice(from).join(" "), max - 2)}`;
+  });
+}
+
 /** Keep, Merge or Park, with the issue to merge into or the reason for parking. */
 function decisionCell(issue, { kept, onDecide, label }) {
   const status = issue.status;
@@ -91,11 +114,13 @@ function decisionCell(issue, { kept, onDecide, label }) {
   }, t(key)));
   let detail = null;
   if (status === "merged") {
+    const into = kept.filter((k) => k.id !== issue.id);
+    const shown = shortTitles(into.map((k) => k.title));
     detail = h("label", { class: "decide-detail" }, h("span", { class: "vc-visually-hidden" }, t("read.into")), h("select", {
       class: "vc-select vc-select--sm",
       dataset: { action: "decide-into" },
       on: { change: (e) => onDecide(issue.id, "merge", { into: e.target.value }) }
-    }, kept.filter((k) => k.id !== issue.id).map((k) => h("option", { value: k.id, title: k.title, selected: k.id === issue.merged_into ? true : undefined }, shortTitle(k.title)))));
+    }, into.map((k, n) => h("option", { value: k.id, title: k.title, selected: k.id === issue.merged_into ? true : undefined }, shown[n]))));
   } else if (status === "parked") {
     const current = PARK_REASONS.find((r) => t(`read.reason.${r}`) === issue.park_reason) || PARK_REASONS[0];
     detail = h("label", { class: "decide-detail" }, h("span", { class: "vc-visually-hidden" }, t("read.why")), h("select", {

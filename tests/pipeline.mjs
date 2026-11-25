@@ -23,7 +23,7 @@ import { createReport } from "./lib/report.mjs";
 import { createFakeClaude, KEY, standInTokens } from "./lib/fake-claude.mjs";
 
 const imp = (p) => import(path.join(APP_ROOT, p));
-const { settingsOf, runStep, createMeter, fitToCap, worstCaseEur, requestOf, inputTokensOf, checkedInputTokens, BudgetStop, StepFailed } = await imp("js/pipeline.js");
+const { settingsOf, runStep, createMeter, fitToCap, worstCaseEur, longTierOf, cautiousTokensOf, requestOf, inputTokensOf, checkedInputTokens, BudgetStop, StepFailed } = await imp("js/pipeline.js");
 const { messageOf } = await imp("js/api_messages.js");
 const { usageCostUsd } = await imp("js/cost.js");
 const { AGENT_TOKENS, FX_USD_EUR, MODELS } = await imp("js/config.js");
@@ -238,6 +238,44 @@ for (const [name, settings] of Object.entries({ fast: sets.fast, balanced: sets.
   const oldFit = fitToCap({ model: sets.thorough.model, inputTokens: old, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: 0.4 });
   const billedEur = worstCaseEur(sets.thorough.model, standInTokens(probe, { withFormat: true }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
   r.control(oldFit.maxTokens !== null && billedEur > 0.4, `under the old rule the request went out (max_tokens ${oldFit.maxTokens}) and would have cost €${billedEur.toFixed(4)}, past €0.40`);
+}
+
+// Review C5: with the count failing, the cautious ratio took every character past ASCII as one token, which
+// no source says holds for every script, and Haiku's price steps up fivefold past 100,000 tokens. Now such a
+// character counts at its UTF-8 bytes, and a cautious count within 1.5 times of the step is priced at the
+// long-prompt tier; a stop on it says the count didn't answer, with Try again first. The case: 90,000
+// Chinese characters at an assumed 1.43 tokens a character (no source gives the 5.5 models' figure).
+{
+  const sys = "You are the Writer of Prototype Ideator. Test.";
+  const zh = "\u6E2F\u53E3\u8CBB\u7528\u4E0A\u5347".repeat(15000);
+  const ratio = 1.43;
+  const settings = sets.balanced;
+  const fake = createFakeClaude((n, req) => ({ answer: writerAnswer, usage: { input_tokens: standInTokens(req, { withFormat: true, otherTokens: ratio }), output_tokens: req.max_tokens } }), { countFails: true });
+  stub(fake);
+  const meter = createMeter(settings.model, 0.05);
+  let err = null;
+  try { await runStep({ agent: "writer", key: KEY, settings, system: sys, content: [{ type: "text", text: zh }], schema: recommendationSchema(), check: writerCheck, meter }); } catch (e) { err = e; }
+  const msg = messageOf(err);
+  r.check(meter.spentEur() <= 0.05 + 1e-9 && err instanceof BudgetStop && err.uncounted === true && msg.vars?.uncounted === true && msg.next === "retry" && fake.requests.length === 0,
+    `90,000 Chinese characters at ${ratio} tokens each, the count failing, Balanced at €0.05: the run spends €${meter.spentEur().toFixed(4)} and stops before the request (${err?.name}), saying the count didn't answer, with Try again first (${msg.next})`);
+  // Control: the old cautious count saw fewer tokens than the step, let the request out, and its bill passed the cap.
+  const probe = requestOf({ settings, system: sys, content: [{ type: "text", text: zh }], schema: recommendationSchema(), maxTokens: AGENT_TOKENS.writer.max });
+  const oldTok = (text) => { let a = 0; for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) < 0x80) a += 1; return Math.ceil(a / 2 + (text.length - a)); };
+  const oldInput = oldTok(probe.system) + oldTok(JSON.stringify(probe.output_config.format.schema)) + 16 + oldTok(zh);
+  const oldFit = fitToCap({ model: settings.model, inputTokens: oldInput, limits: AGENT_TOKENS.writer, spentEur: 0, capEur: 0.05 });
+  const billed = worstCaseEur(settings.model, standInTokens(probe, { withFormat: true, otherTokens: ratio }), oldFit.maxTokens ?? AGENT_TOKENS.writer.min);
+  r.control(oldFit.maxTokens !== null && oldInput < 100000 && billed > 0.05, `the old cautious count saw ${oldInput.toLocaleString("en")} tokens, under the step, let the request out (max_tokens ${oldFit.maxTokens}), and its bill would have been €${billed.toFixed(4)}`);
+  // The bytes: an accented letter 2, a Chinese character 3, an emoji 4, plain ASCII two characters a token.
+  r.check(cautiousTokensOf("ab") === 1 && cautiousTokensOf("\u00e4") === 2 && cautiousTokensOf("\u6E2F") === 3 && cautiousTokensOf("\u{1F600}") === 4 && cautiousTokensOf("Gr\u00f6\u00dfe") === 6,
+    `the cautious count takes plain ASCII at two characters a token and every other character at its UTF-8 bytes ("ab" ${cautiousTokensOf("ab")}, "\u00e4" ${cautiousTokensOf("\u00e4")}, "\u6E2F" ${cautiousTokensOf("\u6E2F")}, an emoji ${cautiousTokensOf("\u{1F600}")}, "Gr\u00f6\u00dfe" ${cautiousTokensOf("Gr\u00f6\u00dfe")})`);
+  // The tier: Haiku's long-prompt prices within 1.5 times of the step on the cautious count only; Sonnet has no step.
+  const haiku = "claude-haiku-5-5";
+  r.check(longTierOf(haiku, 70000, null) && !longTierOf(haiku, 60000, null) && !longTierOf(haiku, 70000, 70000) && !longTierOf("claude-sonnet-5-5", 99000, null)
+    && worstCaseEur(haiku, 70000, 2000, { longTier: true }) > worstCaseEur(haiku, 70000, 2000) * 4.9,
+    `the cap takes Haiku's long-prompt prices for a cautious count of 70,000 tokens (€${worstCaseEur(haiku, 70000, 2000, { longTier: true }).toFixed(4)} against €${worstCaseEur(haiku, 70000, 2000).toFixed(4)}), not for 60,000, not for a count that answered, and never for Sonnet`);
+  const long = MODELS.find((m) => m.id === haiku).price.longPrompt;
+  r.check(Math.abs(worstCaseEur(haiku, 70000, 2000, { longTier: true }) - ((70000 * long.input + 2000 * long.output) / 1e6) * FX_USD_EUR) < 1e-12 && usageCostUsd(haiku, { input_tokens: 70000, output_tokens: 2000 }) * FX_USD_EUR === worstCaseEur(haiku, 70000, 2000),
+    "the long-prompt worst case is Haiku's long-prompt prices on input and output, and a bill below the step is still priced at the base tier: the cautious tier is the cap's alone");
 }
 
 // ---- a broken stream ---------------------------------------------------------------------------------------

@@ -46,6 +46,10 @@ export function reportDoc(run, meta) {
   const fill = (text) => renderFacts(text, run.facts, lang);
   const marks = meta.unchecked || { issues: new Set(), ideas: new Set(), report: new Set() };
   const ai = () => h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr("ai.tag"));
+  // A sum of money at stake that holds the Reader's AI estimates says so: partly or all (review A6).
+  const estimatesTag = (s, before = null) => (s?.estimated > 0
+    ? [before, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr(s.estimated < s.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll"))]
+    : null);
   const kept = run.issues.filter((i) => i.status === "kept");
   const merged = run.issues.filter((i) => i.status === "merged");
   const parked = run.issues.filter((i) => i.status === "parked");
@@ -120,9 +124,10 @@ export function reportDoc(run, meta) {
     h("p", { class: "rep-pick__head" }, h("strong", {}, p.name), " ", h("span", { class: "rep-muted" }, tr("report.pickLine", { score: fmtScore(p.value, lang), rank: p.rank }))),
     h("p", {}, fill(p.why), " ", ai()),
     h("p", { class: "rep-muted" }, tr("report.pickCost", { cost: fmtEurRun(p.cost, lang) }), " ", ref(ruleRef)))));
-  // What the shortlist answers of the money at stake, as the tile says after the decision (review B18).
+  // What the shortlist answers of the money at stake, as the tile says after the decision (review B18), with
+  // the AI mark the sum carries wherever it holds the Reader's estimates (reviews A6 and C3).
   const shareLine = () => (run.shortlist?.decided && typeof run.figures?.share === "number"
-    ? h("p", {}, tr("report.share", { share: fmtShare(run.figures.share, lang), amount: fmtEurCompact(run.figures.shareEur, lang), total: fmtEurCompact(run.figures.atStake.eur, lang) }))
+    ? h("p", {}, tr("report.share", { share: fmtShare(run.figures.share, lang), amount: fmtEurCompact(run.figures.shareEur, lang), total: fmtEurCompact(run.figures.atStake.eur, lang) }), estimatesTag(run.figures.atStake, " "))
     : null);
   const where = [
     tr("rep.map.title"),
@@ -182,7 +187,7 @@ export function reportDoc(run, meta) {
       h("th", { scope: "row" },
         h("span", { class: "rep-issue" }, tr("rep.map.total")),
         h("span", { class: "rep-sub" }, on, tr("rep.map.rounded")),
-        total.estimated > 0 ? h("span", { class: "rep-sub" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm ai-tag" }, h("span", { class: "vc-icon vc-icon--sparkle", "aria-hidden": "true" }), tr(total.estimated < total.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll"))) : null),
+        total.estimated > 0 ? h("span", { class: "rep-sub" }, estimatesTag(total)) : null),
       h("td", { class: "rep-stake" }, h("strong", {}, fmtEurCompact(total.value, lang))),
       h("td", {}), h("td", {}))];
   };

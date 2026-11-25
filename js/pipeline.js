@@ -28,13 +28,14 @@ function abortError() {
 
 /** The run stopped before a request whose worst case would pass the cap. */
 export class BudgetStop extends Error {
-  constructor(agent, { spentEur, capEur, needEur }) {
+  constructor(agent, { spentEur, capEur, needEur, uncounted = false }) {
     super(`Stopped at the budget cap before the ${agent}`);
     this.name = "BudgetStop";
     this.agent = agent;
     this.spentEur = spentEur;
     this.capEur = capEur;
     this.needEur = needEur;
+    this.uncounted = uncounted;
   }
 }
 
@@ -75,14 +76,22 @@ export function requestOf({ settings, system, content, schema, maxTokens, histor
 }
 
 /**
- * Tokens of a text at the cautious ratio: two characters a token for plain ASCII, one token for every other
- * character (CAP_INPUT). More than Anthropic's glossary gives for English text on the 5.5 models.
+ * Tokens of a text at the cautious ratio (CAP_INPUT): two characters a token for plain ASCII, more than
+ * Anthropic's glossary gives for English text on the 5.5 models, and every other character at its UTF-8
+ * bytes: 2 for an accented letter, 3 for Chinese, Japanese or Korean, 4 for an emoji (review C5). A tokenizer
+ * that works on bytes gives no more tokens than a text has bytes; that it does is an assumption, since
+ * Anthropic doesn't publish its tokenizer.
  */
 export function cautiousTokensOf(text) {
   const s = String(text ?? "");
   let ascii = 0;
-  for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) < 0x80) ascii += 1;
-  return Math.ceil(ascii / CAP_INPUT.asciiCharsPerToken + (s.length - ascii) / CAP_INPUT.otherCharsPerToken);
+  let other = 0;
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x80) ascii += 1;
+    else other += cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+  }
+  return Math.ceil(ascii / CAP_INPUT.asciiCharsPerToken) + other;
 }
 
 /** The output schema's tokens at the cautious ratio: what the cap adds to a count that leaves it out. */
@@ -111,9 +120,24 @@ export function checkedInputTokens(body, counted, { pdfTokens = 0 } = {}) {
   return inputTokensOf(body, { pdfTokens });
 }
 
-/** A request's worst case in euros: its input at the input price plus max_tokens at the output price. */
-export function worstCaseEur(model, inputTokens, maxTokens) {
+/**
+ * A request's worst case in euros: its input at the input price plus max_tokens at the output price; longTier
+ * prices both at Haiku's long-prompt tier whatever the input.
+ */
+export function worstCaseEur(model, inputTokens, maxTokens, { longTier = false } = {}) {
+  const long = longTier ? MODELS.find((m) => m.id === model)?.price?.longPrompt : null;
+  if (long) return ((inputTokens * long.input + maxTokens * long.output) / 1e6) * FX_USD_EUR;
   return usageCostUsd(model, { input_tokens: inputTokens, output_tokens: maxTokens }) * FX_USD_EUR;
+}
+
+/**
+ * The cap prices a request at Haiku's long-prompt tier though its input reckons below the step: when the count
+ * failed and the cautious count comes within CAP_INPUT.fallbackTierMargin of it, since the cautious ratio is
+ * no bound for every ASCII text, and the tier is a step of five times the price (review C5).
+ */
+export function longTierOf(model, inputTokens, counted) {
+  const step = MODELS.find((m) => m.id === model)?.price?.longPrompt?.thresholdTokens;
+  return !!step && !(Number.isFinite(counted) && counted > 0) && inputTokens * CAP_INPUT.fallbackTierMargin > step;
 }
 
 /**
@@ -180,12 +204,12 @@ export function createMeter(model, capEur) {
  * The max_tokens a request may use under the cap: the step's own, or its smallest, or null when even the
  * smallest would pass the cap. Returns { maxTokens, worstEur }.
  */
-export function fitToCap({ model, inputTokens, limits, spentEur, capEur }) {
+export function fitToCap({ model, inputTokens, limits, spentEur, capEur, longTier = false }) {
   for (const maxTokens of [limits.max, limits.min]) {
-    const worstEur = worstCaseEur(model, inputTokens, maxTokens);
+    const worstEur = worstCaseEur(model, inputTokens, maxTokens, { longTier });
     if (spentEur + worstEur <= capEur + 1e-12) return { maxTokens, worstEur };
   }
-  return { maxTokens: null, worstEur: worstCaseEur(model, inputTokens, limits.min) };
+  return { maxTokens: null, worstEur: worstCaseEur(model, inputTokens, limits.min, { longTier }) };
 }
 
 /** The answer's JSON from an assistant message's text blocks, or why it can't be read. */
@@ -242,13 +266,15 @@ export async function runStep({ agent, key, settings, system, content, schema, c
     const counted = await count({ key, body: probe, signal });
     if (signal?.aborted) throw abortError();
     meter.counted?.(agent, counted);
+    const countedOk = Number.isFinite(counted) && counted > 0;
     const inputTokens = checkedInputTokens(probe, counted, { pdfTokens });
     const reserved = () => (meter.reservedEur ? meter.reservedEur() : meter.spentEur());
-    const fit = fitToCap({ model: settings.model, inputTokens, limits, spentEur: reserved(), capEur: meter.capEur });
-    if (fit.maxTokens === null) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur });
+    const fit = fitToCap({ model: settings.model, inputTokens, limits, spentEur: reserved(), capEur: meter.capEur, longTier: longTierOf(settings.model, inputTokens, counted) });
+    // A stop on the cautious count says the count didn't answer, so Try again may count it (review C5).
+    if (fit.maxTokens === null) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur, uncounted: !countedOk });
     const body = { ...probe, max_tokens: fit.maxTokens };
     maxTokensUsed = fit.maxTokens;
-    onEvent({ type: "request", agent, attempt, maxTokens: fit.maxTokens, inputTokens, counted: Number.isFinite(counted) && counted > 0, worstEur: fit.worstEur, repair: attempt > 1 });
+    onEvent({ type: "request", agent, attempt, maxTokens: fit.maxTokens, inputTokens, counted: countedOk, worstEur: fit.worstEur, repair: attempt > 1 });
     let chars = 0;
     const { message, ms } = await send({
       key, body, signal,
@@ -258,7 +284,7 @@ export async function runStep({ agent, key, settings, system, content, schema, c
         // request goes again only if its worst case still fits beside it (review A15).
         if (error?.midStream && meter.hold) {
           meter.hold(fit.worstEur);
-          if (reserved() + fit.worstEur > meter.capEur + 1e-12) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur });
+          if (reserved() + fit.worstEur > meter.capEur + 1e-12) throw new BudgetStop(agent, { spentEur: meter.spentEur(), capEur: meter.capEur, needEur: fit.worstEur, uncounted: !countedOk });
         }
         onEvent({ type: "retry", agent, attempt: n, waitMs, status: error?.status ?? 0, errorType: error?.type || "" });
       }

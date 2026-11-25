@@ -259,6 +259,22 @@ button.vc-tile:hover, button.vc-tile:focus-visible { --_bg: var(--vc-accent); --
 /* A name with a long word steps its size down, so the word stays whole in the cell (review B7). */
 .comb-name--long { font-size: 0.88em; letter-spacing: -0.005em; }
 .comb-name--longer { font-size: 0.8em; letter-spacing: -0.01em; }
+/* Once the page's fonts are in, js/charts.js measures each name's widest piece (between spaces, or up to a
+   hyphen) and names the next width below in ems of the tile's type: the name takes the size at which that
+   width fills the cell (100cqi of the tile), between 0.65 of the tile's size and its own. Its pieces stay
+   whole, so the browser breaks only at spaces and hyphens; a piece wider than 9 ems doesn't fit at 0.65
+   and breaks at a syllable (review B7). */
+.comb-tile { container-type: inline-size; }
+.comb-name--em-60 { font-size: clamp(0.65em, calc(100cqi / 6), 1em); hyphens: manual; }
+.comb-name--em-65 { font-size: clamp(0.65em, calc(100cqi / 6.5), 1em); hyphens: manual; }
+.comb-name--em-70 { font-size: clamp(0.65em, calc(100cqi / 7), 1em); hyphens: manual; }
+.comb-name--em-75 { font-size: clamp(0.65em, calc(100cqi / 7.5), 1em); hyphens: manual; }
+.comb-name--em-80 { font-size: clamp(0.65em, calc(100cqi / 8), 1em); hyphens: manual; }
+.comb-name--em-85 { font-size: clamp(0.65em, calc(100cqi / 8.5), 1em); hyphens: manual; }
+.comb-name--em-90 { font-size: clamp(0.65em, calc(100cqi / 9), 1em); hyphens: manual; }
+.comb-name--em-100 { font-size: clamp(0.65em, calc(100cqi / 10), 1em); }
+.comb-name--em-110 { font-size: clamp(0.65em, calc(100cqi / 11), 1em); }
+.comb-name--em-120 { font-size: clamp(0.65em, calc(100cqi / 12), 1em); }
 .comb-place { font-size: var(--vc-font-size-xs); font-weight: var(--vc-weight-bold); }
 .comb-tile--pick { --_bg: var(--vc-merlot-700); --_fg: var(--vc-neutral-50); }
 .comb-note { margin-top: 8px; }

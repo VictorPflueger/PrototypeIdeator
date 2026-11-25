@@ -119,9 +119,11 @@ export const ESTIMATE = {
 // the messages, plus a margin, since Anthropic calls the count an estimate that may differ "by a small
 // amount" (token counting page, read 25 November 2026), plus the output schema at the cautious ratio, since
 // structured outputs add a system prompt about the format that the count may leave out. When the count
-// fails, the whole request is taken at the cautious ratio: two characters a token for plain ASCII text and
-// one token for every other character, below the glossary's 2.7, and each PDF at Anthropic's rule's high end.
-export const CAP_INPUT = { countMargin: 0.02, countMarginTokens: 64, asciiCharsPerToken: 2, otherCharsPerToken: 1, messageTokens: 16 };
+// fails, the whole request is taken at the cautious ratio: two characters a token for plain ASCII text,
+// below the glossary's 2.7, every other character at its UTF-8 bytes, and each PDF at Anthropic's rule's
+// high end; and within fallbackTierMargin of Haiku's step at 100,000 tokens, the request is priced at the
+// long-prompt tier (review C5).
+export const CAP_INPUT = { countMargin: 0.02, countMarginTokens: 64, asciiCharsPerToken: 2, messageTokens: 16, fallbackTierMargin: 1.5 };
 
 // The models the live dialog's Advanced offers (cut C5 of PLAN.md: Opus 5.5 is not needed here).
 export const LIVE_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5"];

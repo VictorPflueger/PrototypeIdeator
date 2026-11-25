@@ -190,4 +190,15 @@ r.check(F.fmtEurRun(0.0044, "en") === "€0.004" && F.fmtEurRun(0.02485, "en") =
   const file = { file: "notes.md", kind: () => "markdown", content: () => "# Notes\n\nCustomers wait two days for a quote because the desk checks every surcharge by hand." };
   r.check(I.checkQuote("Customers wait two days for a quote", file) === "word-for-word" && I.checkQuote("two days", file) === "not-checked" && I.checkQuote("Customers wait three days", file) === "failed", `a quote of ${I.QUOTE_MIN_CHARS} characters or more is checked word for word; "two days" is found but too short to prove it; a quote not in the file fails`);
 }
+// Review C6: the merge target's options tell apart titles that a short cut would make read alike.
+{
+  const V = await import(path.join(ROOT, "js", "views", "read.js"));
+  const en = ["Emission allowances raise the cost of every voyage", "Emission allowances raise the price of spot quotes", "The heat plan decides the route"];
+  const de = ["Kraftstoffzuschläge werden bei jedem Angebot von Hand geprüft", "Kraftstoffzuschläge werden bei jeder Buchung von Hand geprüft"];
+  const a = V.shortTitles(en);
+  const b = V.shortTitles(de);
+  r.check(new Set(a).size === 3 && new Set(b).size === 2 && [...a, ...b].every((x) => x.length <= 26) && a[2] === V.shortTitle(en[2]),
+    `titles that a cut would make alike part where they differ, within 26 characters: ${[...a.slice(0, 2), ...b].map((x) => `"${x}"`).join(", ")}; a title that stands apart keeps its start ("${a[2]}")`);
+  r.control(V.shortTitle(en[0]) === V.shortTitle(en[1]) && V.shortTitle(de[0]) === V.shortTitle(de[1]), `cut at 26 characters alone, both pairs read alike ("${V.shortTitle(en[0])}", "${V.shortTitle(de[0])}")`);
+}
 r.finish("UNIT OK");

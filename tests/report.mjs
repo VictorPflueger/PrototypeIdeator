@@ -269,6 +269,11 @@ try {
       res.push([!cover.length && rep.lang === (lang === "de" ? "de" : "en-GB"), `${where}: the cover and the last page say what brief 9 asks, in the report's language${cover.length ? `: ${cover.join("; ")}` : ""}`]);
       const votes = rep.voteRows.length === run.ideas.length && rep.voteRows.every((v) => v.rank && v.why) && rep.voteName && rep.voteRoom;
       res.push([votes, `${where}: the vote sheet has a rank box and a comment box for each of the ${rep.voteRows.length} ideas, the name and who will be in the room`]);
+      // Review C3: the shortlist's share of At stake carries the AI mark when the sum holds the Reader's estimates.
+      const share = await page.evaluate((start) => { const p = [...document.querySelectorAll("#report-doc p")].find((x) => x.textContent.startsWith(start)); return p ? { ai: p.querySelector(".ai-tag")?.textContent.trim() || "" } : null; }, T[lang]["report.share"].split("{share}")[0]);
+      const est = run.figures.atStake;
+      const mark = est.estimated > 0 ? T[lang][est.estimated < est.stated ? "kpi.atStake.aiSome" : "kpi.atStake.aiAll"] : "";
+      res.push([!!share && share.ai === mark, `${where}: the shortlist's share of At stake ${mark ? `says "${share?.ai}", as the sum does with ${est.estimated} AI estimates` : "carries no AI mark, as no amount is an AI estimate"}${share ? "" : " (no share line found)"}`]);
       const ids = [...run.issues.map((i) => i.id), ...run.ideas.map((i) => i.id), ...run.documents.map((d) => d.id)];
       const idProblems = recordIdProblems(rep.html, ids);
       res.push([!idProblems.length && !errors.length, `${where}: no record id in the report and no page error${idProblems.length || errors.length ? `: ${[...idProblems, ...errors].join("; ")}` : ""}`]);

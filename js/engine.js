@@ -261,7 +261,8 @@ export function shortlistShare(issues, ideas, shortlist) {
 
 /**
  * The fact values for {{fact:key}} placeholders (brief §5.10, PLAN.md §9.1): each { type, value }, typed
- * so that js/facts.js writes it in the run's language. type is eur, eur_cents, score, count, share or text.
+ * so that js/facts.js writes it in the run's language. type is eur, eur_run (one live run's cost, written as
+ * the tables write it), score, count, share or text.
  */
 export function factValues({ issues = [], ideas = [], weights = DEFAULT_WEIGHTS, model = "claude-haiku-5-5", shortlist = null, lang = "en" }) {
   const facts = {};
@@ -283,7 +284,7 @@ export function factValues({ issues = [], ideas = [], weights = DEFAULT_WEIGHTS,
       facts[`idea.${r.id}.rank`] = { type: "count", value: r.rank };
       facts[`idea.${r.id}.firsts`] = { type: "count", value: st.counts[r.id].firsts, of: st.of };
       const inputs = idea.live_inputs || {};
-      facts[`idea.${r.id}.cost`] = { type: "eur_cents", value: liveRunEstimate({ model, calls: inputs.model_calls, searches: inputs.web_searches }).eur };
+      facts[`idea.${r.id}.cost`] = { type: "eur_run", value: liveRunEstimate({ model, calls: inputs.model_calls, searches: inputs.web_searches }).eur };
     }
   }
   // Every issue with an amount: a kept one at its group's value (D15), a merged or parked one at its own,

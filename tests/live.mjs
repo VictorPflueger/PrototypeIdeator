@@ -976,6 +976,20 @@ try {
       await startRun(c.page);
       await stepIs(c.page, "read");
       await findIdeas(c.page);
+      // An idea and its build brief opened and closed, so their drawers hold the run's text (review C2).
+      await c.page.click('#stage [data-action="open-idea"]');
+      await c.page.waitForSelector("#idea-drawer[open]");
+      const ideaName = (await c.page.textContent("#idea-title")).trim();
+      await c.page.keyboard.press("Escape");
+      await c.page.waitForFunction(() => !document.querySelector("dialog[open]"));
+      await toReport(c.page);
+      await c.page.click("#btn-brief");
+      await c.page.waitForSelector("#brief-drawer[open]");
+      const briefName = (await c.page.textContent("#brief-title")).trim();
+      await c.page.keyboard.press("Escape");
+      await c.page.waitForFunction(() => !document.querySelector("dialog[open]"));
+      const drawers = () => c.page.evaluate(() => ({ idea: document.getElementById("idea-drawer").textContent, brief: document.getElementById("brief-drawer").textContent, bodies: ["idea-body", "brief-body", "brief-footer"].map((id) => document.getElementById(id).childNodes.length).join("") }));
+      const before = await drawers();
       await c.page.click("#steps .vc-step:first-child .vc-step__button");
       await c.page.waitForSelector("#btn-clear");
       await c.page.click("#btn-clear");
@@ -990,6 +1004,11 @@ try {
         stake: document.querySelector("#kpi-stake .kpi-value").textContent,
         guard: (() => { const e = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; })()
       }));
+      const emptied = await drawers();
+      const held = (d) => (d.idea.includes(ideaName) ? 1 : 0) + (d.brief.includes(briefName) ? 1 : 0);
+      const named = (d) => [ideaName, briefName].some((n) => d.idea.includes(n) || d.brief.includes(n));
+      res.push([ideaName && briefName && held(before) === 2 && !named(emptied) && emptied.bodies === "000",
+        `Clear everything also empties the closed drawers: the idea's held "${ideaName}" and the brief's "${briefName}" before (${held(before)} of 2), and neither names them after (${emptied.bodies === "000" ? "no content left" : `left: ${emptied.bodies}`})`]);
       await c.page.setInputFiles("#intake-files", handoffFiles(s1, "en"));
       await c.page.waitForTimeout(300);
       await c.page.click("#btn-cta");

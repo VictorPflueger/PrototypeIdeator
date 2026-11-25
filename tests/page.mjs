@@ -272,7 +272,9 @@ try {
   // closer, they overlap. Every cell keeps inside its box, and every label inside its cell.
   if (want("comb")) {
     const res = [];
-    const NAMES = ["Allowance Gap Agent", "Route Switch Desk", "Zertifikatslücken-Agent", "Instant Spot Quote", "Emissions per Box", "FuelEU Pool Planner", "Surcharge Explainer", "Spot-Sofortangebot", "Empty Moves Planner", "Leercontainer-Planer"];
+    // English names and long German compounds: every piece of a name (between spaces, or up to a hyphen)
+    // stays whole in its cell (review B7).
+    const NAMES = ["Allowance Gap Agent", "Route Switch Desk", "Zertifikatslücken-Agent", "Instant Spot Quote", "Betriebsstunden-Angebot", "Schwachstellen-Wächter", "Surcharge Explainer", "Spot-Sofortangebot", "Netzinvestitions-Planer", "Leercontainer-Planer"];
     const LAY = async ({ n, names, where, print }) => {
       const { honeycomb } = await import("/js/charts.js");
       const root = print ? document.querySelector("body > [data-vc-print]") : document;
@@ -298,14 +300,27 @@ try {
       const inner = { left: r.left + parseFloat(cs.paddingLeft) - 1, right: r.right - parseFloat(cs.paddingRight) + 1, top: r.top - 1, bottom: r.bottom + 1 };
       const outside = cells.filter((c) => c.left < inner.left || c.right > inner.right || c.top < inner.top || c.bottom > inner.bottom).length;
       const spill = [...ul.querySelectorAll(".comb-tile")].filter((tile) => tile.scrollHeight > tile.clientHeight + 1 || tile.scrollWidth > tile.clientWidth + 1).map((tile) => tile.textContent.trim().slice(0, 24));
+      // A piece wider than the cell's line would break inside a word.
+      const broken = [...ul.querySelectorAll(".comb-name")].filter((el) => {
+        const tile = el.closest(".comb-tile");
+        const ts = getComputedStyle(tile);
+        const room = tile.clientWidth - parseFloat(ts.paddingLeft) - parseFloat(ts.paddingRight);
+        const pieces = el.textContent.split(/\s+/u).flatMap((w) => w.split(/(?<=-)/u)).filter(Boolean);
+        const probe = document.createElement("span");
+        probe.style.cssText = "position:absolute;left:0;top:0;white-space:nowrap;visibility:hidden";
+        el.append(probe);
+        const widest = Math.max(...pieces.map((p) => { probe.textContent = p; return probe.getBoundingClientRect().width; }));
+        probe.remove();
+        return widest > room + 0.5;
+      }).map((el) => el.textContent);
       // The columns the app gives the comb: one row up to six ideas, then four or six columns.
       const cols = getComputedStyle(ul).gridTemplateColumns.split(" ").filter(Boolean).length;
       const want = n <= 6 ? n : n <= 8 ? 4 : 6;
-      return { overlap: n > 1 && min < h * 0.99, min: Math.round(min), h: Math.round(h), outside, spill, cols, want };
+      return { overlap: n > 1 && min < h * 0.99, min: Math.round(min), h: Math.round(h), outside, spill, broken, cols, want };
     };
     const verdict = (label, all) => {
-      const bad = all.filter(([, m]) => m.overlap || m.outside || m.spill.length || m.cols !== m.want);
-      return [!bad.length, `${label}: 1 to 10 ideas lay out in the columns the app gives them, with no two cells overlapping, every cell inside its box and every label inside its cell${bad.length ? `: ${bad.map(([n, m]) => `${n} ideas (${m.cols} columns for ${m.want}, centres ${m.min} px apart for cells ${m.h} px high${m.outside ? `, ${m.outside} outside` : ""}${m.spill.length ? `, labels spill: ${m.spill.join(", ")}` : ""})`).join("; ")}` : ""}`];
+      const bad = all.filter(([, m]) => m.overlap || m.outside || m.spill.length || m.broken.length || m.cols !== m.want);
+      return [!bad.length, `${label}: 1 to 10 ideas lay out in the columns the app gives them, with no two cells overlapping, every cell inside its box and every label inside its cell, no word broken${bad.length ? `: ${bad.map(([n, m]) => `${n} ideas (${m.cols} columns for ${m.want}, centres ${m.min} px apart for cells ${m.h} px high${m.outside ? `, ${m.outside} outside` : ""}${m.spill.length ? `, labels spill: ${m.spill.join(", ")}` : ""}${m.broken.length ? `, words broken: ${m.broken.join(", ")}` : ""})`).join("; ")}` : ""}`];
     };
     for (const [width, height] of [[1920, 1080], [1280, 720]]) {
       for (const [step, where, label] of [[3, ".evidence .ideas-comb", "the Ideate step"], [6, "#report-doc .vc-report__cover .ideas-comb", "the report's cover"]]) {

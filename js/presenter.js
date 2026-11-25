@@ -40,6 +40,7 @@ import { reportDoc, stopReason } from "./report_doc.js";
 import { fileName, saveText, printReport, printWithKeys, reportHtml, ideasFile, ideasProblems } from "./exports.js";
 import { briefBlocks, briefMarkdown, composedPart } from "./brief.js";
 import { turnBar, uncheckedNote } from "./views/common.js";
+import { fitNames } from "./charts.js";
 import { clear, h, copyText } from "./dom.js";
 import { fmtScore, fmtEur, fmtEurSpend, fmtInt } from "./format.js";
 import { LIMITS, BUDGET, MODELS, PRESETS, DEFAULT_PRESET } from "./config.js";
@@ -183,8 +184,9 @@ export async function start() {
   });
   document.addEventListener("keydown", onKey);
   for (const type of ["pointerdown", "keydown", "wheel"]) document.addEventListener(type, () => { if (!P.on) armAttention(); }, { capture: true, passive: true });
-  // Play stops wherever the person acts in the story or its evidence (review B1).
-  for (const type of ["click", "input", "change"]) stage.addEventListener(type, onAct, { capture: true });
+  // Play stops wherever the person acts in the story or its evidence (review B1), the keyboard's focus on
+  // one of its controls included (review C1).
+  for (const type of ["click", "input", "change", "focusin"]) stage.addEventListener(type, onAct, { capture: true });
   // The guide's Start, on a guide opened during a replay, plays on from where the page is.
   for (const g of $$(".vc-guide")) g.addEventListener("vc:guideclose", (e) => { if (e.detail?.returnValue === "done" && S.mode === "simulation" && S.reached > 0) play(); });
 
@@ -196,6 +198,11 @@ export async function start() {
   const step = Number(params.get("step"));
   if (Number.isInteger(step) && step >= 2 && step <= 6) deepLink(step);
   else render();
+  // A comb drawn before the page's fonts were in sizes its names by their length; once they are in, by
+  // their measured width (review B7). Fonts that load later, a weight first used on a later step, refit it.
+  const refit = () => fitNames(stage);
+  document.fonts?.ready.then(refit);
+  document.fonts?.addEventListener?.("loadingdone", refit);
   armAttention();
 }
 
@@ -400,15 +407,24 @@ const ACTS = "button, a[href], summary, select, input, textarea, label, [role=bu
 
 /**
  * Play stops wherever a person acts (Vici's Presenting step by step; review B1): a weight, a view, an idea
- * opened, an issue kept or parked pauses it, so the page never moves on under the person's hand. The step's
- * own action (#btn-cta) does not: it is what Play waits for, or the Next it would press itself.
+ * opened, an issue kept or parked pauses it, and so does the keyboard's focus arriving on anything in the
+ * step's tab order, a chart point included (review C1), so the page never moves on under the person's hand
+ * or focus. The step's own action (#btn-cta) does not: it is what Play waits for, or the Next it would press
+ * itself. A pointer's focus is left to its click, and the step title, which the page focuses itself, is out
+ * of the tab order.
  */
 function onAct(e) {
   if (!P.on || S.mode !== "simulation") return;
   const tgt = e.target instanceof Element ? e.target : null;
   if (!tgt || tgt.closest("#btn-cta")) return;
+  if (e.type === "focusin" && !(tgt.tabIndex >= 0 && fromKeyboard(tgt))) return;
   if (e.type === "click" && !tgt.closest(ACTS)) return;
   pause();
+}
+
+/** The focus came from the keyboard: the browser shows its focus ring (:focus-visible), as after Tab. */
+function fromKeyboard(el) {
+  try { return el.matches(":focus-visible"); } catch { return false; }
 }
 
 function pause() {
@@ -803,7 +819,8 @@ function named(problem) {
 
 /** A stop in words, with the cap and the model filled in. */
 function stopText(st) {
-  return redactSecrets(t(st.key, { ...(st.vars || {}), cap: fmtEur(S.live.capEur), model: modelLabel(S.live.settings?.model) }));
+  const text = t(st.key, { ...(st.vars || {}), cap: fmtEur(S.live.capEur), model: modelLabel(S.live.settings?.model) });
+  return redactSecrets(st.vars?.uncounted ? `${text} ${t("live.budget.uncounted")}` : text);
 }
 
 /** The bar a live step shows while its agent works or after it stopped, in place of the step's own. */
@@ -905,9 +922,22 @@ function clearAll() {
   runCache.clear();
   liveScCache = { id: 0, version: -1, lang: null, sc: null };
   clearEverything();
+  emptyDrawers();
   render();
   announce(t("p.announce.cleared"));
   $("#intake-files")?.focus({ preventScroll: true });
+}
+
+/** The idea's and the brief's drawers closed and empty, so nothing of a cleared run stays in the page (review C2). */
+function emptyDrawers() {
+  for (const dlg of [$("#idea-drawer"), $("#brief-drawer")]) {
+    if (!dlg) continue;
+    if (dlg.open) dlg.close();
+    delete dlg.dataset.idea;
+  }
+  for (const el of [$("#idea-title"), $("#idea-body"), $("#brief-title"), $("#brief-body"), $("#brief-footer")]) if (el) clear(el);
+  const foot = $("#brief-footer");
+  if (foot) foot.hidden = true;
 }
 
 /** Save run as simulation: the run in the scenarios' format, downloaded; nothing is stored. */
@@ -1219,6 +1249,8 @@ function render() {
   const lang = getLang();
   const active = document.activeElement;
   const focusKey = keyOf(active);
+  // Focus that the redraw takes from the step goes to the step's title, never to the page's body (review C1).
+  const focusInStage = !!active && active !== stage && stage.contains(active);
   const sameStep = lastStep === S.step;
   const scrolls = sameStep ? [...stage.querySelectorAll(".panel, .vc-table-wrap")].map((el) => el.scrollTop) : [];
   const open = new Set([...stage.querySelectorAll("details[open]")].map((d) => d.className));
@@ -1250,11 +1282,9 @@ function render() {
   const stopBar = stage.querySelector("#turn.turn-bar--stopped");
   if (stopBar && shownStop !== S.live.stop) { const story = stopBar.closest(".panel"); if (story) story.scrollTop = story.scrollHeight; }
   shownStop = stopBar ? S.live.stop : null;
-  if (focusKey) {
-    const target = findByKey(focusKey);
-    if (target && !target.disabled) target.focus({ preventScroll: true });
-    else if (!stage.contains(document.activeElement)) ($("#step-title") || stage).focus({ preventScroll: true });
-  }
+  const target = focusKey ? findByKey(focusKey) : null;
+  if (target && !target.disabled) target.focus({ preventScroll: true });
+  else if ((focusKey || focusInStage) && !stage.contains(document.activeElement)) ($("#step-title") || stage).focus({ preventScroll: true });
   lastStep = S.step;
   window.Vici?.init?.(stage);
   renderBar();

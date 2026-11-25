@@ -33,8 +33,48 @@ export function hexPoints(x, y, r) {
 /**
  * The longest word of a name, split at spaces and hyphens: a cell steps its font down for a long one, so
  * "Vulnerability" or "Leercontainer" stays whole where no hyphenation dictionary breaks it (review B7).
+ * The rule for a name the page can't measure yet (nameFit).
  */
 const longWord = (name) => Math.max(0, ...String(name ?? "").split(/[\s\-\u2010\u2011]+/u).map((w) => w.length));
+const lengthClass = (name) => (longWord(name) >= 15 ? "comb-name--longer" : longWord(name) >= 12 ? "comb-name--long" : "");
+
+// The widths css/app.css has a size for, in ems of the tile's type: a name whose widest piece is up to that
+// wide takes the size at which that width fills the cell (100cqi), so the piece stays whole (review B7).
+const FIT_EMS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 10, 11, 12];
+let ruler = null;
+
+/**
+ * A name's class for its size: its widest piece (between spaces, or up to and with a hyphen) measured on a
+ * canvas in the tile's type, semibold in the page's family, as comb-name--em-<tenths> of the next width
+ * css/app.css knows; "" when every piece fits at the tile's own size. Measured at 12 px, since Inter's
+ * letters widen at small sizes (its optical size): at 100 px a German compound came out 6 % narrower than
+ * in the cell. null until the page's fonts are in, or where there is no page: the length rule stands in.
+ */
+export function nameFit(name) {
+  if (typeof document === "undefined" || !document.body) return null;
+  try {
+    const root = getComputedStyle(document.documentElement);
+    const font = `${root.getPropertyValue("--vc-weight-semibold").trim() || "600"} 12px ${getComputedStyle(document.body).fontFamily}`;
+    if (document.fonts && !document.fonts.check(font)) return null;
+    ruler ||= document.createElement("canvas").getContext("2d");
+    if (!ruler) return null;
+    ruler.font = font;
+    const pieces = String(name ?? "").split(/\s+/u).flatMap((w) => w.split(/(?<=[-\u2010\u2011])/u)).filter(Boolean);
+    const em = pieces.length ? Math.max(...pieces.map((p) => ruler.measureText(p).width)) / 12 : 0;
+    if (em <= 5.5) return "";
+    const step = FIT_EMS.find((w) => em <= w) ?? FIT_EMS[FIT_EMS.length - 1];
+    return `comb-name--em-${Math.round(step * 10)}`;
+  } catch { return null; }
+}
+
+/** The size class of each comb name in root, once the page's fonts are in: run after they load. */
+export function fitNames(root) {
+  for (const el of root?.querySelectorAll?.(".comb-name") || []) {
+    const fit = nameFit(el.textContent);
+    if (fit === null) continue;
+    el.className = ["comb-name", fit].filter(Boolean).join(" ");
+  }
+}
 
 /**
  * The honeycomb: a list of hexagon cells, one per idea, each a button that opens the idea's page.
@@ -53,7 +93,7 @@ export function honeycomb(ideas, { picks = [], onOpen, still = false, scores = n
       const place = picks.indexOf(idea.id);
       const inner = [
         place >= 0 ? h("span", { class: "comb-place" }, t("short.place", { n: place + 1 }, lang)) : null,
-        h("span", { class: ["comb-name", longWord(idea.name) >= 15 ? "comb-name--longer" : longWord(idea.name) >= 12 ? "comb-name--long" : ""] }, idea.name),
+        h("span", { class: ["comb-name", nameFit(idea.name) ?? lengthClass(idea.name)] }, idea.name),
         scores && scores[idea.id] ? h("span", { class: "comb-score" }, scores[idea.id]) : null
       ];
       const tone = ["vc-tile", place >= 0 ? "vc-tile--merlot comb-tile--pick" : "vc-tile--lilac", "comb-tile"];

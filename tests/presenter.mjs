@@ -521,6 +521,46 @@ try {
       res.push([afterIdea === "play" && afterCta === "pause" && onScore === 3, `on Ideate, an idea opened pauses Play (${afterIdea}); Next: score the ideas keeps it playing (${afterCta}, now at step ${onScore + 1})`]);
       await i.context.close();
     }
+    // Review C1: a keyboard user tabbing through a step is acting too. On Ideate, Tab passes the step's own
+    // action with Play still on, then lands on an idea, which pauses it, and the page keeps the focus there;
+    // the page's own focus on the title, after a key, does not pause it.
+    {
+      const state = (page) => page.getAttribute("#btn-play", "data-state");
+      const where = (page) => page.evaluate(() => { const a = document.activeElement; return a === document.body ? "body" : a.id || `${a.tagName.toLowerCase()}.${String(a.className.baseVal ?? a.className).split(" ")[0]}`; });
+      const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=3");
+      await page.focus("#step-title");
+      await page.keyboard.press(" ");
+      await page.waitForTimeout(100);
+      await page.focus("#step-title");
+      await page.waitForTimeout(150);
+      const afterTitle = await state(page);
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(150);
+      const first = await where(page);
+      const afterCta = await state(page);
+      await page.keyboard.press("Tab");
+      await page.waitForTimeout(150);
+      const second = await where(page);
+      const afterTab = await state(page);
+      // Paused, the page stays: 15 s later it is still on Ideate, which Play leaves after at most 14, and the focus is where the Tab left it.
+      await page.waitForTimeout(15000);
+      const stayed = await current(page);
+      const kept = await where(page);
+      res.push([afterTitle === "pause" && first === "btn-cta" && afterCta === "pause" && second === "button.vc-tile" && afterTab === "play" && stayed === 2 && kept === second,
+        `on Ideate, the title focused by the page and Tab onto the step's own action keep Play on (${afterTitle}, ${afterCta} on ${first}); Tab onto an idea (${second}) pauses it (${afterTab}), and 15 s later the page is still on Ideate (step ${stayed + 1}) with the focus on ${kept}`]);
+      await context.close();
+      // Play started by Space on a chart point moves on with the focus on the next step's title, not the page's body.
+      const s = await open("?guide=0&lang=en&scenario=s1&step=4");
+      await s.page.focus("#stage .chart-point");
+      await s.page.keyboard.press(" ");
+      await s.page.waitForTimeout(100);
+      const on = await state(s.page);
+      await s.page.waitForFunction(() => document.querySelectorAll("#steps .vc-step")[4].classList.contains("vc-step--current"), null, { timeout: 16000 }).catch(() => {});
+      const moved = await current(s.page);
+      const focus = await where(s.page);
+      res.push([on === "pause" && moved === 4 && focus === "step-title", `Space on a chart point plays (${on}); Play moves on to Shortlist (step ${moved + 1}) with the focus on its title (${focus}), not the page's body`]);
+      await s.context.close();
+    }
     // Control: without an act Play stays on, so the checks above see the act, not a timeout.
     {
       const { context, page } = await open("?guide=0&lang=en&scenario=s1&step=4");

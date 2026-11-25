@@ -12,6 +12,7 @@ import { createReport, same } from "./lib/report.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const X = await import(path.join(ROOT, "js", "facts.js"));
 const E = await import(path.join(ROOT, "js", "engine.js"));
+const F = await import(path.join(ROOT, "js", "format.js"));
 const r = createReport("facts");
 
 const evidence = { texts: ["The plant follows Industry 4.0 and reports to ISO 14083.", "Wir messen nach ISO 14083."], titles: ["Annual report 2025"], quotes: [], urls: ["https://example.org/report"] };
@@ -72,6 +73,14 @@ for (const [text, tokens, what] of CASES) {
   r.check(X.renderFacts(text, values, "de") === "4,7 Mio. € bei 2 von 3 Themen at stake; Surcharge check leads with 4,75 and costs 0,30 € a run.", `German figures: ${X.renderFacts(text, values, "de")}`);
   r.check(X.renderFacts("Kept: {{fact:issues.kept}}; unknown: {{fact:nope}}", values, "en") === "Kept: 3; unknown: {{fact:nope}}", "a count renders as a number; an unknown key stays as written, so it shows");
   r.check(X.renderFacts("{{fact:at_stake}}", { at_stake: { type: "eur", value: null, stated: 0, of: 2 } }, "en") === "No issue states an amount", "no amount stated renders as words, never as €0");
+  // Review C4: an idea's cost a run in prose reads as the tables write it, never €0.00 beside their €0.005.
+  const cheap = E.factValues({ issues: [{ id: "I1", status: "kept", eur_year_expected: 1000000 }], ideas: [{ id: "A", name: "A", issues: ["I1"], live_inputs: { model_calls: 6, web_searches: 0 }, ratings: { value: 3, evidence: 3, buildable: 3, agentic: 3, relevance: 3, demo: 3, risk: 3 } }], model: "claude-haiku-5-5" });
+  const runCost = cheap["idea.A.cost"].value;
+  const prose = { en: X.renderFacts("{{fact:idea.A.cost}}", cheap, "en"), de: X.renderFacts("{{fact:idea.A.cost}}", cheap, "de") };
+  r.check(prose.en === F.fmtEurRun(runCost, "en") && prose.de === F.fmtEurRun(runCost, "de") && !/0[.,]00\b/.test(prose.en + prose.de),
+    `a cheap idea's cost a run (€${runCost.toFixed(5)}) reads "${prose.en}" and "${prose.de}" in prose, as the tables write it`);
+  r.check(X.formatFact({ type: "eur_run", value: 0.00465 }, "en") === "€0.005" && X.formatFact({ type: "eur_run", value: 0.02485 }, "en") === "€0.025", "€0.00465 and €0.02485 read €0.005 and €0.025, the tables' figures");
+  r.control(F.fmtEur(0.00465, "en") === "€0.00" && F.fmtEur(0.02485, "en") === "€0.02", "in whole cents they read €0.00 and €0.02, the fault the check above guards against");
 }
 
 r.finish("FACTS OK");
