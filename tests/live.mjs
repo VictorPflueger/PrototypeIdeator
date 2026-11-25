@@ -891,7 +891,9 @@ try {
       await startRun(page);
       await stepIs(page, "read");
       await page.click("#btn-cta");
-      await page.waitForFunction(() => /\d/.test(document.getElementById("busy-note")?.textContent || ""), null, { timeout: 5000 }).catch(() => {});
+      // Wait for the retry's own words: since 1.0.0 the counted input, which has digits too, shows first.
+      const lead = EN["live.retrying"].split("{s}")[0];
+      await page.waitForFunction((l) => (document.getElementById("busy-note")?.textContent || "").startsWith(l), lead, { timeout: 5000 }).catch(() => {});
       const note = await page.evaluate(() => document.getElementById("busy-note")?.textContent || "");
       await stepIs(page, "ideate");
       res.push([fake.requests.length === 4 && note.startsWith(EN["live.retrying"].split("{s}")[0]) && !errors.length, `529 twice and then an answer: the busy bar says "${note}" and the run goes on`]);
