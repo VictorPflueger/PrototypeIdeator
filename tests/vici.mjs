@@ -244,9 +244,9 @@ for (const [lang, D] of [["en", EN], ["de", DE]]) {
 }
 
 // ---- the docs, as text --------------------------------------------------------------------------------------------
-for (const doc of ["README.md", "TECH_NOTES.md", "REVIEW.md", "PLAN.md", "tests/README.md", "vici/README.md"]) {
+for (const doc of ["README.md", "DESIGN.md", "DEMO_SCRIPT.md", "DEMO_SCRIPT.de.md", "TECH_NOTES.md", "REVIEW.md", "DATA_SOURCES.md", "PLAN.md", "tests/README.md", "vici/README.md"]) {
   const there = existsSync(path.join(APP_ROOT, doc));
-  const p = there ? writingProblems(page([read(doc).replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "")])) : ["missing"];
+  const p = there ? writingProblems(page([read(doc).replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "")], doc.endsWith(".de.md") ? "de" : "en-GB")) : ["missing"];
   check(!p.length, `${doc} keeps the writing rules${p.length ? `: ${p.join("; ")}` : ""}`);
 }
 

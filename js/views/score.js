@@ -104,7 +104,8 @@ export function renderScore(ctx) {
     storyPanel(
       ...heading(t("score.title", { name: top.name, count: firsts, of: run.stability.of }), ctx.weightsOpen ? null : t("score.lead", { of: run.stability.of })),
       h("div", { class: "score-actions" },
-        h("button", { type: "button", class: "vc-button vc-button--secondary", id: "btn-weights", "aria-expanded": String(!!ctx.weightsOpen), "aria-controls": "weights", dataset: { action: "toggle-weights" }, on: { click: ctx.onToggleWeights } },
+        // aria-controls names the sliders only while they are drawn: a reference must point to something.
+        h("button", { type: "button", class: "vc-button vc-button--secondary", id: "btn-weights", "aria-expanded": String(!!ctx.weightsOpen), "aria-controls": ctx.weightsOpen ? "weights" : undefined, dataset: { action: "toggle-weights" }, on: { click: ctx.onToggleWeights } },
           h("span", { class: "vc-icon vc-icon--settings", "aria-hidden": "true" }), t(ctx.weightsOpen ? "score.weights.hide" : "score.weights.show")),
         ctx.weightsOpen ? h("button", { type: "button", class: "vc-button vc-button--ghost", id: "btn-weights-reset", dataset: { action: "weights-reset" }, disabled: atDefault || undefined, on: { click: ctx.onResetWeights } },
           h("span", { class: "vc-icon vc-icon--refresh", "aria-hidden": "true" }), t("score.weights.reset")) : null),

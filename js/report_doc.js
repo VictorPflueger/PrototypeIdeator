@@ -238,7 +238,9 @@ export function reportDoc(run, meta) {
           CRITERIA.map((c) => h("td", { class: "vc-num" }, String(ideaOf(r.id).ratings[c].score))),
           h("td", { class: "vc-num" }, h("strong", {}, fmtScore(r.value, lang)))))),
       h("p", { class: "rep-note" }, CRITERIA.map((c) => `${tr(`crit.short.${c}`)}: ${tr(`crit.${c}`)}`).join(" · "))),
-    ...part(tr("rep.scored.stability"),
+    // The stability check and the recommendation each print whole: a table split before its last row left
+    // that row alone on the next sheet.
+    h("div", { class: "rep-keep" }, ...part(tr("rep.scored.stability"),
       h("p", {}, run.sentence),
       h("div", { class: "rep-two" },
         table("rep-stability", tr("score.st.caption", { of: st.of }),
@@ -248,8 +250,8 @@ export function reportDoc(run, meta) {
           [[tr("score.col.idea")], [tr("score.st.firsts"), true], [tr("score.st.top3"), true]],
           st.order.map((id) => h("tr", {}, h("th", { scope: "row" }, names.ideaName(id)),
             h("td", { class: "vc-num" }, tr("score.st.of", { n: st.counts[id].firsts, of: st.of })),
-            h("td", { class: "vc-num" }, tr("score.st.of", { n: st.counts[id].top3, of: st.of }))))))),
-    ...part(tr("rep.scored.recommend"), recommendation())) : null;
+            h("td", { class: "vc-num" }, tr("score.st.of", { n: st.counts[id].top3, of: st.of })))))))),
+    h("div", { class: "rep-keep" }, ...part(tr("rep.scored.recommend"), recommendation()))) : null;
 
   // ---- 7 How they would be built ----------------------------------------------------------------------------
   const built = hasIdeas ? page("built", tr("rep.built.title"),

@@ -8,12 +8,14 @@
 //              four parts once each, "page x of y" counting up to the page count, in the report's language
 //              (AC-13); the print copy goes again afterwards
 //   tables     no table of the report cuts a heading or runs past its sheet, for S1 to S3 in both
-//              languages, on screen at 1920 x 1080 and 1280 x 720 and on paper
+//              languages, on screen at 1920 x 1080 and 1280 x 720 and on paper, with the media as wide as
+//              a print dialog reports A4's page area (673 px) and as page.pdf() does (794 px)
 //   format     the printed report in the SWOT and PESTEL Challengers' format: text at 9.5 pt, an idea's
 //              fact sheet at 9 pt, table heads in sentence case that wrap, each idea on a sheet of its own
-//              and the glance's chart beside its table, each with 9 mm in hand; the cover names the model and setting in a
-//              simulation too; Save as PDF and Ctrl+P offer prototype-ideator-<company>-<date>-<lang> as the
-//              PDF's name and give the page its title back
+//              and the glance's chart beside its table, each with 9 mm in hand at both media widths; the
+//              stability check prints whole, moving to the next sheet when it doesn't fit; the
+//              cover names the model and setting in a simulation too; Save as PDF and Ctrl+P offer
+//              prototype-ideator-<company>-<date>-<lang> as the PDF's name and give the page its title back
 //   stopped    a live run stopped at its budget cap offers what is done, and every page of its report
 //              says where it stopped; its ideas file says so too (AC-09)
 //   html       the HTML file asks for nothing when opened, holds no script, carries its own policy, its
@@ -133,6 +135,17 @@ async function pressPrint(page, selector) {
 async function download(page, selector) {
   const [d] = await Promise.all([page.waitForEvent("download"), page.click(selector)]);
   return { name: d.suggestedFilename(), text: readFileSync(await d.path(), "utf8") };
+}
+
+/**
+ * The sheets of a printed report (texts squeezed of white space) that hold the stability check's heading and
+ * its last row, which leaves out low risk: { head, last }, -1 where not found.
+ */
+function stabilitySheets(texts, w) {
+  const head = texts.findIndex((t) => t.includes(squeeze(w["rep.scored.stability"])));
+  const lastRow = squeeze(w["score.st.without"].replace("{criterion}", w["crit.risk"]));
+  const last = texts.findIndex((t, k) => k >= head && t.includes(lastRow));
+  return { head, last };
 }
 
 // ---- live runs against the stand-in ----------------------------------------------------------------------
@@ -327,12 +340,16 @@ try {
         res.push([!m.out.length && m.tables >= 8 && !errors.length, `${where} at ${width} x ${height}: the ${m.tables} tables keep to their ${m.width} px sheets, every head whole${m.out.length || errors.length ? `: ${[...m.out, ...errors].slice(0, 4).join("; ")}` : ""}`]);
         await context.close();
       }
-      const { context, page, errors } = await openReport(id, lang, { width: 794, height: 1123 });
-      await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
-      await page.emulateMedia({ media: "print" });
-      const m = await page.evaluate(FIT, true);
-      res.push([!m.out.length && m.tables >= 8 && !errors.length, `${where} on paper: the ${m.tables} tables keep to 178 mm, every head whole${m.out.length || errors.length ? `: ${[...m.out, ...errors].slice(0, 4).join("; ")}` : ""}`]);
-      await context.close();
+      // On paper, with the media as wide as a print dialog reports it (A4's page area, 673 px) and as page.pdf()
+      // does (the sheet, 794 px).
+      for (const width of [673, 794]) {
+        const { context, page, errors } = await openReport(id, lang, { width, height: 1123 });
+        await page.evaluate(() => { window.Vici.report.prepare(document.getElementById("report-doc")); document.querySelector("body > [data-vc-print]").style.width = "178mm"; });
+        await page.emulateMedia({ media: "print" });
+        const m = await page.evaluate(FIT, true);
+        res.push([!m.out.length && m.tables >= 8 && !errors.length, `${where} on paper, media ${width} px: the ${m.tables} tables keep to 178 mm, every head whole${m.out.length || errors.length ? `: ${[...m.out, ...errors].slice(0, 4).join("; ")}` : ""}`]);
+        await context.close();
+      }
     }
     report("tables", res);
   }
@@ -356,8 +373,13 @@ try {
       await page.emulateMedia({ media: "print" });
       // A4 holds 261 mm between its margins. Each idea's sheet and the glance with its chart keep 9 mm in
       // hand, so a browser that breaks a line or two otherwise (CI's Chromium did) still prints them whole.
-      const tall = await page.evaluate(() => [...document.querySelectorAll("body > [data-vc-print] :is(.rep-page--idea, .rep-page--glance)")].map((p) => ({ head: p.querySelector("h2, h3, h4, h5")?.textContent || "", mm: Math.round(p.getBoundingClientRect().height * 25.4 / 96) })).filter((p) => p.mm > 252));
-      res.push([!tall.length, `${where}: every idea's page and the glance keep 9 mm in hand on A4${tall.length ? `: ${tall.map((p) => `${p.head} ${p.mm} mm`).join("; ")}` : ""}`]);
+      const TALL = () => [...document.querySelectorAll("body > [data-vc-print] :is(.rep-page--idea, .rep-page--glance)")].map((p) => ({ head: p.querySelector("h2, h3, h4, h5")?.textContent || "", mm: Math.round(p.getBoundingClientRect().height * 25.4 / 96) })).filter((p) => p.mm > 252);
+      const tall = await page.evaluate(TALL);
+      // The same with the media as wide as a print dialog reports it, A4's page area of 673 px.
+      await page.setViewportSize({ width: 673, height: 1123 });
+      const tall673 = await page.evaluate(TALL);
+      await page.setViewportSize({ width: 794, height: 1123 });
+      res.push([!tall.length && !tall673.length, `${where}: every idea's page and the glance keep 9 mm in hand on A4, with the media 794 and 673 px wide${tall.length || tall673.length ? `: ${[...tall, ...tall673].map((p) => `${p.head} ${p.mm} mm`).join("; ")}` : ""}`]);
       const type = await page.evaluate(() => {
         const box = document.querySelector("body > [data-vc-print]");
         const cs = (sel) => { const el = box.querySelector(sel); return el ? getComputedStyle(el) : null; };
@@ -379,7 +401,22 @@ try {
       const sheets = names.map((n) => texts.findIndex((t, k) => k > glance && t.includes(n)));
       const own = glance >= 0 && sheets.every((k, i) => k === glance + 1 + i) && !!texts[glance + 1 + names.length]?.includes(squeeze(w["rep.scored.title"]));
       res.push([own, `${where}: the glance's chart prints on the glance's sheet (${glance + 1}), and each of the ${names.length} ideas on a sheet of its own after it (sheets ${sheets.map((k) => k + 1).join(", ")} of ${texts.length}), then How they were scored`]);
+      // The stability check prints whole: its heading and its last row on one sheet.
+      const whole = stabilitySheets(texts, w);
+      res.push([whole.head >= 0 && whole.head === whole.last, `${where}: the stability check prints whole, its heading and its last row on sheet ${whole.head + 1}${whole.head === whole.last ? "" : ` and ${whole.last + 1}`}`]);
       res.push([prepared.printed === 1 && !errors.length, `${where}: no page error${errors.length ? `: ${errors.slice(0, 2).join("; ")}` : ""}`]);
+      await context.close();
+    }
+    // Control: Auental Energie's stability check does not fit under the scores on the scoring sheet (as in
+    // Victor's live run of 25 November 2026, whose last row printed alone on the next sheet). Kept whole, it
+    // moves to the next sheet in one piece; with break-inside set back to auto it splits, and the check
+    // above catches that.
+    {
+      const { context, page, errors } = await openReport("s3", "en", { width: 794, height: 1123 });
+      await page.evaluate(() => { document.querySelector("#report-doc .rep-page--scored .rep-keep").style.breakInside = "auto"; });
+      const { bytes } = await pressPrint(page, "#btn-cta");
+      const whole = stabilitySheets(pdfPageTexts(bytes).map(squeeze), T.en);
+      res.push([whole.head >= 0 && whole.last > whole.head && !errors.length, `control: without its keep-together rule, Auental Energie's stability check splits across sheets ${whole.head + 1} and ${whole.last + 1}`]);
       await context.close();
     }
     // The PDF's name: Save as PDF and Ctrl+P give the page the report's file name while it prints, then the

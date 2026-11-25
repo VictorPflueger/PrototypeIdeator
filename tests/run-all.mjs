@@ -34,7 +34,8 @@ const SUITES = [
   { id: "intake", what: "the live run's intake: what the drop zone reads, refuses and limits, with no request", file: "tests/intake.mjs", browser: true },
   { id: "live", what: "a live run in Chromium against the stand-in: the dialog, presets, the flow, repairs, guards, Stop, the cap, cost, errors, storage, Save run", file: "tests/live.mjs", browser: true },
   { id: "report", what: "the report in Chromium: its sections, the PDF's footer on every page, its tables and the challengers' print format, a stopped run's notice, the HTML and ideas files, the downloads and the build brief", file: "tests/report.mjs", browser: true },
-  { id: "page", what: "the page in Chromium: languages, key figures, storage, the comb of 1 to 10 ideas, layout at both projector sizes, the probe line", file: "tests/page.mjs", browser: true }
+  { id: "page", what: "the page in Chromium: languages, key figures, storage, the comb of 1 to 10 ideas on screen and paper, the chart's labels, layout from 1920 x 1080 to 1280 x 720, the probe line", file: "tests/page.mjs", browser: true },
+  { id: "access", what: "accessibility in Chromium: a scenario and a live run by keyboard alone, the focus seen at every stop, reduced motion, every control named", file: "tests/access.mjs", browser: true }
 ];
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith("--"));

@@ -1,8 +1,14 @@
-# Review: files taken from other tools
+# Review
 
-Every file this repository took from a sister prototype or a sibling tool, as of version 0.1.0, with what changed and why. "Copied" means byte for byte. The sources, as read on 23 November 2026: the Sovereignty Assessment 2.0.0 (35c0dea), the Data Quality Agent 2.2.0 (831f050), the Timetable Translator (through the Sovereignty Assessment), the SWOT Challenger 0.1.0 (a52fd6f, merged as 617b122) and Vici (6580c06).
+Part 1 lists every file taken from a sister prototype or a sibling tool. Part 2 is the independent review
+of the release by fresh agents that did not build the tool, and part 3 the design review and Vici's
+partner review on the running tool.
 
-## Shared with the sibling tools
+## Part 1. Files taken from other tools
+
+Every file this repository took from a sister prototype or a sibling tool, as of version 0.1.0 and with the files added since, with what changed and why. "Copied" means byte for byte. The sources, as read on 23 November 2026: the Sovereignty Assessment 2.0.0 (35c0dea), the Data Quality Agent 2.2.0 (831f050), the Timetable Translator (through the Sovereignty Assessment), the SWOT Challenger 0.1.0 (a52fd6f, merged as 617b122) and Vici (6580c06); for 1.0.0, the PESTEL Challenger 1.0.0.
+
+### Shared with the sibling tools
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -13,7 +19,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `tools/schema-module.mjs` | SWOT Challenger | Copied | Writes the twin above, so every tool writes the same bytes |
 | `tests/kpis.mjs` | SWOT Challenger | Copied | Checks the shared library the same way in every tool |
 
-## Live client, key and session
+### Live client, key and session
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -28,7 +34,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `js/watch.js` | none | New | A problem on screen until closed, once per message; a hidden modal dialog closed by the next press; a press caught by a layer the page didn't draw, named |
 | `js/pipeline.js`, `js/live_agents.js`, `js/live_run.js`, `js/count.js`, `js/privacy.js` | none | New | One structured request a step under the budget cap with one repair; the four agents' requests and checks; a live run in the scenarios' format and Save run as simulation; the free token count; what looks private |
 
-## Page, languages and settings
+### Page, languages and settings
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -47,7 +53,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `js/report_doc.js`, `js/exports.js` | none, on Vici's report pattern (ViciDesign `64044bd`) | New | The report built from a run as Vici's report pattern sets it out, printed in the SWOT and PESTEL Challengers' format (9.5 pt, heads in sentence case, the model and setting on the cover); the file names, Save as PDF and Ctrl+P under the report's file name, the HTML file through `Vici.report.html` and the ideas file `prototype-ideas/1`, checked against its schema |
 | `js/brief.js` | none | New | The build brief's template in English and German, the idea's part composed from its page, the two blocks, and the checks on the Brief writer's answer |
 
-## Tests and tools
+### Tests and tools
 
 | File | From | Verdict | What changed and why |
 |---|---|---|---|
@@ -55,6 +61,7 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `tests/lib/prototype.mjs` | Sovereignty Assessment | Adapted | This page's name, colour pairs, hexagon tour and page icon |
 | `tests/lib/fake-claude.mjs` | Sovereignty Assessment | Adapted | Single structured requests instead of a tool loop: it streams each answer, plays errors with retry-after, and checks every request's model, effort, thinking, format and headers |
 | `tests/report.mjs` | none, after the PESTEL Challenger's report suite | New | The report, its PDF, its tables on screen and paper, the challengers' print format, its HTML and ideas files, a stopped run's notice, the downloads and the build brief, with Vici's report rule and PDF reader |
+| `tests/access.mjs` | PESTEL Challenger 1.0.0 | Adapted | Its Tab rounds, its pixel test of the focus and its motion sampler, for this tool's six steps, its drawers and a live run against the stand-in that starts at the drop zone's file chooser (AC-14) |
 | `tests/lib/live-route.mjs`, `tests/live.mjs`, `tests/pipeline.mjs`, `tests/privacy.mjs` | none | New | The stand-in on a browser context; the live run in Chromium; the pipeline in Node; the private-data scan |
 | `tests/hygiene.mjs` | Sovereignty Assessment (from the Timetable Translator) | Copied | The private term list comes from `HYGIENE_TERMS` |
 | `tests/hexagon.mjs`, `tests/page-icon.mjs` | Sovereignty Assessment | Copied | The page's values sit in `tests/lib/prototype.mjs` |
@@ -64,6 +71,14 @@ Every file this repository took from a sister prototype or a sibling tool, as of
 | `.github/workflows/tests.yml`, `live-site.yml` | Sovereignty Assessment, with the Data Quality Agent's step for Victor's website | Adapted | Also clones the three challengers for the parity suite |
 | `tools/update-vici.mjs` | none | New | Copies the files this page uses from a ViciDesign checkout, `dist/vici-theme.js` included, and names the commit in `vici/README.md` and the workflow |
 
-## Not taken
+### Not taken
 
 The sisters' agent loops, tools, simulations and domain modules are not taken (PLAN.md, section 7.2): the Ideator sends single structured requests. The page's own theme script went once Vici published `vici/dist/vici-theme.js`, and the Data Quality Agent's vici-files suite is folded into `tests/vici.mjs`.
+
+## Part 2. Independent review
+
+To be filled in as the review runs.
+
+## Part 3. Steve Jobs review and partner review
+
+To be filled in as the reviews run.

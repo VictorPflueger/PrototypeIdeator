@@ -314,6 +314,7 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .chart-point--pick .chart-whisker { stroke: var(--pi-pick); }
 .chart-place { fill: var(--vc-neutral-0); font-size: 10px; font-weight: var(--vc-weight-bold); pointer-events: none; }
 .chart-label { fill: var(--vc-text); font-size: 11.5px; pointer-events: none; paint-order: stroke; stroke: var(--vc-surface); stroke-width: 3px; stroke-linejoin: round; }
+.chart-leader { stroke: var(--vc-text-muted); stroke-width: 1; }
 .chart-point:focus-visible .chart-hex, .chart-point:hover .chart-hex { stroke: var(--vc-focus); stroke-width: 3; }
 .chart-tip { position: absolute; z-index: 2; transform: translate(12px, -50%); padding: 6px 10px; border: 1px solid var(--vc-border); border-radius: var(--vc-radius-sm); background: var(--vc-surface-raised); box-shadow: var(--vc-shadow-md); font-size: var(--vc-font-size-xs); line-height: 1.35; pointer-events: none; white-space: nowrap; }
 .chart-tip[data-side="left"] { transform: translate(calc(-100% - 12px), -50%); }
@@ -477,6 +478,7 @@ html .pi-report[data-theme="light"] .chart-point, html .pi-report[data-theme="li
   .rep-glance thead th:nth-child(5) { width: 9%; }
   .pi-report :is(.rep-map, .rep-glance, .rep-stability, .rep-counts, .rep-vote) { break-inside: auto; }
   .pi-report tr { break-inside: avoid; }
+  .pi-report .rep-keep { break-inside: avoid; }
   /* On paper the short sections pair up: the issue beside what the room sees, the data beside the risks. */
   .pi-report .idea-page { gap: 6px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pi-report .idea-page > * { grid-column: 1 / -1; }
