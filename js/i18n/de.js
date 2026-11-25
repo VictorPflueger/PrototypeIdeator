@@ -404,7 +404,7 @@ export default {
   "crit.short.evidence": "Belege",
   "crit.short.buildable": "Bau",
   "crit.short.agentic": "Agent",
-  "crit.short.relevance": "Relevanz",
+  "crit.short.relevance": "Relev.",
   "crit.short.demo": "Demo",
   "crit.short.risk": "Risiko",
 

@@ -216,7 +216,7 @@ export function briefRequest({ run, idea, runLang }) {
  * the Reader's input), PDFs and text files are named only (review A13).
  */
 export function savedRun(sc, { decisions, weights, picks, reference, settings, cost, timing, byAgent = {} }) {
-  const usage = Object.fromEntries(Object.entries(byAgent).map(([agent, a]) => [agent, { requests: a.requests, input_tokens: a.input_tokens, output_tokens: a.output_tokens, max_output_tokens: a.max_output_tokens }]));
+  const usage = Object.fromEntries(Object.entries(byAgent).filter(([agent, a]) => ["reader", "merges", "ideator", "writer"].includes(agent) && a.requests > 0).map(([agent, a]) => [agent, { requests: a.requests, input_tokens: a.input_tokens, output_tokens: a.output_tokens, max_output_tokens: a.max_output_tokens, ...(a.counted_input_tokens ? { counted_input_tokens: a.counted_input_tokens } : {}) }]));
   const answers = Object.fromEntries(LANGS.map((l) => [l, l === sc.language ? sc.answers[l] : null]));
   return {
     schema: "pi-scenario/1",

@@ -1033,6 +1033,9 @@ try {
     const quotes = (saved.answers[saved.language]?.reader?.issues || []).flatMap((i) => (i.sources || []).map((x) => String(x.quote || "")));
     res.push([!leaks.length && saved.files && Object.keys(saved.files).length === 1 && quotes.every((q) => q.length <= 150), `no key, no prompt, no thinking and no document text beyond the challenger's file and the Reader's ${quotes.length} quotes, none over 150 characters (longest ${Math.max(0, ...quotes.map((q) => q.length))})${leaks.length ? `: found ${leaks.join(", ")}` : ""}`]);
     res.push([saved.source === "live" && saved.language === "en" && saved.answers.de === null && saved.run.setting === "balanced" && typeof saved.run.cost_eur === "number" && ids.length > 0 && !errors.length, `marked live, in its one language, with its setting and cost (${saved.run.cost_eur} euros)`]);
+    // What the free count gave for each step, beside the input billed, so a real run shows how close it came.
+    const usage = Object.entries(saved.run.usage || {});
+    res.push([usage.length > 0 && usage.every(([, u]) => Number.isInteger(u.counted_input_tokens) && u.counted_input_tokens > 0), `each step's usage carries its free count beside its billed input: ${usage.map(([a, u]) => `${a} ${u.counted_input_tokens} counted, ${u.input_tokens} billed`).join("; ")}`]);
     // Each step's use, for setting max_tokens from Victor's runs: the stand-in answers 1,800 in and 900 out.
     const use = saved.run.usage || {};
     const steps = ["reader", "ideator", "writer"].every((k) => use[k] && use[k].requests === 1 && use[k].input_tokens === 1800 && use[k].output_tokens === 900 && use[k].max_output_tokens === 900);

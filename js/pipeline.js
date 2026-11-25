@@ -133,6 +133,15 @@ export function createMeter(model, capEur) {
     capEur,
     /** A broken stream's worst case, held against the cap. */
     hold(eur) { held += Math.max(0, Number(eur) || 0); },
+    /**
+     * What the free count gave for a step's request, before the margin: a saved run sets it beside the
+     * billed input, so a live run shows how close the count came (TECH_NOTES, section 8).
+     */
+    counted(agent, tokens) {
+      if (!agent || !(Number.isFinite(tokens) && tokens > 0)) return;
+      const a = (byAgent[agent] ||= { usd: 0, requests: 0, input_tokens: 0, output_tokens: 0, max_output_tokens: 0 });
+      a.counted_input_tokens = (a.counted_input_tokens || 0) + tokens;
+    },
     heldEur() { return held; },
     /** What the cap counts as spent: the billed usage and what broken streams may have cost. */
     reservedEur() { return totals.usd * FX_USD_EUR + held; },
@@ -232,6 +241,7 @@ export async function runStep({ agent, key, settings, system, content, schema, c
     onEvent({ type: "counting", agent, attempt, pdf: pdfTokens > 0 });
     const counted = await count({ key, body: probe, signal });
     if (signal?.aborted) throw abortError();
+    meter.counted?.(agent, counted);
     const inputTokens = checkedInputTokens(probe, counted, { pdfTokens });
     const reserved = () => (meter.reservedEur ? meter.reservedEur() : meter.spentEur());
     const fit = fitToCap({ model: settings.model, inputTokens, limits, spentEur: reserved(), capEur: meter.capEur });

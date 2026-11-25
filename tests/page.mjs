@@ -657,6 +657,28 @@ try {
     if (!smallSeen.length && plantedCaught) console.log("TARGETS AT LEAST 40 PX");
     if (!reportIssues.length && !briefFailures.length) console.log("REPORT VIEWS LAID OUT");
     else console.log(`Report views: ${[...reportIssues, ...briefFailures].slice(0, 8).join("; ")}`);
+    // The score table keeps every column it shows inside its box, the score above all, at the four sizes in
+    // both languages: a table wrap may scroll sideways, which the checks above allow, but here the score
+    // itself went out of view in German at 1280 x 720. Control: the table's old padding.
+    {
+      const over = [];
+      let controlCaught = false;
+      for (const [w, hgt] of [[1280, 720], [1366, 768], [1600, 900], [1920, 1080]]) for (const lang of ["en", "de"]) for (const sc of ["s1", "s2", "s3"]) {
+        const { context, page } = await open(`?guide=0&lang=${lang}&scenario=${sc}&step=4`, { width: w, height: hgt });
+        await page.click("label:has(#view-table)");
+        await page.waitForTimeout(150);
+        const fit = () => page.evaluate(() => { const wrap = document.querySelector("#score-table").closest(".vc-table-wrap"); return wrap.scrollWidth - wrap.clientWidth; });
+        const by = await fit();
+        if (by > 1) over.push(`${sc} ${lang} ${w} x ${hgt} by ${by} px`);
+        if (w === 1280 && lang === "de" && sc === "s1") {
+          await page.evaluate(() => document.querySelectorAll("#score-table .crit-col").forEach((c) => { c.style.paddingInline = "var(--vc-space-3)"; }));
+          controlCaught = (await fit()) > 1;
+        }
+        await context.close();
+      }
+      res.push([!over.length, `the score table keeps its columns inside its box in S1 to S3, both languages, from 1280 x 720 to 1920 x 1080${over.length ? `: over ${over.join("; ")}` : ""}`]);
+      res.push([controlCaught, "control: the rating columns at the table's old padding run over at 1280 x 720 in German"]);
+    }
     report("layout", res, "PAGE LAYOUT OK");
   }
 

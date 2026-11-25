@@ -345,6 +345,10 @@ html[data-theme="dark"] .chart-point, html[data-theme="dark"] .chart-legend { --
 .legend-hex--pick { background: var(--pi-pick); }
 .legend-hex--pick::after { display: none; }
 .score-table .crit-col { color: var(--vc-text-muted); }
+/* The seven ratings are single digits under short heads: a narrow column each, so the score and, on a wide
+   screen, the person-days and the cost keep their place without the table scrolling sideways, in German too. */
+.score-table :is(th, td).crit-col { padding-inline: var(--vc-space-1); }
+.score-table :is(th, td):first-child { padding-inline-end: var(--vc-space-2); }
 /* Below 1600 px the table keeps what the weights act on: the seven ratings and the score. Build effort is
    the chart's axis and the cost of a run is on each idea's page, so their columns wait for a wide screen. */
 @media (max-width: 1599px) { .score-table .wide-col { display: none; } }
